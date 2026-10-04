@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
+import type { VistaStore } from '../../../application/ports/vista-store';
 import type { Voz } from '../../../application/ports/voz';
 import type { ApiClient } from '../../../application/ports/api-client';
 import type { crearImportarClientesEnLotes } from '../../../application/use-cases/importar-clientes';
@@ -17,6 +18,8 @@ export type Casos = {
   readonly ahora: () => Date;
   /** Dictado propio de la app (si el navegador lo tiene). */
   readonly voz: Voz;
+  /** Vista elegida (grande o normal), recordada en el teléfono. */
+  readonly vista: VistaStore;
 };
 
 const Contexto = createContext<Casos | undefined>(undefined);

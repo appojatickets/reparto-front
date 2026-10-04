@@ -26,6 +26,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     subirFotoLocal: vi.fn(),
     ahora: () => new Date('2026-10-05T15:00:00Z'),
     voz: { disponible: false, escuchar: () => ({ detener: () => undefined }) },
+    vista: { cargar: () => 'grande' as const, guardar: () => undefined },
     ...opciones.casos,
   };
   return { casos, ...render(<ProveedorCasos casos={casos}><Aplicacion /></ProveedorCasos>) };
@@ -104,6 +105,38 @@ describe('entrada y protección por rol', () => {
     expect(await screen.findByRole('heading', { name: 'Sin conexión' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'REINTENTAR' }));
     await waitFor(() => { expect(restaurarSesion).toHaveBeenCalledTimes(2); });
+  });
+});
+
+describe('vista grande o normal', () => {
+  it('la primera vez pregunta cómo ver la app; elegir NORMAL la guarda y la aplica a toda la pantalla', async () => {
+    const guardar = vi.fn();
+    montar({ ruta: '/entrar', casos: { vista: { cargar: () => undefined, guardar } } });
+    expect(await screen.findByRole('heading', { name: '¿Cómo quieres ver la app?' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Entrar' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'NORMAL' }));
+    expect(guardar).toHaveBeenCalledWith('normal');
+    expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeInTheDocument();
+    expect(document.documentElement.dataset['vista']).toBe('normal');
+  });
+
+  it('elegir GRANDE también se guarda', async () => {
+    const guardar = vi.fn();
+    montar({ ruta: '/entrar', casos: { vista: { cargar: () => undefined, guardar } } });
+    await userEvent.click(await screen.findByRole('button', { name: 'GRANDE' }));
+    expect(guardar).toHaveBeenCalledWith('grande');
+    expect(document.documentElement.dataset['vista']).toBe('grande');
+  });
+
+  it('con una vista ya elegida no vuelve a preguntar, y el botón de la cabecera cambia de vista', async () => {
+    const guardar = vi.fn();
+    montar({ sesion: ADMIN, casos: { vista: { cargar: () => 'grande', guardar } } });
+    await screen.findByRole('heading', { name: 'Hola, Matías' });
+    expect(screen.queryByRole('heading', { name: '¿Cómo quieres ver la app?' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /Cambiar a normal/ }));
+    expect(guardar).toHaveBeenCalledWith('normal');
+    expect(document.documentElement.dataset['vista']).toBe('normal');
+    expect(screen.getByRole('button', { name: /Cambiar a grande/ })).toHaveTextContent('VISTA GRANDE');
   });
 });
 

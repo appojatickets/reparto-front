@@ -2,6 +2,7 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import type { ReactNode } from 'react';
 import { puedeHacer, type Accion } from '../../../../domain/rol';
 import { useSesion } from '../sesion';
+import { CambiarVista } from '../vista';
 import { Boton, Cargando, Pagina, Aviso } from './ui';
 
 const ETIQUETA_ROL = { admin: 'Administración', despachador: 'Despacho', chofer: 'Chofer' } as const;
@@ -18,7 +19,10 @@ export const Marco = () => {
           <strong>{estado.usuario.nombre}</strong>
           <span className="rol"> · {ETIQUETA_ROL[estado.usuario.rol]}</span>
         </div>
-        <Boton variante="secundario" onClick={salir}>SALIR</Boton>
+        <div className="fila-botones">
+          <CambiarVista />
+          <Boton variante="secundario" onClick={salir}>SALIR</Boton>
+        </div>
       </header>
       <main className="screen">
         {pathname !== '/' ? <Link className="volver" to="/">← INICIO</Link> : null}

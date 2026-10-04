@@ -16,6 +16,12 @@ export const SESION = { accessToken: 'at', refreshToken: 'rt', expiraEnSegundos:
 
 /** Simula la API con CORS. Clave: «MÉTODO /ruta». Lo que no esté definido responde 404. */
 export const simularApi = async (page: Page, rutas: Rutas, retrasoSaludMs = 0): Promise<void> => {
+  // Las pruebas parten con la vista grande ya elegida (si no, la app la pregunta al entrar).
+  await page.addInitScript(() => {
+    try {
+      if (!localStorage.getItem('reparto.vista.v1')) localStorage.setItem('reparto.vista.v1', 'grande');
+    } catch { /* sin almacenamiento */ }
+  });
   await page.route('http://api.test/**', async (route) => {
     const req = route.request();
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
