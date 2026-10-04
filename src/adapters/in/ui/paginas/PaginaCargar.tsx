@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent 
 import { Link } from 'react-router';
 import { COMUNAS_RM, separarComuna } from '../../../../domain/comunas';
 import { horaDeMinutos, minutosDeHora } from '../../../../domain/hora';
+import { completarRut, formatearRut } from '../../../../domain/rut';
 import { mensajeDeError, mensajesDeDetalle } from '../../../../application/mensajes';
 import type { Factura, Jornada, ResultadoBusqueda } from '../../../../application/modelos';
 import type { ErrorVoz } from '../../../../application/ports/voz';
@@ -120,6 +121,7 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
   const [direccion, setDireccion] = useState(direccionInicial);
   const [comuna, setComuna] = useState(comunaInicial);
   const [nombre, setNombre] = useState('');
+  const [rutEscrito, setRutEscrito] = useState('');
   const [errores, setErrores] = useState<readonly string[]>([]);
   const [ocupado, setOcupado] = useState(false);
   const dictarDireccion = useDictado(setDireccion, (m) => { setErrores([m]); });
@@ -132,9 +134,14 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
       setErrores(['Falta la dirección o la comuna.']);
       return;
     }
+    const rut = rutEscrito.trim() === '' ? undefined : completarRut(rutEscrito);
+    if (rutEscrito.trim() !== '' && rut === undefined) {
+      setErrores(['El RUT no es válido. Revisa los números.']);
+      return;
+    }
     const razonSocial = nombre.trim() === '' ? direccion.trim() : nombre.trim();
     setOcupado(true);
-    const r = await api.crearCliente({ razonSocial, direccion: direccion.trim(), comuna });
+    const r = await api.crearCliente({ razonSocial, direccion: direccion.trim(), comuna, ...(rut !== undefined ? { rut } : {}) });
     setOcupado(false);
     if (r.ok) alCrear({ localId: r.value.localId, razonSocial });
     else {
@@ -154,6 +161,8 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
       </Selector>
       <Campo etiqueta="Nombre del local (opcional)" ayuda="Si lo sabes. Si no, se guarda con la dirección." value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />
       <BotonHablar dictado={dictarNombre} etiqueta="DICTAR NOMBRE" />
+      <Campo etiqueta="RUT (opcional)" ayuda="Solo los números. El RUT no cambia: sirve para reconocer al cliente en todas sus direcciones." inputMode="numeric" value={rutEscrito} onChange={(e) => { setRutEscrito(e.target.value); }} autoComplete="off" />
+      {rutEscrito.trim() !== '' && completarRut(rutEscrito) !== undefined ? <p role="status">RUT {formatearRut(completarRut(rutEscrito) ?? '')}</p> : null}
       {errores.length > 0 ? <Aviso tipo="error">{errores.join(' ')}</Aviso> : null}
       <Boton type="submit" disabled={ocupado}>{ocupado ? 'GUARDANDO…' : 'GUARDAR Y CARGAR'}</Boton>
       <Boton variante="secundario" onClick={alCancelar}>CANCELAR</Boton>
@@ -221,7 +230,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
       <Campo
         ref={campo}
         etiqueta="Dirección o cliente"
-        ayuda={`Dicta o escribe la dirección con la comuna al final (Av. Colón 765 San Bernardo), o el nombre del cliente.${dictado.disponible ? '' : ' Para dictar usa el micrófono del teclado.'}`}
+        ayuda={`Dicta o escribe la dirección con la comuna al final (Av. Colón 765 San Bernardo), el nombre del cliente o su RUT (solo números).${dictado.disponible ? '' : ' Para dictar usa el micrófono del teclado.'}`}
         type="text"
         value={texto}
         onChange={(e) => { setTexto(e.target.value); setCreando(false); }}

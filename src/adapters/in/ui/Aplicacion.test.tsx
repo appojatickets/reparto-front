@@ -784,6 +784,30 @@ describe('el chofer: camión del día y carga de entregas', () => {
     await waitFor(() => { expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'Almacén Don Pepe', direccion: 'Calle 1 123', comuna: 'Maipú' }); });
   });
 
+  it('el RUT opcional se completa solo con números y se manda con el dígito verificador; uno inválido no se envía', async () => {
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura: () => Promise.resolve(ok(FACTURA)), buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Av. Colón Sur 765 San Bernardo');
+    await userEvent.click(await screen.findByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    await userEvent.type(form.getByLabelText('RUT (opcional)'), '77975918');
+    expect(await form.findByText('RUT 77.975.918-0')).toBeInTheDocument();
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    await waitFor(() => { expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'Av. Colón Sur 765', direccion: 'Av. Colón Sur 765', comuna: 'San Bernardo', rut: '77975918-0' }); });
+  });
+
+  it('un RUT con dígito verificador equivocado se avisa y no se envía', async () => {
+    const crearCliente = vi.fn();
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Calle 1 123 Maipú');
+    await userEvent.click(await screen.findByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    await userEvent.type(form.getByLabelText('RUT (opcional)'), '77.975.918-1');
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    expect(await form.findByRole('alert')).toHaveTextContent('El RUT no es válido');
+    expect(crearCliente).not.toHaveBeenCalled();
+  });
+
   it('un error al crear el cliente se muestra en lenguaje simple', async () => {
     const crearCliente = vi.fn(() => Promise.resolve(http(422, { codigo: 'VALIDACION', mensaje: 'Hay datos inválidos.', detalle: { errores: [{ mensaje: 'La comuna no es de la Región Metropolitana.' }] } })));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, buscarClientes: () => Promise.resolve(ok([])) }) });
