@@ -11,6 +11,7 @@ import { crearSesionStore } from './adapters/out/sesion/local-storage-store';
 import { browserTimer } from './adapters/out/timer/browser-timer';
 import { App } from './adapters/in/ui/App';
 import { Aplicacion } from './adapters/in/ui/Aplicacion';
+import { crearVozWeb } from './adapters/out/voz/voz-web';
 import { ProveedorCasos, type Casos } from './adapters/in/ui/contexto';
 import { EVENTO_SERVIDOR_DESPERTANDO } from './adapters/in/ui/despertando';
 import { EVENTO_SESION_EXPIRADA } from './adapters/in/ui/sesion';
@@ -37,6 +38,7 @@ const casos: Casos = {
   importarClientesEnLotes: crearImportarClientesEnLotes({ api }),
   subirFotoLocal: crearSubirFotoLocal({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),
   ahora: () => new Date(),
+  voz: crearVozWeb(),
 };
 const deps = { api, timer: browserTimer, wakingAfterMs: 3000 };
 

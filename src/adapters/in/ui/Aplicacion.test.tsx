@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { err, ok } from '../../../domain/result';
@@ -25,6 +25,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     importarClientesEnLotes: vi.fn(),
     subirFotoLocal: vi.fn(),
     ahora: () => new Date('2026-10-05T15:00:00Z'),
+    voz: { disponible: false, escuchar: () => ({ detener: () => undefined }) },
     ...opciones.casos,
   };
   return { casos, ...render(<ProveedorCasos casos={casos}><Aplicacion /></ProveedorCasos>) };
@@ -722,6 +723,39 @@ describe('el chofer: camión del día y carga de facturas', () => {
     expect(actualizarFactura).toHaveBeenCalledWith('f1', { antesDeMin: 780, urgente: true, nota: 'portón verde' });
     await userEvent.click(screen.getByRole('button', { name: 'ANULAR 1234' }));
     expect(actualizarFactura).toHaveBeenLastCalledWith('f1', { estado: 'anulada' });
+  });
+
+  it('el botón HABLAR dicta en el campo y entiende el folio dicho con palabras', async () => {
+    let manejadores: Parameters<Casos['voz']['escuchar']>[0] | undefined;
+    const detener = vi.fn();
+    const voz = { disponible: true, escuchar: vi.fn((m: Parameters<Casos['voz']['escuchar']>[0]) => { manejadores = m; return { detener }; }) };
+    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    montar({ ruta: '/cargar', sesion: CHOFER, casos: { voz }, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarFacturas: () => Promise.resolve(ok([])), buscarClientes: () => Promise.resolve(ok([RABET])), registrarFactura } });
+    await userEvent.click(await screen.findByRole('button', { name: 'HABLAR' }));
+    expect(await screen.findByRole('button', { name: 'ESCUCHANDO… TOCA PARA PARAR' })).toBeInTheDocument();
+    act(() => { manejadores?.alTexto({ texto: 'mil doscientos treinta y cuatro minimarket rabet', final: true }); manejadores?.alTerminar(undefined); });
+    expect(await screen.findByRole('button', { name: 'HABLAR' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Factura y cliente')).toHaveValue('mil doscientos treinta y cuatro minimarket rabet');
+    await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
+    expect(registrarFactura).toHaveBeenCalledWith({ folio: '1234', localId: 'l1', camionId: 'c1', fecha: '2026-10-05' });
+  });
+
+  it('si el micrófono falla, explica qué hacer; tocar de nuevo mientras escucha lo detiene', async () => {
+    let manejadores: Parameters<Casos['voz']['escuchar']>[0] | undefined;
+    const detener = vi.fn();
+    const voz = { disponible: true, escuchar: vi.fn((m: Parameters<Casos['voz']['escuchar']>[0]) => { manejadores = m; return { detener }; }) };
+    montar({ ruta: '/cargar', sesion: CHOFER, casos: { voz }, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarFacturas: () => Promise.resolve(ok([])) } });
+    await userEvent.click(await screen.findByRole('button', { name: 'HABLAR' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'ESCUCHANDO… TOCA PARA PARAR' }));
+    expect(detener).toHaveBeenCalledTimes(1);
+    act(() => { manejadores?.alTerminar('PERMISO'); });
+    expect(await screen.findByRole('alert')).toHaveTextContent('No hay permiso para usar el micrófono');
+  });
+
+  it('sin dictado propio no muestra HABLAR y sugiere el micrófono del teclado', async () => {
+    montar({ ruta: '/cargar', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarFacturas: () => Promise.resolve(ok([])) } });
+    expect(await screen.findByText(/usa el micrófono del teclado/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'HABLAR' })).toBeNull();
   });
 
   it('sin jornada, cargar y ruta mandan a elegir el camión', async () => {

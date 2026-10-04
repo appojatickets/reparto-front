@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
+import type { Voz } from '../../../application/ports/voz';
 import type { ApiClient } from '../../../application/ports/api-client';
 import type { crearImportarClientesEnLotes } from '../../../application/use-cases/importar-clientes';
 import type { crearCerrarSesion, crearIniciarSesion, crearRestaurarSesion } from '../../../application/use-cases/sesion';
@@ -14,6 +15,8 @@ export type Casos = {
   readonly subirFotoLocal: ReturnType<typeof crearSubirFotoLocal>;
   /** Hora actual (inyectada para que las pantallas con fechas sean comprobables). */
   readonly ahora: () => Date;
+  /** Dictado propio de la app (si el navegador lo tiene). */
+  readonly voz: Voz;
 };
 
 const Contexto = createContext<Casos | undefined>(undefined);

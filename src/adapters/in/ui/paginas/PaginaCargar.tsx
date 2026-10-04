@@ -4,6 +4,7 @@ import { horaDeMinutos, minutosDeHora } from '../../../../domain/hora';
 import { leerLineaFactura } from '../../../../domain/linea-factura';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { Factura, Jornada, ResultadoBusqueda } from '../../../../application/modelos';
+import type { ErrorVoz } from '../../../../application/ports/voz';
 import { puedeBuscar } from '../../../../application/use-cases/buscar';
 import { useCasos } from '../contexto';
 import { useCarga, useDebounced } from '../hooks';
@@ -72,8 +73,17 @@ const TarjetaFactura = ({ f, alCambiar }: { readonly f: Factura; readonly alCamb
   );
 };
 
+const MENSAJE_VOZ: Readonly<Record<ErrorVoz, string>> = {
+  PERMISO: 'No hay permiso para usar el micrófono. Actívalo en los ajustes del navegador, o usa el micrófono del teclado.',
+  SIN_VOZ: 'No te escuché. Toca HABLAR y di, por ejemplo: «mil doscientos treinta y cuatro minimarket rabet».',
+  RED: 'El dictado necesita internet. Revisa tu señal.',
+  OTRO: 'No se pudo usar el micrófono. Intenta de nuevo, o usa el micrófono del teclado.',
+};
+
 const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
-  const { api } = useCasos();
+  const { api, voz } = useCasos();
+  const [escuchando, setEscuchando] = useState(false);
+  const sesionVoz = useRef<{ detener: () => void } | undefined>(undefined);
   const [texto, setTexto] = useState('');
   const consulta = useDebounced(texto, 250);
   const linea = useMemo(() => leerLineaFactura(texto), [texto]);
@@ -119,6 +129,23 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
     campo.current?.focus();
   };
 
+  const hablar = (): void => {
+    if (escuchando) {
+      sesionVoz.current?.detener();
+      return;
+    }
+    setAviso(undefined);
+    setEscuchando(true);
+    sesionVoz.current = voz.escuchar({
+      alTexto: (e) => { setTexto(e.texto); },
+      alTerminar: (error) => {
+        setEscuchando(false);
+        sesionVoz.current = undefined;
+        if (error) setAviso({ tipo: 'error', texto: MENSAJE_VOZ[error] });
+      },
+    });
+  };
+
   const facturas = lista.estado.tipo === 'ok' ? lista.estado.datos : [];
 
   return (
@@ -126,7 +153,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
       <Campo
         ref={campo}
         etiqueta="Factura y cliente"
-        ayuda="Dicta o escribe el número de factura y el nombre del cliente. Ejemplo: 1234 minimarket rabet. Para dictar usa el micrófono del teclado."
+        ayuda={`Dicta o escribe el número de factura y el nombre del cliente. Ejemplo: 1234 minimarket rabet.${voz.disponible ? ' Toca HABLAR para dictar.' : ' Para dictar usa el micrófono del teclado.'}`}
         type="text"
         value={texto}
         onChange={(e) => { setTexto(e.target.value); }}
@@ -135,6 +162,9 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
         spellCheck={false}
         autoFocus
       />
+      {voz.disponible ? (
+        <Boton variante={escuchando ? 'peligro' : 'primario'} aria-pressed={escuchando} onClick={hablar}>{escuchando ? 'ESCUCHANDO… TOCA PARA PARAR' : 'HABLAR'}</Boton>
+      ) : null}
       {texto.trim() !== '' ? (
         <p role="status">
           {linea.folio !== undefined ? <>Factura <strong>{linea.folio}</strong></> : <strong>Falta el número de factura</strong>}

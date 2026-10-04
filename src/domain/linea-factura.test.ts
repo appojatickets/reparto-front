@@ -41,4 +41,15 @@ describe('leerLineaFactura', () => {
     expect(leerLineaFactura('no me olvides')).toEqual({ consulta: 'no me olvides' });
     expect(leerLineaFactura('la esquina')).toEqual({ consulta: 'la esquina' });
   });
+
+  it('entiende el folio dicho con palabras, cardinal o dígito por dígito', () => {
+    expect(leerLineaFactura('mil doscientos treinta y cuatro minimarket rabet')).toEqual({ folio: '1234', consulta: 'minimarket rabet' });
+    expect(leerLineaFactura('factura siete mil uno parque arauco')).toEqual({ folio: '7001', consulta: 'parque arauco' });
+    expect(leerLineaFactura('siete cero cero uno plaza oeste')).toEqual({ folio: '7001', consulta: 'plaza oeste' });
+  });
+
+  it('un nombre que empieza con un número corto en palabras no se toma por folio', () => {
+    expect(leerLineaFactura('dos hermanos')).toEqual({ consulta: 'dos hermanos' });
+    expect(leerLineaFactura('tres marias')).toEqual({ consulta: 'tres marias' });
+  });
 });
