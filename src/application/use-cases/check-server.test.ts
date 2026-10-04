@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { err, ok, type Result } from '../../domain/result';
 import type { ServerStatus } from '../../domain/server-status';
-import type { ApiClient, ApiError, HealthReport } from '../ports/api-client';
+import type { ApiError, HealthReport, SaludApi } from '../ports/api-client';
 import type { Timer } from '../ports/timer';
 import { checkServer } from './check-server';
 
@@ -38,7 +38,7 @@ const deferred = () => {
   return { promise, resolve };
 };
 
-const run = (api: ApiClient, timer: Timer) => {
+const run = (api: SaludApi, timer: Timer) => {
   const seen: ServerStatus['kind'][] = [];
   const done = checkServer({ api, timer, wakingAfterMs: 3000 }, new AbortController().signal, (s) => {
     seen.push(s.kind);

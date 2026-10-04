@@ -1,0 +1,33 @@
+import { Link } from 'react-router';
+import { accionesDe, type Accion } from '../../../../domain/rol';
+import { Aviso, Pagina } from '../componentes/ui';
+import { useUsuario } from '../sesion';
+
+const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: string }>> = {
+  'buscar-clientes': { a: '/clientes', texto: 'BUSCAR CLIENTE' },
+  'cliente-nuevo': { a: '/clientes/nuevo', texto: 'CLIENTE NUEVO' },
+  'revisar-pines': { a: '/pines', texto: 'PINES DE LOCALES' },
+  'importar-clientes': { a: '/admin/importar', texto: 'IMPORTAR CLIENTES' },
+  usuarios: { a: '/admin/usuarios', texto: 'USUARIOS' },
+};
+
+export const PaginaInicio = () => {
+  const usuario = useUsuario();
+  const acciones = accionesDe(usuario.rol);
+  const enlaces = acciones.flatMap((a) => {
+    const e = ENTRADAS[a];
+    return e ? [e] : [];
+  });
+  return (
+    <Pagina titulo={`Hola, ${usuario.nombre.split(' ')[0] ?? usuario.nombre}`}>
+      {acciones.includes('mi-ruta') ? <Aviso>Tu ruta del día estará disponible muy pronto.</Aviso> : null}
+      {enlaces.length > 0 ? (
+        <ul className="menu">
+          {enlaces.map((e) => (
+            <li key={e.a}><Link to={e.a}>{e.texto}</Link></li>
+          ))}
+        </ul>
+      ) : null}
+    </Pagina>
+  );
+};

@@ -26,7 +26,7 @@ module.exports = {
   options: {
     tsConfig: { fileName: 'tsconfig.json' },
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '\\.test\\.tsx?$|schema\\.d\\.ts$' },
+    exclude: { path: '\\.test(-util)?\\.tsx?$|schema\\.d\\.ts$' },
     moduleSystems: ['es6', 'cjs'],
   },
 };

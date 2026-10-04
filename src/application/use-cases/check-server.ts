@@ -1,9 +1,9 @@
 import { isFinal, type ServerStatus } from '../../domain/server-status';
-import type { ApiClient } from '../ports/api-client';
+import type { SaludApi } from '../ports/api-client';
 import type { Timer } from '../ports/timer';
 
 export type CheckServerDeps = {
-  readonly api: ApiClient;
+  readonly api: SaludApi;
   readonly timer: Timer;
   /** Pasado este tiempo sin respuesta se asume que Render está despertando. */
   readonly wakingAfterMs: number;
