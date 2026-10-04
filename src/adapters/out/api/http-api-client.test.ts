@@ -13,7 +13,7 @@ const memoria = () => {
   return { getItem: (k: string) => datos.get(k) ?? null, setItem: (k: string, v: string) => { datos.set(k, v); }, removeItem: (k: string) => { datos.delete(k); } };
 };
 
-const montar = (manejador: (req: Request) => Response | Promise<Response>, tokens?: Tokens) => {
+const montar = (manejador: (req: Request) => Response | Promise<Response>, tokens?: Tokens, extra: { esperasMs?: readonly number[] } = {}) => {
   const store = crearSesionStore(memoria());
   if (tokens) store.guardar(tokens);
   const llamadas: Request[] = [];
@@ -22,8 +22,15 @@ const montar = (manejador: (req: Request) => Response | Promise<Response>, token
     return Promise.resolve(manejador(input));
   });
   const alExpirar = vi.fn();
-  const api = createHttpApiClient({ baseUrl: BASE, store, alExpirarSesion: alExpirar, fetch: fetchFn as unknown as typeof fetch });
-  return { api, store, llamadas, alExpirar, fetchFn };
+  const esperas: number[] = [];
+  const avisos: boolean[] = [];
+  const api = createHttpApiClient({
+    baseUrl: BASE, store, alExpirarSesion: alExpirar, fetch: fetchFn as unknown as typeof fetch,
+    esperasMs: extra.esperasMs ?? [10, 20, 30],
+    esperar: (ms) => { esperas.push(ms); return Promise.resolve(); },
+    alEsperarServidor: (a) => { avisos.push(a); },
+  });
+  return { api, store, llamadas, alExpirar, fetchFn, esperas, avisos };
 };
 
 const TOK: Tokens = { accessToken: 'viejo', refreshToken: 'r1' };
@@ -142,5 +149,68 @@ describe('llamadas de negocio', () => {
   it('una caída de red en una llamada de negocio es NETWORK', async () => {
     const { api } = montar(() => { throw new TypeError('Failed to fetch'); }, TOK);
     expect(await api.listarUsuarios()).toEqual({ ok: false, error: { kind: 'NETWORK' } });
+  });
+});
+
+describe('servidor dormido (Render Free): reintentos automáticos', () => {
+  const USUARIOS = { usuarios: [] };
+
+  it('una consulta que falla por red se reintenta hasta que el servidor responde, y avisa mientras espera', async () => {
+    let n = 0;
+    const { api, esperas, avisos, llamadas } = montar(() => { if (++n <= 2) throw new TypeError('Failed to fetch'); return json(200, USUARIOS); }, TOK);
+    expect(await api.listarUsuarios()).toEqual({ ok: true, value: [] });
+    expect(llamadas).toHaveLength(3);
+    expect(esperas).toEqual([10, 20]);
+    expect(avisos).toEqual([true, false]);
+  });
+
+  it('un 503 del proxy (sin cuerpo de la API) también se reintenta', async () => {
+    let n = 0;
+    const { api } = montar(() => (++n === 1 ? new Response('<html>Service Unavailable</html>', { status: 503 }) : json(200, USUARIOS)), TOK);
+    expect((await api.listarUsuarios()).ok).toBe(true);
+    expect(n).toBe(2);
+  });
+
+  it('un 502 con código de la API (error de negocio) NO se reintenta', async () => {
+    const { api, llamadas, avisos } = montar(() => json(502, { codigo: 'SERVICIO_EXTERNO', mensaje: 'No se pudo conectar.' }), TOK);
+    const r = await api.listarUsuarios();
+    expect(!r.ok && r.error.status).toBe(502);
+    expect(llamadas).toHaveLength(1);
+    expect(avisos).toEqual([]);
+  });
+
+  it('si el servidor nunca despierta, se rinde al agotar las esperas y deja de avisar', async () => {
+    const { api, llamadas, avisos } = montar(() => { throw new TypeError('Failed to fetch'); }, TOK, { esperasMs: [1, 1] });
+    expect(await api.listarUsuarios()).toEqual({ ok: false, error: { kind: 'NETWORK' } });
+    expect(llamadas).toHaveLength(3);
+    expect(avisos).toEqual([true, false]);
+  });
+
+  it('las acciones que crean cosas (crear usuario, crear cliente, aceptar pin) NO se repiten solas', async () => {
+    const { api, llamadas } = montar(() => { throw new TypeError('Failed to fetch'); }, TOK);
+    await api.crearUsuario({ nombre: 'A', apellidoPaterno: 'B', rol: 'chofer', pin: '482915' });
+    await api.crearCliente({ razonSocial: 'X' });
+    await api.resolverPropuesta('123e4567-e89b-42d3-a456-426614174000', 'aceptar');
+    expect(llamadas).toHaveLength(3); // una sola llamada por acción
+  });
+
+  it('el login se reintenta (no cuenta como intento fallido porque nunca llegó al servidor)', async () => {
+    let n = 0;
+    const { api } = montar(() => { if (++n === 1) throw new TypeError('Failed to fetch'); return json(200, { accessToken: 'a', refreshToken: 'r', expiraEnSegundos: 3600, usuario: { ...USUARIO, activo: true } }); });
+    expect((await api.iniciarSesion('jperez', '482915')).ok).toBe(true);
+    expect(n).toBe(2);
+  });
+
+  it('una clave incorrecta (401 de la API) no se reintenta', async () => {
+    const { api, llamadas } = montar(() => json(401, { codigo: 'CREDENCIALES_INVALIDAS', mensaje: 'mal' }));
+    await api.iniciarSesion('x', 'y');
+    expect(llamadas).toHaveLength(1);
+  });
+
+  it('una búsqueda cancelada por quien escribe no sigue reintentando', async () => {
+    const control = new AbortController();
+    const { api, llamadas } = montar(() => { control.abort(); throw new TypeError('Failed to fetch'); }, TOK);
+    await api.buscarClientes('rabe', { signal: control.signal });
+    expect(llamadas).toHaveLength(1);
   });
 });

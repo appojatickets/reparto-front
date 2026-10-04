@@ -95,6 +95,21 @@ test.describe('pantallas de administración y despacho', () => {
     await sinViolaciones(page);
   });
 
+  test('si el servidor estaba dormido y la primera consulta falla, se reintenta sola y muestra el aviso', async ({ page }) => {
+    let intentos = 0;
+    await page.route('http://api.test/v1/clientes/buscar*', async (route) => {
+      if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization,content-type', 'access-control-allow-methods': 'GET,OPTIONS' } });
+      if (++intentos === 1) return route.abort('failed'); // el servidor dormido no responde
+      return route.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, json: BUSQUEDA });
+    });
+    await page.goto('/clientes');
+    await page.getByLabel('Nombre o dirección').fill('rabe');
+    await expect(page.getByText(/Despertando servidor/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Rabelo Mágica SpA' })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(/Despertando servidor/)).toBeHidden();
+    expect(intentos).toBe(2);
+  });
+
   test('detalle del local: enlaces de navegación con coordenadas y accesibilidad', async ({ page }) => {
     await page.goto(`/clientes/${LOCAL.id}`);
     await expect(page.getByRole('heading', { name: 'Rabelo Mágica SpA' })).toBeVisible();
@@ -114,7 +129,7 @@ test.describe('pantallas de administración y despacho', () => {
   test('importar: pegar la planilla, ver la vista previa, importar y ver las filas con problemas', async ({ page }) => {
     await page.goto('/admin/importar');
     await page.getByLabel('O pega aquí la planilla').fill('Rut\tRazón Social\tDirección\tComuna\n12.345.678-5\tRabelo SpA\tAv. X 1\tMaipú\n\tKiosko Sol\tCalle 2\tMarte');
-    await expect(page.getByText('2 filas listas para importar.')).toBeVisible();
+    await expect(page.getByText('2 filas detectadas. El servidor revisará cada una al importar.')).toBeVisible();
     await sinViolaciones(page);
     await page.getByRole('button', { name: 'IMPORTAR' }).click();
     const resultado = page.getByRole('region', { name: 'Resultado de la importación' });

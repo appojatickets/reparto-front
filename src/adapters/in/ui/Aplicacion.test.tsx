@@ -7,6 +7,7 @@ import type { ApiClient } from '../../../application/ports/api-client';
 import type { EstadoSesion } from '../../../application/use-cases/sesion';
 import { fakeApi } from '../../../application/use-cases/fakes.test-util';
 import { Aplicacion } from './Aplicacion';
+import { EVENTO_SERVIDOR_DESPERTANDO } from './despertando';
 import { ProveedorCasos, type Casos } from './contexto';
 
 const CHOFER: UsuarioSesion = { id: 'u1', username: 'jperez', nombre: 'Juan Pérez', rol: 'chofer' };
@@ -97,6 +98,18 @@ describe('entrada y protección por rol', () => {
     expect(await screen.findByRole('heading', { name: 'Sin conexión' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'REINTENTAR' }));
     await waitFor(() => { expect(restaurarSesion).toHaveBeenCalledTimes(2); });
+  });
+});
+
+describe('servidor dormido', () => {
+  it('muestra «Despertando servidor» mientras la API reintenta y lo oculta al terminar', async () => {
+    montar({ sesion: ADMIN });
+    await screen.findByRole('heading', { name: 'Hola, Matías' });
+    expect(screen.queryByText(/Despertando servidor/)).toBeNull();
+    window.dispatchEvent(new CustomEvent(EVENTO_SERVIDOR_DESPERTANDO, { detail: true }));
+    expect(await screen.findByText(/Despertando servidor… puede tardar hasta 1 minuto/)).toBeInTheDocument();
+    window.dispatchEvent(new CustomEvent(EVENTO_SERVIDOR_DESPERTANDO, { detail: false }));
+    await waitFor(() => { expect(screen.queryByText(/Despertando servidor/)).toBeNull(); });
   });
 });
 
@@ -198,7 +211,7 @@ describe('importar clientes', () => {
     montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes } });
     await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
     await userEvent.paste(planilla);
-    expect(await screen.findByText('2 filas listas para importar.')).toBeInTheDocument();
+    expect(await screen.findByText('2 filas detectadas. El servidor revisará cada una al importar.')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'IMPORTAR' }));
     const resultado = await screen.findByRole('region', { name: 'Resultado de la importación' });
     expect(within(resultado).getByText(/Clientes nuevos: 1/)).toBeInTheDocument();

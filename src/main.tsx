@@ -12,6 +12,7 @@ import { browserTimer } from './adapters/out/timer/browser-timer';
 import { App } from './adapters/in/ui/App';
 import { Aplicacion } from './adapters/in/ui/Aplicacion';
 import { ProveedorCasos, type Casos } from './adapters/in/ui/contexto';
+import { EVENTO_SERVIDOR_DESPERTANDO } from './adapters/in/ui/despertando';
 import { EVENTO_SESION_EXPIRADA } from './adapters/in/ui/sesion';
 import './adapters/in/ui/styles.css';
 
@@ -20,7 +21,12 @@ if (!apiUrl) throw new Error('Falta VITE_API_URL');
 
 // Adaptadores de salida
 const store = crearSesionStore();
-const api = createHttpApiClient({ baseUrl: apiUrl, store, alExpirarSesion: () => window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA)) });
+const api = createHttpApiClient({
+  baseUrl: apiUrl,
+  store,
+  alExpirarSesion: () => window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA)),
+  alEsperarServidor: (activo) => window.dispatchEvent(new CustomEvent(EVENTO_SERVIDOR_DESPERTANDO, { detail: activo })),
+});
 
 // Casos de uso con sus puertos inyectados
 const casos: Casos = {

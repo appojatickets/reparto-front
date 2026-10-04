@@ -8,12 +8,14 @@ import { PaginaLocal } from './paginas/PaginaLocal';
 import { PaginaLogin } from './paginas/PaginaLogin';
 import { PaginaPines } from './paginas/PaginaPines';
 import { PaginaUsuarios } from './paginas/PaginaUsuarios';
+import { AvisoServidorDespertando } from './despertando';
 import { ProveedorSesion } from './sesion';
 
 /** Rutas de la aplicación. Cada una declara la acción que exige; la API vuelve a comprobar el permiso. */
 export const Aplicacion = () => (
   <BrowserRouter>
     <ProveedorSesion>
+      <AvisoServidorDespertando />
       <Routes>
         <Route path="/entrar" element={<PaginaLogin />} />
         <Route element={<RutaProtegida><Marco /></RutaProtegida>}>

@@ -58,7 +58,7 @@ export const PaginaImportar = () => {
       {texto.trim() !== '' && !hayFilas ? <Aviso tipo="error">No se encontraron filas de datos. La primera línea debe tener los títulos de las columnas.</Aviso> : null}
       {mapeo.faltantes.length > 0 && texto.trim() !== '' ? <Aviso tipo="error">Faltan columnas obligatorias: {mapeo.faltantes.map((c) => NOMBRE_CAMPO[c]).join(', ')}.</Aviso> : null}
       {mapeo.ignoradas.length > 0 && hayFilas ? <Aviso>Se ignorarán estas columnas: {mapeo.ignoradas.join(', ')}.</Aviso> : null}
-      {completa ? <Aviso tipo="exito">{mapeo.filas.length} filas listas para importar.</Aviso> : null}
+      {completa ? <Aviso tipo="exito">{mapeo.filas.length} filas detectadas. El servidor revisará cada una al importar.</Aviso> : null}
 
       {completa ? (
         <div className="desplazable">

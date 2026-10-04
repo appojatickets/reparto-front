@@ -11,6 +11,11 @@ export type HttpApiClientOptions = {
   readonly alExpirarSesion?: () => void;
   /** Render Free puede tardar ~1 min en despertar. */
   readonly timeoutMs?: number;
+  /** Pausas (ms) entre reintentos cuando el servidor está despertando. Por defecto suman ~57 s. */
+  readonly esperasMs?: readonly number[];
+  readonly esperar?: (ms: number) => Promise<void>;
+  /** `true` cuando empieza a reintentar porque el servidor no responde; `false` al terminar. Para mostrar un aviso. */
+  readonly alEsperarServidor?: (activo: boolean) => void;
   readonly fetch?: typeof globalThis.fetch;
 };
 
@@ -34,7 +39,18 @@ const cuerpoDeSalud = (data: HealthReport | undefined, error: HealthReport | und
   return body ? ok(body) : err({ kind: 'UNEXPECTED' });
 };
 
-export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs = 90_000, fetch }: HttpApiClientOptions): ApiClient => {
+/** Render Free se duerme tras 15 min sin uso y tarda hasta ~1 min en despertar. */
+const ESPERAS_POR_DEFECTO: readonly number[] = [1000, 2000, 4000, 8000, 12000, 15000, 15000];
+
+type OpcionesLlamada = {
+  /** Renovar la sesión ante un 401 (no aplica al login). */
+  readonly renovar?: boolean;
+  /** Reintentar si el servidor no responde. Solo para llamadas que se pueden repetir sin efectos dobles. */
+  readonly repetible?: boolean;
+  readonly signal?: AbortSignal | undefined;
+};
+
+export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs = 90_000, esperasMs = ESPERAS_POR_DEFECTO, esperar = (ms) => new Promise((r) => { setTimeout(r, ms); }), alEsperarServidor, fetch }: HttpApiClientOptions): ApiClient => {
   const client = createClient<paths>({ baseUrl, ...(fetch ? { fetch } : {}) });
   client.use({
     onRequest: ({ request }) => {
@@ -72,14 +88,39 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     return renovando;
   };
 
-  async function ejecutar<T>(llamar: () => Promise<Respuesta<T>>, reintentar = true): Promise<Result<T, ApiError>> {
+  async function intentar<T>(llamar: () => Promise<Respuesta<T>>, renovarSesion: boolean): Promise<Result<T, ApiError>> {
     try {
       let r = await llamar();
-      if (r.response.status === 401 && reintentar && (await renovar())) r = await llamar();
+      if (r.response.status === 401 && renovarSesion && (await renovar())) r = await llamar();
       return r.response.ok ? ok(r.data as T) : err(aError(r.response, r.error));
     } catch (e) {
       const nombre = e instanceof Error ? e.name : '';
       return err({ kind: nombre === 'TimeoutError' ? 'TIMEOUT' : 'NETWORK' });
+    }
+  }
+
+  /**
+   * Un servidor dormido responde sin CORS o con 502/503/504 del proxy (sin cuerpo de la API): al navegador le parece
+   * «sin conexión». Es transitorio, así que las llamadas repetibles se reintentan con pausas crecientes.
+   */
+  const esTransitorio = (r: Result<unknown, ApiError>): boolean =>
+    !r.ok && (r.error.kind === 'NETWORK' || (r.error.kind === 'HTTP' && [502, 503, 504].includes(r.error.status ?? 0) && r.error.codigo === undefined));
+
+  async function ejecutar<T>(llamar: () => Promise<Respuesta<T>>, { renovar: renovarSesion = true, repetible = false, signal }: OpcionesLlamada = {}): Promise<Result<T, ApiError>> {
+    let esperando = false;
+    try {
+      for (let n = 0; ; n++) {
+        const r = await intentar(llamar, renovarSesion);
+        const pausa = esperasMs[n];
+        if (!repetible || !esTransitorio(r) || pausa === undefined || signal?.aborted) return r;
+        if (!esperando) {
+          esperando = true;
+          alEsperarServidor?.(true);
+        }
+        await esperar(pausa);
+      }
+    } finally {
+      if (esperando) alEsperarServidor?.(false);
     }
   }
   const sinCuerpo = (r: Result<unknown, ApiError>): Result<void, ApiError> => (r.ok ? ok(undefined) : r);
@@ -99,33 +140,33 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     },
 
     async iniciarSesion(username, pin) {
-      const r = await ejecutar(() => client.POST('/v1/auth/login', { body: { username, pin }, signal: timeout() }), false);
+      const r = await ejecutar(() => client.POST('/v1/auth/login', { body: { username, pin }, signal: timeout() }), { renovar: false, repetible: true });
       return mapear(r, (d) => ({ tokens: { accessToken: d.accessToken, refreshToken: d.refreshToken }, usuario: { id: d.usuario.id, username: d.usuario.username, nombre: d.usuario.nombre, rol: d.usuario.rol } }));
     },
-    yo: () => ejecutar(() => client.GET('/v1/me', { signal: timeout() })),
+    yo: () => ejecutar(() => client.GET('/v1/me', { signal: timeout() }), { repetible: true }),
 
     async buscarClientes(q, opciones = {}) {
-      const r = await ejecutar(() => client.GET('/v1/clientes/buscar', { params: { query: { q, ...(opciones.comuna ? { comuna: opciones.comuna } : {}), ...(opciones.limite ? { limite: opciones.limite } : {}) } }, signal: AbortSignal.any([timeout(opciones.signal), AbortSignal.timeout(20_000)]) }));
+      const r = await ejecutar(() => client.GET('/v1/clientes/buscar', { params: { query: { q, ...(opciones.comuna ? { comuna: opciones.comuna } : {}), ...(opciones.limite ? { limite: opciones.limite } : {}) } }, signal: AbortSignal.any([timeout(opciones.signal), AbortSignal.timeout(20_000)]) }), { repetible: true, signal: opciones.signal });
       return mapear(r, (d) => d.resultados);
     },
     crearCliente: (fila) => ejecutar(() => client.POST('/v1/clientes', { body: fila, signal: timeout() })),
-    importarClientes: (filas) => ejecutar(() => client.POST('/v1/clientes/importaciones', { body: { filas: [...filas] }, signal: timeout() })),
-    obtenerLocal: (id) => ejecutar(() => client.GET('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() })),
-    actualizarLocal: async (id, cambios) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/locales/{id}', { params: { path: { id } }, body: cambios, signal: timeout() }))),
+    importarClientes: (filas) => ejecutar(() => client.POST('/v1/clientes/importaciones', { body: { filas: [...filas] }, signal: timeout() }), { repetible: true }),
+    obtenerLocal: (id) => ejecutar(() => client.GET('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
+    actualizarLocal: async (id, cambios) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/locales/{id}', { params: { path: { id } }, body: cambios, signal: timeout() }), { repetible: true })),
 
-    solicitarUrlSubida: (localId, tipo) => ejecutar(() => client.POST('/v1/archivos/url-subida', { body: { localId, tipo }, signal: timeout() })),
-    registrarFoto: async (id, path) => sinCuerpo(await ejecutar(() => client.PUT('/v1/locales/{id}/foto', { params: { path: { id } }, body: { path }, signal: timeout() }))),
-    urlFoto: (id) => ejecutar(() => client.GET('/v1/locales/{id}/foto-url', { params: { path: { id } }, signal: timeout() })),
+    solicitarUrlSubida: (localId, tipo) => ejecutar(() => client.POST('/v1/archivos/url-subida', { body: { localId, tipo }, signal: timeout() }), { repetible: true }),
+    registrarFoto: async (id, path) => sinCuerpo(await ejecutar(() => client.PUT('/v1/locales/{id}/foto', { params: { path: { id } }, body: { path }, signal: timeout() }), { repetible: true })),
+    urlFoto: (id) => ejecutar(() => client.GET('/v1/locales/{id}/foto-url', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
 
     importarPines: (pines) => ejecutar(() => client.POST('/v1/pines/importaciones', { body: { pines: [...pines] }, signal: timeout() })),
     async listarPropuestas(estado) {
-      const r = await ejecutar(() => client.GET('/v1/pines/propuestas', { params: { query: { estado } }, signal: timeout() }));
+      const r = await ejecutar(() => client.GET('/v1/pines/propuestas', { params: { query: { estado } }, signal: timeout() }), { repetible: true });
       return mapear(r, (d) => d.propuestas);
     },
     resolverPropuesta: async (id, accion) => sinCuerpo(await ejecutar(() => client.POST('/v1/pines/propuestas/{id}/resolver', { params: { path: { id } }, body: { accion }, signal: timeout() }))),
 
     async listarUsuarios() {
-      const r = await ejecutar(() => client.GET('/v1/usuarios', { signal: timeout() }));
+      const r = await ejecutar(() => client.GET('/v1/usuarios', { signal: timeout() }), { repetible: true });
       return mapear(r, (d) => d.usuarios);
     },
     crearUsuario: (datos) => ejecutar(() => client.POST('/v1/usuarios', { body: datos, signal: timeout() })),
