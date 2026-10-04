@@ -270,3 +270,51 @@ progress {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
+/* ---- Fase 3b: editor de horarios ---- */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.chip {
+  min-height: 4rem;
+  min-width: 4rem;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-weight: 800;
+  background: var(--bg);
+  color: var(--fg);
+  border: 4px solid var(--fg);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+.chip[aria-pressed='true'] {
+  background: var(--fg);
+  color: var(--bg);
+}
+.chip:focus-visible {
+  outline: 6px solid var(--fg);
+  outline-offset: 4px;
+}
+.grupo-opciones {
+  border: 4px solid var(--fg);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+}
+.grupo-opciones legend {
+  font-weight: 800;
+  padding: 0 0.5rem;
+}
+.lista-dias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}

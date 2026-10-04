@@ -176,6 +176,98 @@ describe('detalle del local', () => {
   });
 });
 
+describe('horario del local (editor con botones)', () => {
+  const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'validado' as const, lat: -33.4372, lng: -70.6506 };
+  const abrir = async (api: Partial<ApiClient> = {}, sesion = DESPACHADOR) => {
+    montar({ ruta: '/clientes/l1', sesion, api: { obtenerLocal: () => Promise.resolve(ok(local)), ...api } });
+    return screen.findByRole('region', { name: 'Editar horario de atención' });
+  };
+  const resumen = () => within(screen.getByRole('list', { name: 'Horario actual' }));
+
+  it('muestra el horario guardado y los días sin dato', async () => {
+    await abrir({ obtenerHorario: () => Promise.resolve(ok([{ dia: 1, cerrado: false, tramos: [{ desde: 600, hasta: 1080 }] }, { dia: 0, cerrado: true, tramos: [] }])) });
+    expect(resumen().getByText(/Abre 10:00 · cierra 18:00/)).toBeInTheDocument();
+    expect(resumen().getByText(/Domingo:/).parentElement).toHaveTextContent('Cerrado');
+    expect(resumen().getByText(/Martes:/).parentElement).toHaveTextContent('Sin dato');
+  });
+
+  it('con botones: lun a vie abre a las 10, cierra a las 18, colación 13 a 14, domingo cerrado, y guarda', async () => {
+    const guardarHorario = vi.fn((_id: string, dias: unknown) => Promise.resolve(ok(dias as never)));
+    const editor = await abrir({ guardarHorario });
+    const e = within(editor);
+    await userEvent.click(e.getByRole('button', { name: 'LUN A VIE' }));
+    await userEvent.click(e.getByRole('button', { name: 'Abre a las 10:00' }));
+    await userEvent.click(e.getByRole('button', { name: 'Cierra a las 18:00' }));
+    await userEvent.click(e.getByRole('button', { name: 'Colación de 13:00 a 14:00' }));
+    await userEvent.click(e.getByRole('button', { name: 'LIMPIAR' }));
+    await userEvent.click(e.getByRole('button', { name: 'DOM' }));
+    await userEvent.click(e.getByRole('button', { name: 'CERRADO' }));
+    expect(resumen().getByText(/Lunes:/).parentElement).toHaveTextContent('10:00 a 13:00 y 14:00 a 18:00');
+    expect(e.getByText('Hay cambios sin guardar.')).toBeInTheDocument();
+    await userEvent.click(e.getByRole('button', { name: 'GUARDAR HORARIO' }));
+    expect(await e.findByText(/Horario guardado como dato manual/)).toBeInTheDocument();
+    const enviado = guardarHorario.mock.calls[0]?.[1] as { dia: number; cerrado: boolean; tramos: unknown[] }[];
+    expect(enviado.map((d) => d.dia)).toEqual([1, 2, 3, 4, 5, 0]);
+    expect(enviado[0]).toEqual({ dia: 1, cerrado: false, tramos: [{ desde: 600, hasta: 780 }, { desde: 840, hasta: 1080 }] });
+    expect(enviado[5]).toEqual({ dia: 0, cerrado: true, tramos: [] });
+  });
+
+  it('sin elegir días avisa; «otro horario» acepta horas a mano y colación', async () => {
+    const editor = await abrir();
+    const e = within(editor);
+    await userEvent.click(e.getByRole('button', { name: 'CERRADO' }));
+    expect(await e.findByText(/Primero elige a qué días/)).toBeInTheDocument();
+    await userEvent.click(e.getByRole('button', { name: 'SÁB' }));
+    await userEvent.click(e.getByRole('button', { name: 'OTRO HORARIO' }));
+    await userEvent.clear(e.getByLabelText('Abre a las', { selector: 'input' }));
+    await userEvent.type(e.getByLabelText('Abre a las', { selector: 'input' }), '07:30');
+    await userEvent.clear(e.getByLabelText('Cierra a las', { selector: 'input' }));
+    await userEvent.type(e.getByLabelText('Cierra a las', { selector: 'input' }), '15:00');
+    await userEvent.type(e.getByLabelText('Colación desde (opcional)'), '12:00');
+    await userEvent.type(e.getByLabelText('Colación hasta (opcional)'), '12:45');
+    await userEvent.click(e.getByRole('button', { name: 'APLICAR A LOS DÍAS ELEGIDOS' }));
+    expect(resumen().getByText(/Sábado:/).parentElement).toHaveTextContent('07:30 a 12:00 y 12:45 a 15:00');
+  });
+
+  it('una colación que no cabe en el horario se informa y no se aplica', async () => {
+    const editor = await abrir();
+    const e = within(editor);
+    await userEvent.click(e.getByRole('button', { name: 'LUN' }));
+    await userEvent.click(e.getByRole('button', { name: 'Abre a las 13:00' }));
+    await userEvent.click(e.getByRole('button', { name: 'Colación de 13:00 a 14:00' }));
+    expect(await e.findByRole('alert')).toHaveTextContent('No se pudo aplicar en: lunes');
+    expect(resumen().getByText(/Lunes:/).parentElement).toHaveTextContent('Abre a las 13:00');
+  });
+
+  it('un error al guardar se muestra y deja los cambios sin guardar', async () => {
+    const editor = await abrir({ guardarHorario: () => Promise.resolve(http(422, { codigo: 'VALIDACION', mensaje: 'El lunes: los tramos se solapan.' })) });
+    const e = within(editor);
+    await userEvent.click(e.getByRole('button', { name: 'LUN' }));
+    await userEvent.click(e.getByRole('button', { name: 'CERRADO' }));
+    await userEvent.click(e.getByRole('button', { name: 'GUARDAR HORARIO' }));
+    expect(await e.findByRole('alert')).toHaveTextContent('El lunes: los tramos se solapan.');
+    expect(e.getByRole('button', { name: 'GUARDAR HORARIO' })).toBeEnabled();
+  });
+});
+
+describe('pin del local', () => {
+  const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Kiosko', direccion: 'Calle 1', comuna: 'Maipú', pinEstado: 'pendiente' as const };
+  it('guarda la ubicación pegada desde Google Maps y rechaza lo que no se entiende', async () => {
+    const actualizarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), actualizarLocal } });
+    const campo = await screen.findByLabelText('Ubicación del local (pin)');
+    await userEvent.type(campo, 'cerca de la plaza');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR UBICACIÓN' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('No entendí las coordenadas');
+    expect(actualizarLocal).not.toHaveBeenCalled();
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '-33.5123, -70.7001');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR UBICACIÓN' }));
+    expect(await screen.findByText('Ubicación guardada.')).toBeInTheDocument();
+    expect(actualizarLocal).toHaveBeenCalledWith('l1', { lat: -33.5123, lng: -70.7001 });
+  });
+});
+
 describe('cliente nuevo', () => {
   it('manda solo los campos con datos y lleva al detalle; los errores de validación se listan', async () => {
     const crearCliente = vi.fn()

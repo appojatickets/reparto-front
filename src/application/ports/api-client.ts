@@ -1,3 +1,4 @@
+import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
   CambiosFactura, Camion, ConfigEmpresa, Factura, FilaCliente, FiltroFacturas, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, UsuarioAdmin, UsuarioSesion, VistaRuta,
@@ -59,6 +60,9 @@ export interface ApiClient extends SaludApi {
 
   obtenerConfig(): R<ConfigEmpresa>;
   guardarConfig(config: ConfigEmpresa): R<ConfigEmpresa>;
+
+  obtenerHorario(localId: string): R<readonly DiaApi[]>;
+  guardarHorario(localId: string, dias: readonly DiaApi[]): R<readonly DiaApi[]>;
 
   verRuta(camionId: string, fecha: string): R<VistaRuta>;
   planificarRuta(camionId: string, fecha: string, salidaMin?: number): R<VistaRuta>;

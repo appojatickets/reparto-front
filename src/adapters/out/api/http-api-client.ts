@@ -191,6 +191,15 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     obtenerConfig: () => ejecutar(() => client.GET('/v1/empresa/config', { signal: timeout() }), { repetible: true }),
     guardarConfig: (config) => ejecutar(() => client.PUT('/v1/empresa/config', { body: config, signal: timeout() })),
 
+    async obtenerHorario(localId) {
+      const r = await ejecutar(() => client.GET('/v1/locales/{id}/horario', { params: { path: { id: localId } }, signal: timeout() }), { repetible: true });
+      return mapear(r, (d) => d.dias);
+    },
+    async guardarHorario(localId, dias) {
+      const r = await ejecutar(() => client.PUT('/v1/locales/{id}/horario', { params: { path: { id: localId } }, body: { dias: dias.map((d) => ({ dia: d.dia, cerrado: d.cerrado, tramos: [...d.tramos] })) }, signal: timeout() }));
+      return mapear(r, (d) => d.dias);
+    },
+
     verRuta: (camionId, fecha) => ejecutar(() => client.GET('/v1/rutas', { params: { query: { camionId, fecha } }, signal: timeout() }), { repetible: true }),
     planificarRuta: (camionId, fecha, salidaMin) => ejecutar(() => client.POST('/v1/rutas/planificar', { body: { camionId, fecha, ...(salidaMin !== undefined ? { salidaMin } : {}) }, signal: timeout() })),
     operarRuta: (camionId, fecha, version, operacion) => ejecutar(() => client.POST('/v1/rutas/operaciones', { body: { camionId, fecha, version, operacion }, signal: timeout() })),

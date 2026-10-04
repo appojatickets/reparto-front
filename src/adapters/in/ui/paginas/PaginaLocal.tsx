@@ -1,5 +1,6 @@
 import { useCallback, useState, type ChangeEvent, type SyntheticEvent } from 'react';
 import { useParams } from 'react-router';
+import { leerCoordenadas } from '../../../../domain/coordenadas';
 import { enlaceGoogleMaps, enlaceStreetView, enlaceWaze } from '../../../../domain/enlaces';
 import { puedeHacer } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
@@ -7,6 +8,7 @@ import type { LocalDetalle } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { useUsuario } from '../sesion';
+import { EditorHorario, ResumenHorario } from '../componentes/EditorHorario';
 import { AreaTexto, Aviso, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina } from '../componentes/ui';
 import { ETIQUETA_PIN } from './PaginaClientes';
 
@@ -19,6 +21,50 @@ const FotoLocal = ({ localId, version }: { readonly localId: string; readonly ve
   if (estado.tipo === 'cargando') return <Cargando texto="Cargando foto…" />;
   if (estado.tipo === 'error') return <Aviso tipo="error">{mensajeDeError(estado.error, 'No se pudo cargar la foto.')}</Aviso>;
   return <img className="foto" src={estado.datos.url} alt="Fachada del local" />;
+};
+
+const SeccionHorario = ({ localId, editar }: { readonly localId: string; readonly editar: boolean }) => {
+  const { api } = useCasos();
+  const cargar = useCallback(() => api.obtenerHorario(localId), [api, localId]);
+  const { estado, recargar } = useCarga(cargar);
+  if (estado.tipo === 'cargando') return <Cargando texto="Cargando horario…" />;
+  if (estado.tipo === 'error') return <ErrorCarga error={estado.error} alReintentar={recargar} />;
+  if (editar) return <EditorHorario localId={localId} inicial={estado.datos} />;
+  return (
+    <section className="pagina" aria-label="Horario de atención">
+      <h2>Horario de atención</h2>
+      <ResumenHorario dias={estado.datos} />
+    </section>
+  );
+};
+
+const PinLocal = ({ local, recargar }: { readonly local: LocalDetalle; readonly recargar: () => void }) => {
+  const { api } = useCasos();
+  const [texto, setTexto] = useState(local.lat !== undefined && local.lng !== undefined ? `${local.lat}, ${local.lng}` : '');
+  const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | undefined>();
+  const [ocupado, setOcupado] = useState(false);
+  const guardar = async (e: SyntheticEvent): Promise<void> => {
+    e.preventDefault();
+    const punto = leerCoordenadas(texto);
+    if (!punto) {
+      setMensaje({ tipo: 'error', texto: 'No entendí las coordenadas. Pega las dos cifras como las copia Google Maps, por ejemplo: -33.4372, -70.6506 (deben estar en la Región Metropolitana).' });
+      return;
+    }
+    setOcupado(true);
+    const r = await api.actualizarLocal(local.id, punto);
+    setOcupado(false);
+    if (r.ok) {
+      setMensaje({ tipo: 'exito', texto: 'Ubicación guardada.' });
+      recargar();
+    } else setMensaje({ tipo: 'error', texto: mensajeDeError(r.error) });
+  };
+  return (
+    <form className="pagina" onSubmit={(e) => void guardar(e)} noValidate>
+      <Campo etiqueta="Ubicación del local (pin)" ayuda="En Google Maps toca y mantén el lugar exacto y copia las dos cifras de arriba." value={texto} onChange={(e) => { setTexto(e.target.value); }} autoComplete="off" />
+      <Boton type="submit" disabled={ocupado}>GUARDAR UBICACIÓN</Boton>
+      {mensaje ? <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
+    </form>
+  );
 };
 
 const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly recargar: () => void }) => {
@@ -85,6 +131,8 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
         </form>
       ) : null}
       {mensaje ? <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
+      {editar ? <PinLocal key={`${local.lat ?? ''},${local.lng ?? ''}`} local={local} recargar={recargar} /> : null}
+      <SeccionHorario localId={local.id} editar={editar} />
     </Pagina>
   );
 };

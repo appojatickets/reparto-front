@@ -64,3 +64,31 @@ test.describe('fase 3b: rutas y configuración', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 });
+
+test.describe('fase 3b: horario del local', () => {
+  const LOCAL = { id: '123e4567-e89b-42d3-a456-426614174000', clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', direccion: 'Av. Providencia 2500', comuna: 'Providencia', lat: -33.4372, lng: -70.6506, pinEstado: 'validado' };
+
+  test('el editor con botones es accesible, sirve con el teclado y guarda', async ({ page }) => {
+    let enviado: unknown;
+    await simularApi(page, rutas({
+      [`GET /v1/locales/${LOCAL.id}`]: () => ({ status: 200, json: LOCAL }),
+      [`GET /v1/locales/${LOCAL.id}/horario`]: () => ({ status: 200, json: { dias: [{ dia: 0, cerrado: true, tramos: [] }] } }),
+      [`PUT /v1/locales/${LOCAL.id}/horario`]: (req) => { enviado = req.postDataJSON(); return { status: 200, json: req.postDataJSON() }; },
+    }));
+    await conSesionGuardada(page);
+    await page.goto(`/clientes/${LOCAL.id}`);
+    const editor = page.getByRole('region', { name: 'Editar horario de atención' });
+    await expect(editor).toBeVisible();
+    await sinViolaciones(page);
+    await editor.getByRole('button', { name: 'LUN A VIE' }).click();
+    await editor.getByRole('button', { name: 'Abre a las 10:00' }).click();
+    await editor.getByRole('button', { name: 'Cierra a las 18:00' }).click();
+    await editor.getByRole('button', { name: 'OTRO HORARIO' }).click();
+    await sinViolaciones(page);
+    for (const b of await editor.getByRole('button').all()) expect((await b.boundingBox())?.height ?? 64).toBeGreaterThanOrEqual(63);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await editor.getByRole('button', { name: 'GUARDAR HORARIO' }).click();
+    await expect(editor.getByText(/Horario guardado como dato manual/)).toBeVisible();
+    expect(enviado).toMatchObject({ dias: expect.arrayContaining([{ dia: 1, cerrado: false, tramos: [{ desde: 600, hasta: 1080 }] }, { dia: 0, cerrado: true, tramos: [] }]) });
+  });
+});
