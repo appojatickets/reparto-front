@@ -36,6 +36,7 @@ const casos: Casos = {
   cerrarSesion: crearCerrarSesion({ store }),
   importarClientesEnLotes: crearImportarClientesEnLotes({ api }),
   subirFotoLocal: crearSubirFotoLocal({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),
+  ahora: () => new Date(),
 };
 const deps = { api, timer: browserTimer, wakingAfterMs: 3000 };
 

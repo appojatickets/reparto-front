@@ -1,6 +1,6 @@
 import type { Result } from '../../domain/result';
 import type {
-  FilaCliente, LocalDetalle, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, UsuarioAdmin, UsuarioSesion,
+  CambiosFactura, Camion, Factura, FilaCliente, FiltroFacturas, LocalDetalle, NuevaFactura, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, UsuarioAdmin, UsuarioSesion,
 } from '../modelos';
 
 export type HealthReport = {
@@ -48,4 +48,12 @@ export interface ApiClient extends SaludApi {
   crearUsuario(datos: NuevoUsuario): R<UsuarioAdmin>;
   resetearPin(usuarioId: string, pin: string): R<void>;
   cambiarEstadoUsuario(usuarioId: string, activo: boolean): R<void>;
+
+  listarCamiones(opciones?: { incluirInactivos?: boolean }): R<readonly Camion[]>;
+  crearCamion(datos: { patente: string; alias?: string }): R<Camion>;
+  actualizarCamion(id: string, cambios: { alias?: string | null; activo?: boolean }): R<Camion>;
+
+  listarFacturas(filtro?: FiltroFacturas): R<readonly Factura[]>;
+  registrarFactura(datos: NuevaFactura): R<Factura>;
+  actualizarFactura(id: string, cambios: CambiosFactura): R<Factura>;
 }

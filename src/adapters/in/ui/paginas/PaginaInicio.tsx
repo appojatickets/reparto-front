@@ -4,10 +4,12 @@ import { Aviso, Pagina } from '../componentes/ui';
 import { useUsuario } from '../sesion';
 
 const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: string }>> = {
+  facturas: { a: '/facturas', texto: 'FACTURAS DEL DÍA' },
   'buscar-clientes': { a: '/clientes', texto: 'BUSCAR CLIENTE' },
   'cliente-nuevo': { a: '/clientes/nuevo', texto: 'CLIENTE NUEVO' },
   'revisar-pines': { a: '/pines', texto: 'PINES DE LOCALES' },
   'importar-clientes': { a: '/admin/importar', texto: 'IMPORTAR CLIENTES' },
+  camiones: { a: '/admin/camiones', texto: 'CAMIONES' },
   usuarios: { a: '/admin/usuarios', texto: 'USUARIOS' },
 };
 

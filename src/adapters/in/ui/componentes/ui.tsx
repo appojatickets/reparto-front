@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, Ref, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import { useId } from 'react';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ApiError } from '../../../../application/ports/api-client';
@@ -17,13 +17,13 @@ export const Boton = ({ variante = 'primario', className = '', ...props }: Butto
 
 type CampoProps = { readonly etiqueta: string; readonly ayuda?: string; readonly error?: string | undefined };
 
-export const Campo = ({ etiqueta, ayuda, error, ...props }: CampoProps & InputHTMLAttributes<HTMLInputElement>) => {
+export const Campo = ({ etiqueta, ayuda, error, ref, ...props }: CampoProps & InputHTMLAttributes<HTMLInputElement> & { readonly ref?: Ref<HTMLInputElement> }) => {
   const id = useId();
   return (
     <div className="campo">
       <label htmlFor={id}>{etiqueta}</label>
       {ayuda ? <span id={`${id}-ayuda`} className="ayuda">{ayuda}</span> : null}
-      <input id={id} aria-describedby={ayuda ? `${id}-ayuda` : undefined} aria-invalid={error ? true : undefined} {...props} />
+      <input ref={ref} id={id} aria-describedby={ayuda ? `${id}-ayuda` : undefined} aria-invalid={error ? true : undefined} {...props} />
       {error ? <span role="alert" className="error-campo">{error}</span> : null}
     </div>
   );

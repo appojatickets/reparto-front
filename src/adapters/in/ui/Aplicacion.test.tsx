@@ -5,7 +5,7 @@ import { err, ok } from '../../../domain/result';
 import type { UsuarioSesion } from '../../../application/modelos';
 import type { ApiClient } from '../../../application/ports/api-client';
 import type { EstadoSesion } from '../../../application/use-cases/sesion';
-import { fakeApi } from '../../../application/use-cases/fakes.test-util';
+import { fakeApi, http } from '../../../application/use-cases/fakes.test-util';
 import { Aplicacion } from './Aplicacion';
 import { EVENTO_SERVIDOR_DESPERTANDO } from './despertando';
 import { ProveedorCasos, type Casos } from './contexto';
@@ -24,6 +24,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     cerrarSesion: vi.fn(),
     importarClientesEnLotes: vi.fn(),
     subirFotoLocal: vi.fn(),
+    ahora: () => new Date('2026-10-05T15:00:00Z'),
     ...opciones.casos,
   };
   return { casos, ...render(<ProveedorCasos casos={casos}><Aplicacion /></ProveedorCasos>) };
@@ -68,13 +69,15 @@ describe('entrada y protección por rol', () => {
     montar({ sesion: DESPACHADOR });
     expect(await screen.findByRole('link', { name: 'BUSCAR CLIENTE' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'PINES DE LOCALES' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'FACTURAS DEL DÍA' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'USUARIOS' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'CAMIONES' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'IMPORTAR CLIENTES' })).toBeNull();
   });
 
   it('el admin ve todo el menú', async () => {
     montar({ sesion: ADMIN });
-    for (const nombre of ['BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'USUARIOS']) {
+    for (const nombre of ['FACTURAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'USUARIOS']) {
       expect(await screen.findByRole('link', { name: nombre })).toBeInTheDocument();
     }
   });
@@ -289,5 +292,107 @@ describe('pines', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'PROPONER PINES' }));
     expect(await screen.findByText(/Recibidos: 1 · para revisar: 1/)).toBeInTheDocument();
     expect(importarPines).toHaveBeenCalledWith([{ direccion: 'Calle 1 10', lat: '-33,5', lng: '-70,7' }]);
+  });
+});
+
+describe('facturas del día', () => {
+  const CAMION = { id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true };
+  const RABET = { localId: 'l1', clienteId: 'k1', razonSocial: 'Minimarket Rabet', direccion: 'Calle 1 123', comuna: 'Maipú', pinEstado: 'validado' as const };
+  const FACTURA = { id: 'f1', folio: '1001', fecha: '2026-10-05', estado: 'pendiente' as const, urgente: true, antesDeMin: 810, camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' }, local: { id: 'l1', razonSocial: 'Minimarket Rabet', direccion: 'Calle 1 123', comuna: 'Maipú', tienePin: true } };
+
+  it('ingresa una factura con camión, cliente y condiciones; conserva el camión para la siguiente', async () => {
+    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    const listarFacturas = vi.fn(() => Promise.resolve(ok([] as never[])));
+    montar({ ruta: '/facturas', sesion: DESPACHADOR, api: { listarCamiones: () => Promise.resolve(ok([CAMION])), listarFacturas, registrarFactura, buscarClientes: () => Promise.resolve(ok([RABET])) } });
+    await screen.findByRole('option', { name: 'Camión 3 · AB·1234' });
+    await userEvent.selectOptions(screen.getByLabelText('Camión'), 'c1');
+    await userEvent.type(screen.getByLabelText('Cliente'), 'rabe');
+    await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
+    await userEvent.type(screen.getByLabelText('Número de factura (folio)'), '1001');
+    await userEvent.type(screen.getByLabelText('Entregar antes de (opcional)'), '13:30');
+    await userEvent.click(screen.getByLabelText('Urgente'));
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR FACTURA' }));
+    expect(await screen.findByText('Factura 1001 guardada para Minimarket Rabet.')).toBeInTheDocument();
+    expect(registrarFactura).toHaveBeenCalledWith({ folio: '1001', localId: 'l1', fecha: '2026-10-05', camionId: 'c1', antesDeMin: 810, urgente: true });
+    expect(screen.getByLabelText('Camión')).toHaveValue('c1');
+    expect(screen.getByLabelText('Número de factura (folio)')).toHaveValue('');
+    expect(screen.getByLabelText('Cliente')).toBeInTheDocument(); // listo para elegir otro cliente
+    expect(listarFacturas).toHaveBeenCalledTimes(2);
+  });
+
+  it('un folio repetido muestra el aviso de la API y no limpia lo escrito', async () => {
+    const registrarFactura = vi.fn(() => Promise.resolve(http(409, { codigo: 'CONFLICTO', mensaje: 'Ya existe una factura con el folio 1001.' })));
+    montar({ ruta: '/facturas', sesion: DESPACHADOR, api: { listarCamiones: () => Promise.resolve(ok([CAMION])), listarFacturas: () => Promise.resolve(ok([])), registrarFactura, buscarClientes: () => Promise.resolve(ok([RABET])) } });
+    await userEvent.type(await screen.findByLabelText('Cliente'), 'rabe');
+    await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
+    await userEvent.type(screen.getByLabelText('Número de factura (folio)'), '1001');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR FACTURA' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ya existe una factura con el folio 1001.');
+    expect(screen.getByLabelText('Número de factura (folio)')).toHaveValue('1001');
+  });
+
+  it('sin cliente elegido pide elegirlo y no llama a la API', async () => {
+    const registrarFactura = vi.fn();
+    montar({ ruta: '/facturas', sesion: DESPACHADOR, api: { listarCamiones: () => Promise.resolve(ok([])), listarFacturas: () => Promise.resolve(ok([])), registrarFactura } });
+    await userEvent.type(await screen.findByLabelText('Número de factura (folio)'), '1');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR FACTURA' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Elige el cliente.');
+    expect(registrarFactura).not.toHaveBeenCalled();
+  });
+
+  it('«Mañana» pide las facturas del día siguiente en hora de Chile', async () => {
+    const listarFacturas = vi.fn(() => Promise.resolve(ok([])));
+    montar({ ruta: '/facturas', sesion: ADMIN, api: { listarCamiones: () => Promise.resolve(ok([])), listarFacturas } });
+    await userEvent.selectOptions(await screen.findByLabelText('Día de reparto'), 'manana');
+    await waitFor(() => { expect(listarFacturas).toHaveBeenLastCalledWith({ fecha: '2026-10-06' }); });
+    expect(screen.getByText(/Se reparte el martes, 6 de octubre/)).toBeInTheDocument();
+  });
+
+  it('agrupa por camión, muestra condiciones y permite cambiar de camión o anular', async () => {
+    const actualizarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    const listarFacturas = vi.fn(() => Promise.resolve(ok([FACTURA])));
+    montar({ ruta: '/facturas', sesion: DESPACHADOR, api: { listarCamiones: () => Promise.resolve(ok([CAMION])), listarFacturas, actualizarFactura } });
+    const grupo = await screen.findByRole('region', { name: 'Camión 3 · AB·1234' });
+    expect(within(grupo).getByText('URGENTE')).toBeInTheDocument();
+    expect(within(grupo).getByText('ANTES DE 13:30')).toBeInTheDocument();
+    await userEvent.selectOptions(within(grupo).getByLabelText('Camión de la factura 1001'), '');
+    await waitFor(() => { expect(actualizarFactura).toHaveBeenCalledWith('f1', { camionId: null }); });
+    await userEvent.click(within(grupo).getByRole('button', { name: 'ANULAR 1001' }));
+    await waitFor(() => { expect(actualizarFactura).toHaveBeenCalledWith('f1', { estado: 'anulada' }); });
+  });
+
+  it('el chofer no entra a /facturas', async () => {
+    montar({ ruta: '/facturas', sesion: CHOFER });
+    expect(await screen.findByText('Tu ruta del día estará disponible muy pronto.')).toBeInTheDocument();
+  });
+});
+
+describe('camiones', () => {
+  it('agrega un camión por su patente y lo lista; un duplicado muestra el aviso', async () => {
+    const crearCamion = vi.fn()
+      .mockResolvedValueOnce(ok({ id: 'c1', patente: 'AB1234', activo: true }))
+      .mockResolvedValueOnce(http(409, { codigo: 'CONFLICTO', mensaje: 'Ya existe un camión con la patente AB·1234.' }));
+    const listarCamiones = vi.fn(() => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true }])));
+    montar({ ruta: '/admin/camiones', sesion: ADMIN, api: { listarCamiones, crearCamion } });
+    expect(await screen.findByText('AB·1234')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Patente'), 'ab 1234');
+    await userEvent.click(screen.getByRole('button', { name: 'AGREGAR CAMIÓN' }));
+    expect(await screen.findByText('Camión AB·1234 agregado.')).toBeInTheDocument();
+    expect(crearCamion).toHaveBeenCalledWith({ patente: 'ab 1234' });
+    await userEvent.type(screen.getByLabelText('Patente'), 'AB1234');
+    await userEvent.click(screen.getByRole('button', { name: 'AGREGAR CAMIÓN' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ya existe un camión');
+  });
+
+  it('saca un camión de servicio', async () => {
+    const actualizarCamion = vi.fn(() => Promise.resolve(ok({ id: 'c1', patente: 'AB1234', activo: false })));
+    montar({ ruta: '/admin/camiones', sesion: ADMIN, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', activo: true }])), actualizarCamion } });
+    await userEvent.click(await screen.findByRole('button', { name: 'SACAR DE SERVICIO' }));
+    expect(actualizarCamion).toHaveBeenCalledWith('c1', { activo: false });
+  });
+
+  it('el despachador no entra a la administración de camiones', async () => {
+    montar({ ruta: '/admin/camiones', sesion: DESPACHADOR });
+    expect(await screen.findByRole('heading', { name: 'Hola, Ana' })).toBeInTheDocument();
   });
 });

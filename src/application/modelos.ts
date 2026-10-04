@@ -45,3 +45,31 @@ export type NuevoUsuario = { readonly nombre: string; readonly apellidoPaterno: 
 
 export type TipoFoto = 'webp' | 'jpeg';
 export type FilaCliente = FilaClienteCruda;
+
+export type Camion = { readonly id: string; readonly patente: string; readonly alias?: string; readonly activo: boolean };
+export type CamionResumen = { readonly id: string; readonly patente: string; readonly alias?: string };
+
+export type Factura = {
+  readonly id: string;
+  readonly folio: string;
+  readonly fecha: string;
+  readonly estado: 'pendiente' | 'anulada';
+  readonly total?: number;
+  readonly antesDeMin?: number;
+  readonly urgente: boolean;
+  readonly nota?: string;
+  readonly camion?: CamionResumen;
+  readonly local: { readonly id: string; readonly razonSocial: string; readonly direccion: string; readonly comuna: string; readonly tienePin: boolean };
+};
+export type NuevaFactura = {
+  readonly folio: string;
+  readonly localId: string;
+  readonly camionId?: string;
+  readonly fecha?: string;
+  readonly antesDeMin?: number;
+  readonly urgente?: boolean;
+  readonly nota?: string;
+};
+/** `null` quita el valor. */
+export type CambiosFactura = { readonly camionId?: string | null; readonly estado?: 'pendiente' | 'anulada' };
+export type FiltroFacturas = { readonly fecha?: string; readonly incluirAnuladas?: boolean };

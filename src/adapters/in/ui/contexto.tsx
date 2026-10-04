@@ -12,6 +12,8 @@ export type Casos = {
   readonly cerrarSesion: ReturnType<typeof crearCerrarSesion>;
   readonly importarClientesEnLotes: ReturnType<typeof crearImportarClientesEnLotes>;
   readonly subirFotoLocal: ReturnType<typeof crearSubirFotoLocal>;
+  /** Hora actual (inyectada para que las pantallas con fechas sean comprobables). */
+  readonly ahora: () => Date;
 };
 
 const Contexto = createContext<Casos | undefined>(undefined);

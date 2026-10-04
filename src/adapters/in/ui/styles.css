@@ -241,3 +241,32 @@ progress {
   z-index: 10;
   background: var(--bg);
 }
+
+/* ---- Fase 3a: facturas ---- */
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4rem;
+  font-weight: 800;
+}
+.casilla input[type='checkbox'] {
+  width: 2.5rem;
+  min-height: 2.5rem;
+  height: 2.5rem;
+  accent-color: var(--fg);
+}
+.tarjeta-boton {
+  width: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  min-height: 4rem;
+  cursor: pointer;
+}
+.insignias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

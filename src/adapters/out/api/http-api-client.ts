@@ -172,5 +172,20 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     crearUsuario: (datos) => ejecutar(() => client.POST('/v1/usuarios', { body: datos, signal: timeout() })),
     resetearPin: async (id, pin) => sinCuerpo(await ejecutar(() => client.POST('/v1/usuarios/{id}/pin', { params: { path: { id } }, body: { pin }, signal: timeout() }))),
     cambiarEstadoUsuario: async (id, activo) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/usuarios/{id}', { params: { path: { id } }, body: { activo }, signal: timeout() }))),
+
+    async listarCamiones(opciones = {}) {
+      const r = await ejecutar(() => client.GET('/v1/camiones', { params: { query: opciones.incluirInactivos ? { incluirInactivos: 'true' } : {} }, signal: timeout() }), { repetible: true });
+      return mapear(r, (d) => d.camiones);
+    },
+    crearCamion: (datos) => ejecutar(() => client.POST('/v1/camiones', { body: datos, signal: timeout() })),
+    actualizarCamion: (id, cambios) => ejecutar(() => client.PATCH('/v1/camiones/{id}', { params: { path: { id } }, body: cambios, signal: timeout() })),
+
+    async listarFacturas(filtro = {}) {
+      const query = { ...(filtro.fecha ? { fecha: filtro.fecha } : {}), ...(filtro.incluirAnuladas ? { incluirAnuladas: 'true' as const } : {}) };
+      const r = await ejecutar(() => client.GET('/v1/facturas', { params: { query }, signal: timeout() }), { repetible: true });
+      return mapear(r, (d) => d.facturas);
+    },
+    registrarFactura: (datos) => ejecutar(() => client.POST('/v1/facturas', { body: datos, signal: timeout() })),
+    actualizarFactura: (id, cambios) => ejecutar(() => client.PATCH('/v1/facturas/{id}', { params: { path: { id } }, body: cambios, signal: timeout() })),
   };
 };
