@@ -36,9 +36,9 @@ test.describe('fase 3b: rutas y configuración', () => {
     await expect(page.getByRole('listitem', { name: 'Parada 1' })).toBeVisible();
     await expect(page.getByRole('region', { name: 'Paradas en riesgo' })).toBeVisible();
     await sinViolaciones(page);
-    await page.getByRole('button', { name: 'MÁS OPCIONES 1002' }).click();
+    await page.getByRole('button', { name: 'MÁS OPCIONES Local 2' }).click();
     await sinViolaciones(page);
-    await page.getByRole('button', { name: 'SUBIR 1002' }).click();
+    await page.getByRole('button', { name: 'SUBIR Local 2' }).click();
     await expect(page.getByText('ACOMODADA A MANO')).toBeVisible();
     expect(operacion).toMatchObject({ version: 1, operacion: { tipo: 'subir' } });
   });

@@ -71,7 +71,7 @@ export const InicioChofer = () => {
         <strong>Camión {nombreCamion(jornada.camion)}</strong>
       </div>
       <ul className="menu">
-        <li><Link to="/cargar">CARGAR FACTURAS</Link></li>
+        <li><Link to="/cargar">CARGAR ENTREGAS</Link></li>
         <li><Link to="/mi-ruta">MI RUTA</Link></li>
       </ul>
       <div className="fila-botones">

@@ -403,14 +403,14 @@ describe('facturas del día', () => {
     await userEvent.selectOptions(screen.getByLabelText('Camión'), 'c1');
     await userEvent.type(screen.getByLabelText('Cliente'), 'rabe');
     await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
-    await userEvent.type(screen.getByLabelText('Número de factura (folio)'), '1001');
+    await userEvent.type(screen.getByLabelText('Número de factura (opcional)'), '1001');
     await userEvent.type(screen.getByLabelText('Entregar antes de (opcional)'), '13:30');
     await userEvent.click(screen.getByLabelText('Urgente'));
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR FACTURA' }));
-    expect(await screen.findByText('Factura 1001 guardada para Minimarket Rabet.')).toBeInTheDocument();
+    expect(await screen.findByText('Entrega guardada para Minimarket Rabet.')).toBeInTheDocument();
     expect(registrarFactura).toHaveBeenCalledWith({ folio: '1001', localId: 'l1', fecha: '2026-10-05', camionId: 'c1', antesDeMin: 810, urgente: true });
     expect(screen.getByLabelText('Camión')).toHaveValue('c1');
-    expect(screen.getByLabelText('Número de factura (folio)')).toHaveValue('');
+    expect(screen.getByLabelText('Número de factura (opcional)')).toHaveValue('');
     expect(screen.getByLabelText('Cliente')).toBeInTheDocument(); // listo para elegir otro cliente
     expect(listarFacturas).toHaveBeenCalledTimes(2);
   });
@@ -420,16 +420,16 @@ describe('facturas del día', () => {
     montar({ ruta: '/facturas', sesion: DESPACHADOR, api: { listarCamiones: () => Promise.resolve(ok([CAMION])), listarFacturas: () => Promise.resolve(ok([])), registrarFactura, buscarClientes: () => Promise.resolve(ok([RABET])) } });
     await userEvent.type(await screen.findByLabelText('Cliente'), 'rabe');
     await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
-    await userEvent.type(screen.getByLabelText('Número de factura (folio)'), '1001');
+    await userEvent.type(screen.getByLabelText('Número de factura (opcional)'), '1001');
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR FACTURA' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Ya existe una factura con el folio 1001.');
-    expect(screen.getByLabelText('Número de factura (folio)')).toHaveValue('1001');
+    expect(screen.getByLabelText('Número de factura (opcional)')).toHaveValue('1001');
   });
 
   it('sin cliente elegido pide elegirlo y no llama a la API', async () => {
     const registrarFactura = vi.fn();
     montar({ ruta: '/facturas', sesion: DESPACHADOR, api: { listarCamiones: () => Promise.resolve(ok([])), listarFacturas: () => Promise.resolve(ok([])), registrarFactura } });
-    await userEvent.type(await screen.findByLabelText('Número de factura (folio)'), '1');
+    await userEvent.type(await screen.findByLabelText('Número de factura (opcional)'), '1');
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR FACTURA' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Elige el cliente.');
     expect(registrarFactura).not.toHaveBeenCalled();
@@ -450,9 +450,9 @@ describe('facturas del día', () => {
     const grupo = await screen.findByRole('region', { name: 'Camión 3 · AB·1234' });
     expect(within(grupo).getByText('URGENTE')).toBeInTheDocument();
     expect(within(grupo).getByText('ANTES DE 13:30')).toBeInTheDocument();
-    await userEvent.selectOptions(within(grupo).getByLabelText('Camión de la factura 1001'), '');
+    await userEvent.selectOptions(within(grupo).getByLabelText('Camión de Minimarket Rabet'), '');
     await waitFor(() => { expect(actualizarFactura).toHaveBeenCalledWith('f1', { camionId: null }); });
-    await userEvent.click(within(grupo).getByRole('button', { name: 'ANULAR 1001' }));
+    await userEvent.click(within(grupo).getByRole('button', { name: 'ANULAR Minimarket Rabet' }));
     await waitFor(() => { expect(actualizarFactura).toHaveBeenCalledWith('f1', { estado: 'anulada' }); });
   });
 
@@ -579,9 +579,9 @@ describe('rutas del día', () => {
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())), operarRuta }) });
     await elegirCamion();
     await screen.findByRole('listitem', { name: 'Parada 1' });
-    expect(screen.getByRole('button', { name: 'SUBIR 100A' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'BAJAR 100C' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'SUBIR 100B' }));
+    expect(screen.getByRole('button', { name: 'SUBIR Local A' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'BAJAR Local C' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'SUBIR Local B' }));
     expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'subir', facturaId: 'fB' });
     expect(await screen.findByText('1. Local B')).toBeInTheDocument();
     expect(screen.getByText('ACOMODADA A MANO')).toBeInTheDocument();
@@ -591,12 +591,12 @@ describe('rutas del día', () => {
     const operarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 2 }))));
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())), operarRuta }) });
     await elegirCamion();
-    expect(screen.queryByRole('button', { name: 'IR PRIMERO 100C' })).toBeNull();
-    await userEvent.click(await screen.findByRole('button', { name: 'MÁS OPCIONES 100C' }));
-    await userEvent.click(screen.getByRole('button', { name: 'IR PRIMERO 100C' }));
+    expect(screen.queryByRole('button', { name: 'IR PRIMERO Local C' })).toBeNull();
+    await userEvent.click(await screen.findByRole('button', { name: 'MÁS OPCIONES Local C' }));
+    await userEvent.click(screen.getByRole('button', { name: 'IR PRIMERO Local C' }));
     expect(operarRuta).toHaveBeenLastCalledWith('c1', '2026-10-05', 1, { tipo: 'primero', facturaId: 'fC' });
-    await userEvent.click(screen.getByRole('button', { name: 'MÁS OPCIONES 100B' }));
-    await userEvent.click(screen.getByRole('button', { name: 'QUITAR DEL CAMIÓN 100B' }));
+    await userEvent.click(screen.getByRole('button', { name: 'MÁS OPCIONES Local B' }));
+    await userEvent.click(screen.getByRole('button', { name: 'QUITAR DEL CAMIÓN Local B' }));
     expect(operarRuta).toHaveBeenLastCalledWith('c1', '2026-10-05', 2, { tipo: 'quitar', facturaId: 'fB' });
   });
 
@@ -629,7 +629,7 @@ describe('rutas del día', () => {
     const operarRuta = vi.fn(() => Promise.resolve(http(409, { codigo: 'CONFLICTO', mensaje: 'Otra persona cambió esta ruta. Recarga para ver la versión nueva.', detalle: { codigo: 'RUTA_DESACTUALIZADA' } })));
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta, operarRuta }) });
     await elegirCamion();
-    await userEvent.click(await screen.findByRole('button', { name: 'SUBIR 100B' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'SUBIR Local B' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Otra persona cambió esta ruta');
     expect(await screen.findByText('1. Local C')).toBeInTheDocument();
     expect(verRuta).toHaveBeenCalledTimes(2);
@@ -647,11 +647,12 @@ describe('rutas del día', () => {
   });
 });
 
-describe('el chofer: camión del día y carga de facturas', () => {
+describe('el chofer: camión del día y carga de entregas', () => {
   const CAMION = { id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true };
   const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
   const RABET = { localId: 'l1', clienteId: 'k1', razonSocial: 'Minimarket Rabet', direccion: 'Calle 1 123', comuna: 'Maipú', pinEstado: 'validado' as const };
-  const FACTURA = { id: 'f1', folio: '1234', fecha: '2026-10-05', estado: 'pendiente' as const, urgente: false, camion: { id: 'c1', patente: 'AB1234' }, local: { id: 'l1', razonSocial: 'Minimarket Rabet', direccion: 'Calle 1 123', comuna: 'Maipú', tienePin: true } };
+  const FACTURA = { id: 'f1', fecha: '2026-10-05', estado: 'pendiente' as const, urgente: false, camion: { id: 'c1', patente: 'AB1234' }, local: { id: 'l1', razonSocial: 'Minimarket Rabet', direccion: 'Calle 1 123', comuna: 'Maipú', tienePin: true } };
+  const baseApi = (extra: Partial<ApiClient> = {}): Partial<ApiClient> => ({ miJornada: () => Promise.resolve(ok(JORNADA)), listarFacturas: () => Promise.resolve(ok([])), ...extra });
 
   it('sin jornada elige el camión con un toque y entra a su inicio', async () => {
     const miJornada = vi.fn().mockResolvedValueOnce(ok(null)).mockResolvedValue(ok(JORNADA));
@@ -660,92 +661,107 @@ describe('el chofer: camión del día y carga de facturas', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Camión 3 · AB·1234' }));
     expect(iniciarJornada).toHaveBeenCalledWith('c1');
     expect(await screen.findByText('Camión Camión 3 · AB·1234')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'CARGAR FACTURAS' })).toHaveAttribute('href', '/cargar');
+    expect(screen.getByRole('link', { name: 'CARGAR ENTREGAS' })).toHaveAttribute('href', '/cargar');
     expect(screen.getByRole('link', { name: 'MI RUTA' })).toHaveAttribute('href', '/mi-ruta');
   });
 
   it('con jornada puede cambiar de camión o terminar su día', async () => {
     const terminarJornada = vi.fn(() => Promise.resolve(ok(undefined)));
     montar({ sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), terminarJornada, listarCamiones: () => Promise.resolve(ok([CAMION])) } });
-    await userEvent.click(await screen.findByRole('button', { name: 'CAMBIAR DE CAMIÓN' }));
-    expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
-  });
-
-  it('terminar el día cierra la jornada', async () => {
-    const terminarJornada = vi.fn(() => Promise.resolve(ok(undefined)));
-    montar({ sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), terminarJornada } });
     await userEvent.click(await screen.findByRole('button', { name: 'TERMINAR MI DÍA' }));
     expect(terminarJornada).toHaveBeenCalledTimes(1);
   });
 
-  it('carga una factura con una línea dictada: entiende folio y cliente, y guarda al tocar el cliente', async () => {
+  it('cambiar de camión vuelve a la elección', async () => {
+    montar({ sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarCamiones: () => Promise.resolve(ok([CAMION])) } });
+    await userEvent.click(await screen.findByRole('button', { name: 'CAMBIAR DE CAMIÓN' }));
+    expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
+  });
+
+  it('carga una entrega con solo el cliente, sin número de factura', async () => {
     const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
     const buscarClientes = vi.fn(() => Promise.resolve(ok([RABET])));
     const listarFacturas = vi.fn(() => Promise.resolve(ok([] as never[])));
-    montar({ ruta: '/cargar', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), registrarFactura, buscarClientes, listarFacturas } });
-    await userEvent.type(await screen.findByLabelText('Factura y cliente'), 'factura número 1234 minimarket rabet');
-    expect(screen.getByText('1234', { selector: 'strong' })).toBeInTheDocument();
-    expect(screen.getByText('minimarket rabet', { selector: 'strong' })).toBeInTheDocument();
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ registrarFactura, buscarClientes, listarFacturas }) });
+    await userEvent.type(await screen.findByLabelText('¿A quién le llevas?'), 'minimarket rabet');
     await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
     expect(buscarClientes).toHaveBeenLastCalledWith('minimarket rabet', expect.objectContaining({ limite: 6 }));
-    expect(registrarFactura).toHaveBeenCalledWith({ folio: '1234', localId: 'l1', camionId: 'c1', fecha: '2026-10-05' });
-    expect(await screen.findByText('Factura 1234 cargada para Minimarket Rabet.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Factura y cliente')).toHaveValue('');
+    expect(registrarFactura).toHaveBeenCalledWith({ localId: 'l1', camionId: 'c1', fecha: '2026-10-05' });
+    expect(await screen.findByText('Cargado: Minimarket Rabet.')).toBeInTheDocument();
+    expect(screen.getByLabelText('¿A quién le llevas?')).toHaveValue('');
     expect(listarFacturas).toHaveBeenCalledTimes(2);
   });
 
-  it('sin número de factura avisa y no guarda; un folio repetido muestra el aviso de la API', async () => {
-    const registrarFactura = vi.fn(() => Promise.resolve(http(409, { codigo: 'CONFLICTO', mensaje: 'Ya existe una factura con el folio 1234.' })));
-    montar({ ruta: '/cargar', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), registrarFactura, buscarClientes: () => Promise.resolve(ok([RABET])), listarFacturas: () => Promise.resolve(ok([])) } });
-    const campo = await screen.findByLabelText('Factura y cliente');
-    await userEvent.type(campo, 'minimarket rabet');
-    expect(await screen.findByText('Falta el número de factura')).toBeInTheDocument();
-    await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Falta el número de factura.');
+  it('si ya cargó a ese cliente hoy, pregunta antes de cargar otra', async () => {
+    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ registrarFactura, buscarClientes: () => Promise.resolve(ok([RABET])), listarFacturas: () => Promise.resolve(ok([FACTURA])) }) });
+    await screen.findByText('Cargadas hoy (1)');
+    await userEvent.type(screen.getByLabelText('¿A quién le llevas?'), 'rabet');
+    await userEvent.click(await screen.findByRole('button', { name: /^Minimarket Rabet.*Maipú/ }));
+    expect(await screen.findByText(/Ya cargaste a Minimarket Rabet hoy/)).toBeInTheDocument();
     expect(registrarFactura).not.toHaveBeenCalled();
-    await userEvent.clear(campo);
-    await userEvent.type(campo, '1234 minimarket rabet');
-    await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Ya existe una factura con el folio 1234.');
-    expect(campo).toHaveValue('1234 minimarket rabet');
+    await userEvent.click(screen.getByRole('button', { name: 'NO' }));
+    expect(screen.queryByText(/Ya cargaste a/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /^Minimarket Rabet.*Maipú/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'CARGAR OTRA' }));
+    await waitFor(() => { expect(registrarFactura).toHaveBeenCalledTimes(1); });
   });
 
-  it('lista lo cargado hoy con condiciones; se pueden poner «antes de», urgente y nota, o anular', async () => {
+  it('«no lo encuentro»: crea el cliente con nombre, dirección y comuna, y lo carga', async () => {
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura, buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('¿A quién le llevas?'), 'almacen don pepe');
+    expect(await screen.findByText('No encuentro ese cliente.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    expect(form.getByLabelText('Nombre del cliente')).toHaveValue('almacen don pepe');
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    expect(await form.findByRole('alert')).toHaveTextContent('Falta el nombre, la dirección o la comuna.');
+    expect(crearCliente).not.toHaveBeenCalled();
+    await userEvent.type(form.getByLabelText('Dirección'), 'Av. Colón 765');
+    await userEvent.selectOptions(form.getByLabelText('Comuna'), 'San Bernardo');
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    await waitFor(() => { expect(registrarFactura).toHaveBeenCalledWith({ localId: 'l9', camionId: 'c1', fecha: '2026-10-05' }); });
+    expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'almacen don pepe', direccion: 'Av. Colón 765', comuna: 'San Bernardo' });
+    expect(await screen.findByText('Cargado: almacen don pepe.')).toBeInTheDocument();
+  });
+
+  it('un error al crear el cliente se muestra en lenguaje simple', async () => {
+    const crearCliente = vi.fn(() => Promise.resolve(http(422, { codigo: 'VALIDACION', mensaje: 'Hay datos inválidos.', detalle: { errores: [{ mensaje: 'La comuna no es de la Región Metropolitana.' }] } })));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('¿A quién le llevas?'), 'kiosko sol');
+    await userEvent.click(await screen.findByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    await userEvent.type(form.getByLabelText('Dirección'), 'Calle 1');
+    await userEvent.selectOptions(form.getByLabelText('Comuna'), 'Maipú');
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    expect(await form.findByRole('alert')).toHaveTextContent('La comuna no es de la Región Metropolitana.');
+  });
+
+  it('lista lo cargado hoy con condiciones; se pueden poner «antes de», urgente y nota, o quitar', async () => {
     const actualizarFactura = vi.fn(() => Promise.resolve(ok({ ...FACTURA, urgente: true })));
-    montar({ ruta: '/cargar', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarFacturas: () => Promise.resolve(ok([FACTURA])), actualizarFactura } });
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ listarFacturas: () => Promise.resolve(ok([FACTURA])), actualizarFactura }) });
     expect(await screen.findByText('Cargadas hoy (1)')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'CALCULAR MI RUTA' })).toHaveAttribute('href', '/mi-ruta');
-    await userEvent.click(screen.getByRole('button', { name: 'CONDICIONES 1234' }));
-    await userEvent.type(screen.getByLabelText('Entregar antes de (factura 1234)'), '13:00');
+    await userEvent.click(screen.getByRole('button', { name: 'CONDICIONES Minimarket Rabet' }));
+    await userEvent.type(screen.getByLabelText('Entregar antes de (Minimarket Rabet)'), '13:00');
     await userEvent.click(screen.getByLabelText('Urgente'));
-    await userEvent.type(screen.getByLabelText('Nota (factura 1234)'), 'portón verde');
+    await userEvent.type(screen.getByLabelText('Nota (Minimarket Rabet)'), 'portón verde');
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR CONDICIONES' }));
     expect(actualizarFactura).toHaveBeenCalledWith('f1', { antesDeMin: 780, urgente: true, nota: 'portón verde' });
-    await userEvent.click(screen.getByRole('button', { name: 'ANULAR 1234' }));
+    await userEvent.click(screen.getByRole('button', { name: 'QUITAR Minimarket Rabet' }));
     expect(actualizarFactura).toHaveBeenLastCalledWith('f1', { estado: 'anulada' });
   });
 
-  it('el botón HABLAR dicta en el campo y entiende el folio dicho con palabras', async () => {
+  it('el botón HABLAR dicta en el campo del cliente; tocar de nuevo mientras escucha lo detiene', async () => {
     let manejadores: Parameters<Casos['voz']['escuchar']>[0] | undefined;
     const detener = vi.fn();
     const voz = { disponible: true, escuchar: vi.fn((m: Parameters<Casos['voz']['escuchar']>[0]) => { manejadores = m; return { detener }; }) };
-    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
-    montar({ ruta: '/cargar', sesion: CHOFER, casos: { voz }, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarFacturas: () => Promise.resolve(ok([])), buscarClientes: () => Promise.resolve(ok([RABET])), registrarFactura } });
+    montar({ ruta: '/cargar', sesion: CHOFER, casos: { voz }, api: baseApi({ buscarClientes: () => Promise.resolve(ok([RABET])) }) });
     await userEvent.click(await screen.findByRole('button', { name: 'HABLAR' }));
-    expect(await screen.findByRole('button', { name: 'ESCUCHANDO… TOCA PARA PARAR' })).toBeInTheDocument();
-    act(() => { manejadores?.alTexto({ texto: 'mil doscientos treinta y cuatro minimarket rabet', final: true }); manejadores?.alTerminar(undefined); });
-    expect(await screen.findByRole('button', { name: 'HABLAR' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Factura y cliente')).toHaveValue('mil doscientos treinta y cuatro minimarket rabet');
-    await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
-    expect(registrarFactura).toHaveBeenCalledWith({ folio: '1234', localId: 'l1', camionId: 'c1', fecha: '2026-10-05' });
-  });
-
-  it('si el micrófono falla, explica qué hacer; tocar de nuevo mientras escucha lo detiene', async () => {
-    let manejadores: Parameters<Casos['voz']['escuchar']>[0] | undefined;
-    const detener = vi.fn();
-    const voz = { disponible: true, escuchar: vi.fn((m: Parameters<Casos['voz']['escuchar']>[0]) => { manejadores = m; return { detener }; }) };
-    montar({ ruta: '/cargar', sesion: CHOFER, casos: { voz }, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarFacturas: () => Promise.resolve(ok([])) } });
-    await userEvent.click(await screen.findByRole('button', { name: 'HABLAR' }));
+    act(() => { manejadores?.alTexto({ texto: 'minimarket rabet', final: true }); });
+    expect(screen.getByLabelText('¿A quién le llevas?')).toHaveValue('minimarket rabet');
     await userEvent.click(await screen.findByRole('button', { name: 'ESCUCHANDO… TOCA PARA PARAR' }));
     expect(detener).toHaveBeenCalledTimes(1);
     act(() => { manejadores?.alTerminar('PERMISO'); });
@@ -753,7 +769,7 @@ describe('el chofer: camión del día y carga de facturas', () => {
   });
 
   it('sin dictado propio no muestra HABLAR y sugiere el micrófono del teclado', async () => {
-    montar({ ruta: '/cargar', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarFacturas: () => Promise.resolve(ok([])) } });
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi() });
     expect(await screen.findByText(/usa el micrófono del teclado/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'HABLAR' })).toBeNull();
   });

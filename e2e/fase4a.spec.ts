@@ -44,27 +44,30 @@ test.describe('fase 4a: el chofer', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 
-  test('cargar una factura dictando una sola línea', async ({ page }) => {
+  test('cargar una entrega solo con el cliente', async ({ page }) => {
     let enviado: unknown;
     await simularApi(page, rutas({ 'POST /v1/facturas': (req) => { enviado = req.postDataJSON(); return { status: 201, json: FACTURA }; } }));
     await conSesionGuardada(page);
     await page.goto('/cargar');
-    await expect(page.getByRole('heading', { name: 'Cargar facturas' })).toBeVisible();
-    await page.getByLabel('Factura y cliente').fill('factura 1234 minimarket rabet');
-    await expect(page.getByRole('button', { name: /Minimarket Rabet/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Cargar entregas' })).toBeVisible();
+    await page.getByLabel('¿A quién le llevas?').fill('minimarket rabet');
+    await expect(page.getByRole('button', { name: /^Minimarket Rabet.*Maipú/ })).toBeVisible();
     await sinViolaciones(page);
-    await page.getByRole('button', { name: /Minimarket Rabet/ }).click();
-    await expect(page.getByText('Factura 1234 cargada para Minimarket Rabet.')).toBeVisible();
-    expect(enviado).toMatchObject({ folio: '1234', localId: UUID, camionId: CAMION.id });
-    await expect(page.getByLabel('Factura y cliente')).toHaveValue('');
+    await page.getByRole('button', { name: /^Minimarket Rabet.*Maipú/ }).click();
+    await expect(page.getByText(/Ya cargaste a Minimarket Rabet hoy/)).toBeVisible(); // la lista simulada ya trae una entrega de ese cliente
+    await page.getByRole('button', { name: 'CARGAR OTRA' }).click();
+    await expect(page.getByText('Cargado: Minimarket Rabet.')).toBeVisible();
+    expect(enviado).toMatchObject({ localId: UUID, camionId: CAMION.id });
+    expect(enviado).not.toHaveProperty('folio');
+    await expect(page.getByLabel('¿A quién le llevas?')).toHaveValue('');
   });
 
   test('la pantalla de cargar con facturas y condiciones abiertas es accesible', async ({ page }) => {
     await simularApi(page, rutas());
     await conSesionGuardada(page);
     await page.goto('/cargar');
-    await page.getByRole('button', { name: 'CONDICIONES 1234' }).click();
-    await expect(page.getByLabel('Entregar antes de (factura 1234)')).toBeVisible();
+    await page.getByRole('button', { name: 'CONDICIONES Minimarket Rabet' }).click();
+    await expect(page.getByLabel('Entregar antes de (Minimarket Rabet)')).toBeVisible();
     await sinViolaciones(page);
     for (const b of await page.getByRole('button').all()) expect((await b.boundingBox())?.height ?? 64).toBeGreaterThanOrEqual(63);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);

@@ -52,7 +52,7 @@ export type CamionResumen = { readonly id: string; readonly patente: string; rea
 
 export type Factura = {
   readonly id: string;
-  readonly folio: string;
+  readonly folio?: string;
   readonly fecha: string;
   readonly estado: 'pendiente' | 'anulada';
   readonly total?: number;
@@ -63,7 +63,7 @@ export type Factura = {
   readonly local: { readonly id: string; readonly razonSocial: string; readonly direccion: string; readonly comuna: string; readonly tienePin: boolean };
 };
 export type NuevaFactura = {
-  readonly folio: string;
+  readonly folio?: string;
   readonly localId: string;
   readonly camionId?: string;
   readonly fecha?: string;
@@ -89,7 +89,7 @@ export type ConfigEmpresa = {
 
 export type ItemRuta = {
   readonly facturaId: string;
-  readonly folio: string;
+  readonly folio?: string;
   readonly localId: string;
   readonly cliente: string;
   readonly direccion: string;

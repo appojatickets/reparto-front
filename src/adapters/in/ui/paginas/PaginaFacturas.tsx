@@ -70,7 +70,7 @@ const FilaFactura = ({ f, camiones, alCambiar }: { readonly f: Factura; readonly
   };
   return (
     <li className="tarjeta">
-      <strong>Factura {f.folio} · {f.local.razonSocial}</strong>
+      <strong>{f.local.razonSocial}{f.folio ? ` · factura ${f.folio}` : ''}</strong>
       <span>{f.local.direccion}, {f.local.comuna}</span>
       <span className="insignias">
         {f.urgente ? <Insignia>URGENTE</Insignia> : null}
@@ -78,11 +78,11 @@ const FilaFactura = ({ f, camiones, alCambiar }: { readonly f: Factura; readonly
         {!f.local.tienePin ? <Insignia>SIN PIN</Insignia> : null}
       </span>
       {f.nota ? <span>Nota: {f.nota}</span> : null}
-      <Selector etiqueta={`Camión de la factura ${f.folio}`} value={f.camion?.id ?? ''} onChange={(e) => void aplicar({ camionId: e.target.value === '' ? null : e.target.value })}>
+      <Selector etiqueta={`Camión de ${f.local.razonSocial}`} value={f.camion?.id ?? ''} onChange={(e) => void aplicar({ camionId: e.target.value === '' ? null : e.target.value })}>
         <option value="">Sin camión</option>
         {camiones.map((c) => <option key={c.id} value={c.id}>{nombreCamion(c)}</option>)}
       </Selector>
-      <div className="fila-botones"><Boton variante="peligro" onClick={() => void aplicar({ estado: 'anulada' })}>{`ANULAR ${f.folio}`}</Boton></div>
+      <div className="fila-botones"><Boton variante="peligro" onClick={() => void aplicar({ estado: 'anulada' })}>{`ANULAR ${f.local.razonSocial}`}</Boton></div>
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
     </li>
   );
@@ -129,7 +129,7 @@ export const PaginaFacturas = () => {
     }
     setOcupado(true);
     const r = await api.registrarFactura({
-      folio, localId: cliente.localId, fecha,
+      ...(folio.trim() !== '' ? { folio } : {}), localId: cliente.localId, fecha,
       ...(camionId !== '' ? { camionId } : {}),
       ...(antes !== undefined ? { antesDeMin: antes } : {}),
       ...(urgente ? { urgente: true } : {}),
@@ -141,7 +141,7 @@ export const PaginaFacturas = () => {
       return;
     }
     // El camión y el día se mantienen: se ingresan varias facturas seguidas.
-    setGuardada(`Factura ${r.value.folio} guardada para ${r.value.local.razonSocial}.`);
+    setGuardada(`Entrega guardada para ${r.value.local.razonSocial}.`);
     setCliente(undefined);
     setFolio('');
     setAntesDe('');
@@ -175,7 +175,7 @@ export const PaginaFacturas = () => {
         {camiones.estado.tipo === 'error' ? <ErrorCarga error={camiones.estado.error} alReintentar={camiones.recargar} /> : null}
 
         <BuscadorCliente elegido={cliente} alElegir={setCliente} />
-        <Campo ref={folioRef} etiqueta="Número de factura (folio)" value={folio} onChange={(e) => { setFolio(e.target.value); }} inputMode="numeric" autoComplete="off" />
+        <Campo ref={folioRef} etiqueta="Número de factura (opcional)" value={folio} onChange={(e) => { setFolio(e.target.value); }} inputMode="numeric" autoComplete="off" />
         <Campo etiqueta="Entregar antes de (opcional)" type="time" value={antesDe} onChange={(e) => { setAntesDe(e.target.value); }} />
         <label className="casilla"><input type="checkbox" checked={urgente} onChange={(e) => { setUrgente(e.target.checked); }} /> Urgente</label>
         <AreaTexto etiqueta="Nota (opcional)" value={nota} onChange={(e) => { setNota(e.target.value); }} maxLength={300} />

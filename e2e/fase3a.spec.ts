@@ -32,12 +32,12 @@ test.describe('fase 3a: facturas y camiones', () => {
 
     await page.getByLabel('Camión', { exact: true }).selectOption(CAMION.id);
     await page.getByLabel('Cliente').fill('rabe');
-    await page.getByRole('button', { name: /Minimarket Rabet/ }).click();
-    await page.getByLabel('Número de factura (folio)').fill('1001');
+    await page.getByRole('button', { name: /^Minimarket Rabet.*Maipú/ }).click();
+    await page.getByLabel('Número de factura (opcional)').fill('1001');
     await page.getByLabel('Urgente').check();
     await sinViolaciones(page);
     await page.getByRole('button', { name: 'GUARDAR FACTURA' }).click();
-    await expect(page.getByText('Factura 1001 guardada para Minimarket Rabet.')).toBeVisible();
+    await expect(page.getByText('Entrega guardada para Minimarket Rabet.')).toBeVisible();
     expect(enviado).toMatchObject({ folio: '1001', localId: UUID, camionId: CAMION.id, urgente: true });
   });
 

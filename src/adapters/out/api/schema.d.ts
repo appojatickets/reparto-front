@@ -3274,7 +3274,7 @@ export interface paths {
                         "application/json": {
                             facturas: {
                                 id: string;
-                                folio: string;
+                                folio?: string;
                                 fecha: string;
                                 /** @enum {string} */
                                 estado: "pendiente" | "anulada";
@@ -3405,7 +3405,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Ingresar una factura: folio, cliente (local), camión opcional y condiciones de entrega */
+        /** Ingresar una entrega: cliente (local), camión opcional, condiciones y, si se quiere, el folio de la factura */
         post: {
             parameters: {
                 query?: never;
@@ -3416,7 +3416,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        folio: string;
+                        folio?: string;
                         /** Format: uuid */
                         localId: string;
                         /** Format: uuid */
@@ -3438,7 +3438,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             id: string;
-                            folio: string;
+                            folio?: string;
                             fecha: string;
                             /** @enum {string} */
                             estado: "pendiente" | "anulada";
@@ -3620,7 +3620,7 @@ export interface paths {
                     content: {
                         "application/json": {
                             id: string;
-                            folio: string;
+                            folio?: string;
                             fecha: string;
                             /** @enum {string} */
                             estado: "pendiente" | "anulada";
@@ -4082,11 +4082,13 @@ export interface paths {
                             regresoTardio?: boolean;
                             readonly paradas: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4101,33 +4103,39 @@ export interface paths {
                             }[];
                             readonly nuevas: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
                             }[];
                             readonly sinPin: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
                             }[];
                             readonly noAtendidas: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4135,11 +4143,13 @@ export interface paths {
                             }[];
                             readonly enRiesgo: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4316,11 +4326,13 @@ export interface paths {
                             regresoTardio?: boolean;
                             readonly paradas: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4335,33 +4347,39 @@ export interface paths {
                             }[];
                             readonly nuevas: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
                             }[];
                             readonly sinPin: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
                             }[];
                             readonly noAtendidas: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4369,11 +4387,13 @@ export interface paths {
                             }[];
                             readonly enRiesgo: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4561,11 +4581,13 @@ export interface paths {
                             regresoTardio?: boolean;
                             readonly paradas: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4580,33 +4602,39 @@ export interface paths {
                             }[];
                             readonly nuevas: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
                             }[];
                             readonly sinPin: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
                             }[];
                             readonly noAtendidas: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4614,11 +4642,13 @@ export interface paths {
                             }[];
                             readonly enRiesgo: {
                                 facturaId: string;
-                                folio: string;
+                                folio?: string;
                                 localId: string;
                                 cliente: string;
                                 direccion: string;
                                 comuna: string;
+                                lat?: number;
+                                lng?: number;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;

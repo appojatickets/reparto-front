@@ -24,22 +24,22 @@ const TarjetaParada = ({ p, total, ocupado, operar }: { readonly p: ParadaDeRuta
     <li className="tarjeta" aria-label={`Parada ${p.posicion + 1}`}>
       <strong>{p.posicion + 1}. {p.cliente}</strong>
       <span>{p.direccion}, {p.comuna}</span>
-      <span>Llega a las <strong>{horaDelDia(p.llegada)}</strong>{p.espera > 0.5 ? ` (espera ${Math.round(p.espera)} min a que abra)` : ''} · Factura {p.folio}</span>
+      <span>Llega a las <strong>{horaDelDia(p.llegada)}</strong>{p.espera > 0.5 ? ` (espera ${Math.round(p.espera)} min a que abra)` : ''} · {p.folio ? ` · Factura ${p.folio}` : ''}</span>
       <Etiquetas i={p} />
       {p.atraso > 0.5 ? <Insignia>LLEGA {Math.round(p.atraso)} MIN TARDE</Insignia> : null}
       {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
       {p.nota ? <span>Nota: {p.nota}</span> : null}
       {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
       <div className="fila-botones">
-        <Boton variante="secundario" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.folio}`} onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>SUBIR</Boton>
-        <Boton variante="secundario" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.folio}`} onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>BAJAR</Boton>
-        <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES ${p.folio}`} onClick={() => { setMas(!mas); }}>MÁS</Boton>
+        <Boton variante="secundario" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>SUBIR</Boton>
+        <Boton variante="secundario" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>BAJAR</Boton>
+        <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES ${p.cliente}`} onClick={() => { setMas(!mas); }}>MÁS</Boton>
       </div>
       {mas ? (
         <div className="fila-botones">
-          <Boton disabled={ocupado} aria-label={`IR PRIMERO ${p.folio}`} onClick={() => { operar({ tipo: 'primero', facturaId: p.facturaId }); }}>IR PRIMERO</Boton>
-          <Boton variante="secundario" disabled={ocupado} aria-label={`DEJAR PARA DESPUÉS ${p.folio}`} onClick={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }}>DEJAR PARA DESPUÉS</Boton>
-          <Boton variante="peligro" disabled={ocupado} aria-label={`QUITAR DEL CAMIÓN ${p.folio}`} onClick={() => { operar({ tipo: 'quitar', facturaId: p.facturaId }); }}>QUITAR DEL CAMIÓN</Boton>
+          <Boton disabled={ocupado} aria-label={`IR PRIMERO ${p.cliente}`} onClick={() => { operar({ tipo: 'primero', facturaId: p.facturaId }); }}>IR PRIMERO</Boton>
+          <Boton variante="secundario" disabled={ocupado} aria-label={`DEJAR PARA DESPUÉS ${p.cliente}`} onClick={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }}>DEJAR PARA DESPUÉS</Boton>
+          <Boton variante="peligro" disabled={ocupado} aria-label={`QUITAR DEL CAMIÓN ${p.cliente}`} onClick={() => { operar({ tipo: 'quitar', facturaId: p.facturaId }); }}>QUITAR DEL CAMIÓN</Boton>
         </div>
       ) : null}
     </li>
@@ -63,7 +63,7 @@ const ListaItems = ({ titulo, items, children }: { readonly titulo: string; read
         {items.map((i) => (
           <li key={i.facturaId} className="tarjeta">
             <strong>{i.cliente}</strong>
-            <span>{i.direccion}, {i.comuna} · Factura {i.folio}</span>
+            <span>{i.direccion}, {i.comuna}{i.folio ? ` · Factura ${i.folio}` : ''}</span>
             <Etiquetas i={i} />
             {children?.(i)}
           </li>
@@ -169,7 +169,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
             {vista.enRiesgo.map((r) => (
               <li key={r.facturaId} className="tarjeta">
                 <strong>{r.cliente}</strong>
-                <span>Cierra a las {horaDelDia(r.cierre)} · Factura {r.folio}</span>
+                <span>Cierra a las {horaDelDia(r.cierre)}</span>
                 {r.conflictos.map((c) => <span key={c}>{c}</span>)}
                 {r.sugerencias.map((s) => <Insignia key={s.texto}>{s.texto}</Insignia>)}
               </li>
