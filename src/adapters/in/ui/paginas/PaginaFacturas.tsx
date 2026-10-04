@@ -7,7 +7,7 @@ import { puedeBuscar } from '../../../../application/use-cases/buscar';
 import { useCasos } from '../contexto';
 import { useCarga, useDebounced } from '../hooks';
 import { useDiaDeReparto } from '../componentes/dia';
-import { Aviso, AreaTexto, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
+import { Aviso, AreaTexto, Direccion, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
 const nombreCamion = (c: { patente: string; alias?: string | undefined }): string => (c.alias ? `${c.alias} · ${formatearPatente(c.patente)}` : formatearPatente(c.patente));
 
@@ -31,7 +31,7 @@ const BuscadorCliente = ({ elegido, alElegir }: { readonly elegido: ResultadoBus
     return (
       <div className="tarjeta" aria-label="Cliente elegido">
         <strong>{elegido.razonSocial}</strong>
-        <span>{elegido.direccion}, {elegido.comuna}</span>
+        <Direccion direccion={elegido.direccion} comuna={elegido.comuna} />
         <div className="fila-botones"><Boton variante="secundario" onClick={() => { alElegir(undefined); setTexto(''); }}>CAMBIAR CLIENTE</Boton></div>
       </div>
     );
@@ -49,7 +49,7 @@ const BuscadorCliente = ({ elegido, alElegir }: { readonly elegido: ResultadoBus
             <li key={r.localId}>
               <button type="button" className="tarjeta tarjeta-boton" onClick={() => { alElegir(r); }}>
                 <strong>{r.razonSocial}</strong>
-                <span>{r.direccion}, {r.comuna}</span>
+                <Direccion direccion={r.direccion} comuna={r.comuna} />
               </button>
             </li>
           ))}
@@ -71,7 +71,7 @@ const FilaFactura = ({ f, camiones, alCambiar }: { readonly f: Factura; readonly
   return (
     <li className="tarjeta">
       <strong>{f.local.razonSocial}{f.folio ? ` · factura ${f.folio}` : ''}</strong>
-      <span>{f.local.direccion}, {f.local.comuna}</span>
+      <Direccion direccion={f.local.direccion} comuna={f.local.comuna} />
       <span className="insignias">
         {f.urgente ? <Insignia>URGENTE</Insignia> : null}
         {f.antesDeMin !== undefined ? <Insignia>ANTES DE {horaDeMinutos(f.antesDeMin)}</Insignia> : null}

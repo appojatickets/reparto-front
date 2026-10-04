@@ -66,4 +66,9 @@ export const ErrorCarga = ({ error, alReintentar }: { readonly error: ApiError; 
   </div>
 );
 
+/** Dirección con la comuna siempre a la vista y destacada (la misma calle existe en varias comunas). */
+export const Direccion = ({ direccion, comuna }: { readonly direccion: string; readonly comuna: string }) => (
+  <span>{direccion}, <strong className="comuna">{comuna}</strong></span>
+);
+
 export const Insignia = ({ children }: { readonly children: ReactNode }) => <span className="insignia">{children}</span>;

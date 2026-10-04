@@ -50,7 +50,7 @@ test.describe('fase 4a: el chofer', () => {
     await conSesionGuardada(page);
     await page.goto('/cargar');
     await expect(page.getByRole('heading', { name: 'Cargar entregas' })).toBeVisible();
-    await page.getByLabel('¿A quién le llevas?').fill('minimarket rabet');
+    await page.getByLabel('Dirección o cliente').fill('minimarket rabet');
     await expect(page.getByRole('button', { name: /^Minimarket Rabet.*Maipú/ })).toBeVisible();
     await sinViolaciones(page);
     await page.getByRole('button', { name: /^Minimarket Rabet.*Maipú/ }).click();
@@ -59,7 +59,7 @@ test.describe('fase 4a: el chofer', () => {
     await expect(page.getByText('Cargado: Minimarket Rabet.')).toBeVisible();
     expect(enviado).toMatchObject({ localId: UUID, camionId: CAMION.id });
     expect(enviado).not.toHaveProperty('folio');
-    await expect(page.getByLabel('¿A quién le llevas?')).toHaveValue('');
+    await expect(page.getByLabel('Dirección o cliente')).toHaveValue('');
   });
 
   test('la pantalla de cargar con facturas y condiciones abiertas es accesible', async ({ page }) => {

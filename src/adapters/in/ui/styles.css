@@ -413,3 +413,7 @@ html[data-vista='normal'] th,
 html[data-vista='normal'] td {
   padding: 0.25rem 0.4rem;
 }
+
+.comuna {
+  text-transform: uppercase;
+}

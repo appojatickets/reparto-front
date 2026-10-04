@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { Link } from 'react-router';
-import { COMUNAS_RM } from '../../../../domain/comunas';
+import { COMUNAS_RM, separarComuna } from '../../../../domain/comunas';
 import { horaDeMinutos, minutosDeHora } from '../../../../domain/hora';
 import { mensajeDeError, mensajesDeDetalle } from '../../../../application/mensajes';
 import type { Factura, Jornada, ResultadoBusqueda } from '../../../../application/modelos';
@@ -8,7 +8,7 @@ import type { ErrorVoz } from '../../../../application/ports/voz';
 import { puedeBuscar } from '../../../../application/use-cases/buscar';
 import { useCasos } from '../contexto';
 import { useCarga, useDebounced } from '../hooks';
-import { AreaTexto, Aviso, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
+import { AreaTexto, Aviso, Boton, Campo, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
 const MENSAJE_VOZ: Readonly<Record<ErrorVoz, string>> = {
   PERMISO: 'No hay permiso para usar el micrófono. Actívalo en los ajustes del navegador, o usa el micrófono del teclado.',
@@ -93,8 +93,8 @@ const TarjetaEntrega = ({ f, alCambiar }: { readonly f: Factura; readonly alCamb
   };
   return (
     <li className="tarjeta">
-      <strong>{f.local.razonSocial}</strong>
-      <span>{f.local.direccion}, {f.local.comuna}</span>
+      {f.local.razonSocial !== f.local.direccion ? <strong>{f.local.razonSocial}</strong> : null}
+      <Direccion direccion={f.local.direccion} comuna={f.local.comuna} />
       <span className="insignias">
         {f.urgente ? <Insignia>URGENTE</Insignia> : null}
         {f.antesDeMin !== undefined ? <Insignia>ANTES DE {horaDeMinutos(f.antesDeMin)}</Insignia> : null}
@@ -111,28 +111,32 @@ const TarjetaEntrega = ({ f, alCambiar }: { readonly f: Factura; readonly alCamb
   );
 };
 
-/** «No lo encuentro»: se crea el cliente con lo mínimo (nombre, dirección, comuna) y se carga la entrega. El pin se fija al llegar. */
-const ClienteNuevo = ({ inicial, alCrear, alCancelar }: { readonly inicial: string; readonly alCrear: (c: { localId: string; razonSocial: string }) => void; readonly alCancelar: () => void }) => {
+/**
+ * «No lo encuentro»: se crea el cliente con lo mínimo (dirección y comuna; el nombre del local es opcional) y se carga la entrega.
+ * Si no hay nombre, el local se llama como su dirección y cualquiera puede completarlo después. El pin se fija al llegar.
+ */
+const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: { readonly direccionInicial: string; readonly comunaInicial: string; readonly alCrear: (c: { localId: string; razonSocial: string }) => void; readonly alCancelar: () => void }) => {
   const { api } = useCasos();
-  const [nombre, setNombre] = useState(inicial);
-  const [direccion, setDireccion] = useState('');
-  const [comuna, setComuna] = useState('');
+  const [direccion, setDireccion] = useState(direccionInicial);
+  const [comuna, setComuna] = useState(comunaInicial);
+  const [nombre, setNombre] = useState('');
   const [errores, setErrores] = useState<readonly string[]>([]);
   const [ocupado, setOcupado] = useState(false);
-  const dictarNombre = useDictado(setNombre, (m) => { setErrores([m]); });
   const dictarDireccion = useDictado(setDireccion, (m) => { setErrores([m]); });
+  const dictarNombre = useDictado(setNombre, (m) => { setErrores([m]); });
 
   const guardar = async (e: SyntheticEvent): Promise<void> => {
     e.preventDefault();
     setErrores([]);
-    if (nombre.trim() === '' || direccion.trim() === '' || comuna === '') {
-      setErrores(['Falta el nombre, la dirección o la comuna.']);
+    if (direccion.trim() === '' || comuna === '') {
+      setErrores(['Falta la dirección o la comuna.']);
       return;
     }
+    const razonSocial = nombre.trim() === '' ? direccion.trim() : nombre.trim();
     setOcupado(true);
-    const r = await api.crearCliente({ razonSocial: nombre.trim(), direccion: direccion.trim(), comuna });
+    const r = await api.crearCliente({ razonSocial, direccion: direccion.trim(), comuna });
     setOcupado(false);
-    if (r.ok) alCrear({ localId: r.value.localId, razonSocial: nombre.trim() });
+    if (r.ok) alCrear({ localId: r.value.localId, razonSocial });
     else {
       const detalle = mensajesDeDetalle(r.error);
       setErrores(detalle.length > 0 ? detalle : [mensajeDeError(r.error)]);
@@ -142,14 +146,14 @@ const ClienteNuevo = ({ inicial, alCrear, alCancelar }: { readonly inicial: stri
   return (
     <form className="tarjeta pagina" aria-label="Cliente nuevo" onSubmit={(e) => void guardar(e)} noValidate>
       <h2>Cliente nuevo</h2>
-      <Campo etiqueta="Nombre del cliente" value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />
-      <BotonHablar dictado={dictarNombre} etiqueta="DICTAR NOMBRE" />
       <Campo etiqueta="Dirección" ayuda="Calle y número. Ejemplo: Av. Colón 765." value={direccion} onChange={(e) => { setDireccion(e.target.value); }} autoComplete="off" />
       <BotonHablar dictado={dictarDireccion} etiqueta="DICTAR DIRECCIÓN" />
       <Selector etiqueta="Comuna" value={comuna} onChange={(e) => { setComuna(e.target.value); }}>
         <option value="">Elige la comuna</option>
         {COMUNAS_RM.map((c) => <option key={c} value={c}>{c}</option>)}
       </Selector>
+      <Campo etiqueta="Nombre del local (opcional)" ayuda="Si lo sabes. Si no, se guarda con la dirección." value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />
+      <BotonHablar dictado={dictarNombre} etiqueta="DICTAR NOMBRE" />
       {errores.length > 0 ? <Aviso tipo="error">{errores.join(' ')}</Aviso> : null}
       <Boton type="submit" disabled={ocupado}>{ocupado ? 'GUARDANDO…' : 'GUARDAR Y CARGAR'}</Boton>
       <Boton variante="secundario" onClick={alCancelar}>CANCELAR</Boton>
@@ -174,16 +178,18 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
   const facturas = lista.estado.tipo === 'ok' ? lista.estado.datos : [];
 
   useEffect(() => {
-    if (!puedeBuscar(consulta)) return;
+    const { consulta: direccion, comuna } = separarComuna(consulta);
+    if (!puedeBuscar(direccion)) return;
     const control = new AbortController();
-    void api.buscarClientes(consulta, { limite: 6, signal: control.signal }).then((r) => {
+    void api.buscarClientes(direccion, { limite: 6, signal: control.signal, ...(comuna ? { comuna } : {}) }).then((r) => {
       if (control.signal.aborted) return;
       setResultados(r.ok ? { consulta, lista: r.value } : { consulta, lista: [], error: mensajeDeError(r.error) });
     });
     return () => { control.abort(); };
   }, [api, consulta]);
 
-  const buscando = puedeBuscar(texto);
+  const escrito = useMemo(() => separarComuna(texto), [texto]);
+  const buscando = puedeBuscar(escrito.consulta);
   const actual = buscando && resultados?.consulta === consulta && consulta === texto ? resultados : undefined;
 
   const cargar = async (c: { localId: string; razonSocial: string }): Promise<void> => {
@@ -214,8 +220,8 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
     <>
       <Campo
         ref={campo}
-        etiqueta="¿A quién le llevas?"
-        ayuda={`Dicta o escribe el nombre del cliente o su dirección.${dictado.disponible ? '' : ' Para dictar usa el micrófono del teclado.'}`}
+        etiqueta="Dirección o cliente"
+        ayuda={`Dicta o escribe la dirección con la comuna al final (Av. Colón 765 San Bernardo), o el nombre del cliente.${dictado.disponible ? '' : ' Para dictar usa el micrófono del teclado.'}`}
         type="text"
         value={texto}
         onChange={(e) => { setTexto(e.target.value); setCreando(false); }}
@@ -225,6 +231,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
         autoFocus
       />
       <BotonHablar dictado={dictado} />
+      {escrito.comuna ? <p role="status">Comuna: <strong className="comuna">{escrito.comuna}</strong></p> : null}
       {buscando && !actual ? <Cargando texto="Buscando…" /> : null}
       {actual?.error ? <Aviso tipo="error">{actual.error}</Aviso> : null}
       {actual && !actual.error && actual.lista.length === 0 ? <Aviso>No encuentro ese cliente.</Aviso> : null}
@@ -235,8 +242,8 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
             {actual.lista.map((c) => (
               <li key={c.localId}>
                 <button type="button" className="tarjeta tarjeta-boton" disabled={ocupado} onClick={() => { elegir(c); }}>
-                  <strong>{c.razonSocial}</strong>
-                  <span>{c.direccion}, {c.comuna}</span>
+                  {c.razonSocial !== c.direccion ? <strong>{c.razonSocial}</strong> : null}
+                  <Direccion direccion={c.direccion} comuna={c.comuna} />
                 </button>
               </li>
             ))}
@@ -253,7 +260,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
         </div>
       ) : null}
       {texto.trim() !== '' && !creando ? <Boton variante="secundario" onClick={() => { setCreando(true); }}>NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO</Boton> : null}
-      {creando ? <ClienteNuevo inicial={texto.trim()} alCrear={(c) => void cargar(c)} alCancelar={() => { setCreando(false); }} /> : null}
+      {creando ? <ClienteNuevo direccionInicial={escrito.consulta} comunaInicial={escrito.comuna ?? ''} alCrear={(c) => void cargar(c)} alCancelar={() => { setCreando(false); }} /> : null}
       {aviso ? <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso> : null}
 
       <h2>Cargadas hoy ({facturas.length})</h2>

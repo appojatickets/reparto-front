@@ -8,7 +8,7 @@ import type { ItemRuta, OperacionRuta, ParadaDeRuta, VistaRuta } from '../../../
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { useDiaDeReparto } from '../componentes/dia';
-import { Aviso, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
+import { Aviso, Boton, Campo, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
 const Etiquetas = ({ i }: { readonly i: ItemRuta }) => (
   <span className="insignias">
@@ -23,7 +23,7 @@ const TarjetaParada = ({ p, total, ocupado, operar }: { readonly p: ParadaDeRuta
   return (
     <li className="tarjeta" aria-label={`Parada ${p.posicion + 1}`}>
       <strong>{p.posicion + 1}. {p.cliente}</strong>
-      <span>{p.direccion}, {p.comuna}</span>
+      {p.cliente !== p.direccion ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : <span><strong className="comuna">{p.comuna}</strong></span>}
       <span>Llega a las <strong>{horaDelDia(p.llegada)}</strong>{p.espera > 0.5 ? ` (espera ${Math.round(p.espera)} min a que abra)` : ''} · {p.folio ? ` · Factura ${p.folio}` : ''}</span>
       <Etiquetas i={p} />
       {p.atraso > 0.5 ? <Insignia>LLEGA {Math.round(p.atraso)} MIN TARDE</Insignia> : null}
@@ -63,7 +63,7 @@ const ListaItems = ({ titulo, items, children }: { readonly titulo: string; read
         {items.map((i) => (
           <li key={i.facturaId} className="tarjeta">
             <strong>{i.cliente}</strong>
-            <span>{i.direccion}, {i.comuna}{i.folio ? ` · Factura ${i.folio}` : ''}</span>
+            <Direccion direccion={i.direccion} comuna={i.comuna} />
             <Etiquetas i={i} />
             {children?.(i)}
           </li>

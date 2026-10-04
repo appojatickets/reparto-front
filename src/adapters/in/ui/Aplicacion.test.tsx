@@ -591,6 +591,16 @@ describe('rutas del día', () => {
     expect(verRuta).toHaveBeenCalledWith('c1', '2026-10-05');
   });
 
+  it('una parada que solo tiene dirección (sin nombre de cliente) muestra la dirección y la comuna, sin repetir', async () => {
+    const solo = { ...parada('A', 0), cliente: 'Av. Colón 765', direccion: 'Av. Colón 765', comuna: 'San Bernardo' };
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ paradas: [solo] }))) }) });
+    await elegirCamion();
+    const tarjeta = await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(within(tarjeta).getByText('1. Av. Colón 765')).toBeInTheDocument();
+    expect(within(tarjeta).getByText('San Bernardo')).toHaveClass('comuna');
+    expect(within(tarjeta).getAllByText(/Av\. Colón 765/)).toHaveLength(1);
+  });
+
   it('un regreso tardío se marca con un aviso', async () => {
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ regreso: 1300, regresoTardio: true }))) }) });
     await elegirCamion();
@@ -716,12 +726,12 @@ describe('el chofer: camión del día y carga de entregas', () => {
     const buscarClientes = vi.fn(() => Promise.resolve(ok([RABET])));
     const listarFacturas = vi.fn(() => Promise.resolve(ok([] as never[])));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ registrarFactura, buscarClientes, listarFacturas }) });
-    await userEvent.type(await screen.findByLabelText('¿A quién le llevas?'), 'minimarket rabet');
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'minimarket rabet');
     await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
     expect(buscarClientes).toHaveBeenLastCalledWith('minimarket rabet', expect.objectContaining({ limite: 6 }));
     expect(registrarFactura).toHaveBeenCalledWith({ localId: 'l1', camionId: 'c1', fecha: '2026-10-05' });
     expect(await screen.findByText('Cargado: Minimarket Rabet.')).toBeInTheDocument();
-    expect(screen.getByLabelText('¿A quién le llevas?')).toHaveValue('');
+    expect(screen.getByLabelText('Dirección o cliente')).toHaveValue('');
     expect(listarFacturas).toHaveBeenCalledTimes(2);
   });
 
@@ -729,7 +739,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
     const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ registrarFactura, buscarClientes: () => Promise.resolve(ok([RABET])), listarFacturas: () => Promise.resolve(ok([FACTURA])) }) });
     await screen.findByText('Cargadas hoy (1)');
-    await userEvent.type(screen.getByLabelText('¿A quién le llevas?'), 'rabet');
+    await userEvent.type(screen.getByLabelText('Dirección o cliente'), 'rabet');
     await userEvent.click(await screen.findByRole('button', { name: /^Minimarket Rabet.*Maipú/ }));
     expect(await screen.findByText(/Ya cargaste a Minimarket Rabet hoy/)).toBeInTheDocument();
     expect(registrarFactura).not.toHaveBeenCalled();
@@ -740,33 +750,46 @@ describe('el chofer: camión del día y carga de entregas', () => {
     await waitFor(() => { expect(registrarFactura).toHaveBeenCalledTimes(1); });
   });
 
-  it('«no lo encuentro»: crea el cliente con nombre, dirección y comuna, y lo carga', async () => {
+  it('«no lo encuentro»: detecta la comuna del final, crea el cliente solo con dirección y comuna, y lo carga', async () => {
     const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
     const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
-    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura, buscarClientes: () => Promise.resolve(ok([])) }) });
-    await userEvent.type(await screen.findByLabelText('¿A quién le llevas?'), 'almacen don pepe');
+    const buscarClientes = vi.fn(() => Promise.resolve(ok([])));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura, buscarClientes }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Av. Colón 765 San Bernardo');
     expect(await screen.findByText('No encuentro ese cliente.')).toBeInTheDocument();
+    expect(screen.getByText('Comuna:').parentElement).toHaveTextContent('Comuna: San Bernardo');
+    expect(buscarClientes).toHaveBeenLastCalledWith('Av. Colón 765', expect.objectContaining({ comuna: 'San Bernardo', limite: 6 }));
     await userEvent.click(screen.getByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
     const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
-    expect(form.getByLabelText('Nombre del cliente')).toHaveValue('almacen don pepe');
-    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
-    expect(await form.findByRole('alert')).toHaveTextContent('Falta el nombre, la dirección o la comuna.');
-    expect(crearCliente).not.toHaveBeenCalled();
-    await userEvent.type(form.getByLabelText('Dirección'), 'Av. Colón 765');
-    await userEvent.selectOptions(form.getByLabelText('Comuna'), 'San Bernardo');
+    expect(form.getByLabelText('Dirección')).toHaveValue('Av. Colón 765');
+    expect(form.getByLabelText('Comuna')).toHaveValue('San Bernardo');
     await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
     await waitFor(() => { expect(registrarFactura).toHaveBeenCalledWith({ localId: 'l9', camionId: 'c1', fecha: '2026-10-05' }); });
-    expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'almacen don pepe', direccion: 'Av. Colón 765', comuna: 'San Bernardo' });
-    expect(await screen.findByText('Cargado: almacen don pepe.')).toBeInTheDocument();
+    expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'Av. Colón 765', direccion: 'Av. Colón 765', comuna: 'San Bernardo' });
+    expect(await screen.findByText('Cargado: Av. Colón 765.')).toBeInTheDocument();
+  });
+
+  it('sin comuna no se puede guardar el cliente nuevo; con nombre del local lo usa', async () => {
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura: () => Promise.resolve(ok(FACTURA)), buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Calle 1 123');
+    await userEvent.click(await screen.findByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    expect(await form.findByRole('alert')).toHaveTextContent('Falta la dirección o la comuna.');
+    expect(crearCliente).not.toHaveBeenCalled();
+    await userEvent.selectOptions(form.getByLabelText('Comuna'), 'Maipú');
+    await userEvent.type(form.getByLabelText('Nombre del local (opcional)'), 'Almacén Don Pepe');
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    await waitFor(() => { expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'Almacén Don Pepe', direccion: 'Calle 1 123', comuna: 'Maipú' }); });
   });
 
   it('un error al crear el cliente se muestra en lenguaje simple', async () => {
     const crearCliente = vi.fn(() => Promise.resolve(http(422, { codigo: 'VALIDACION', mensaje: 'Hay datos inválidos.', detalle: { errores: [{ mensaje: 'La comuna no es de la Región Metropolitana.' }] } })));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, buscarClientes: () => Promise.resolve(ok([])) }) });
-    await userEvent.type(await screen.findByLabelText('¿A quién le llevas?'), 'kiosko sol');
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'kiosko sol');
     await userEvent.click(await screen.findByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
     const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
-    await userEvent.type(form.getByLabelText('Dirección'), 'Calle 1');
     await userEvent.selectOptions(form.getByLabelText('Comuna'), 'Maipú');
     await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
     expect(await form.findByRole('alert')).toHaveTextContent('La comuna no es de la Región Metropolitana.');
@@ -794,7 +817,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
     montar({ ruta: '/cargar', sesion: CHOFER, casos: { voz }, api: baseApi({ buscarClientes: () => Promise.resolve(ok([RABET])) }) });
     await userEvent.click(await screen.findByRole('button', { name: 'HABLAR' }));
     act(() => { manejadores?.alTexto({ texto: 'minimarket rabet', final: true }); });
-    expect(screen.getByLabelText('¿A quién le llevas?')).toHaveValue('minimarket rabet');
+    expect(screen.getByLabelText('Dirección o cliente')).toHaveValue('minimarket rabet');
     await userEvent.click(await screen.findByRole('button', { name: 'ESCUCHANDO… TOCA PARA PARAR' }));
     expect(detener).toHaveBeenCalledTimes(1);
     act(() => { manejadores?.alTerminar('PERMISO'); });

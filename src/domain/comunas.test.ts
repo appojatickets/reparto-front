@@ -1,10 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { COMUNAS_RM } from './comunas';
+import { COMUNAS_RM, separarComuna } from './comunas';
 
 describe('COMUNAS_RM', () => {
   it('son las 52 comunas, sin repetidas y en orden alfabético para el selector', () => {
     expect(COMUNAS_RM).toHaveLength(52);
     expect(new Set(COMUNAS_RM).size).toBe(52);
     expect([...COMUNAS_RM].sort((a, b) => a.localeCompare(b, 'es'))).toEqual(COMUNAS_RM);
+  });
+});
+
+describe('separarComuna', () => {
+  it('separa la comuna del final y deja el resto como dirección', () => {
+    expect(separarComuna('Av. Colón 765 San Bernardo')).toEqual({ consulta: 'Av. Colón 765', comuna: 'San Bernardo' });
+    expect(separarComuna('kennedy 5413 las condes')).toEqual({ consulta: 'kennedy 5413', comuna: 'Las Condes' });
+    expect(separarComuna('Calle El Maitén 052, Puente Alto')).toEqual({ consulta: 'Calle El Maitén 052', comuna: 'Puente Alto' });
+  });
+
+  it('ignora tildes, ñ y mayúsculas del dictado', () => {
+    expect(separarComuna('Irarrázaval 3000 nunoa')).toEqual({ consulta: 'Irarrázaval 3000', comuna: 'Ñuñoa' });
+    expect(separarComuna('Pajaritos 3030 MAIPU')).toEqual({ consulta: 'Pajaritos 3030', comuna: 'Maipú' });
+  });
+
+  it('prefiere la comuna más larga («San José de Maipo», no «Maipo»)', () => {
+    expect(separarComuna('Camino 100 San José de Maipo')).toEqual({ consulta: 'Camino 100', comuna: 'San José de Maipo' });
+  });
+
+  it('una calle con nombre de comuna no se toma por la comuna si no está al final', () => {
+    expect(separarComuna('Av. Providencia 2500')).toEqual({ consulta: 'Av. Providencia 2500' });
+    expect(separarComuna('Providencia 2500 Providencia')).toEqual({ consulta: 'Providencia 2500', comuna: 'Providencia' });
+  });
+
+  it('no deja el texto vacío: si todo es el nombre de una comuna, no se separa', () => {
+    expect(separarComuna('Santiago')).toEqual({ consulta: 'Santiago' });
+    expect(separarComuna('  ')).toEqual({ consulta: '' });
+  });
+
+  it('sin comuna devuelve el texto tal cual (espacios simples)', () => {
+    expect(separarComuna('minimarket   rabet')).toEqual({ consulta: 'minimarket rabet' });
   });
 });
