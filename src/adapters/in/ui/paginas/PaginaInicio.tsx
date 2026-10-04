@@ -1,7 +1,8 @@
 import { Link } from 'react-router';
 import { accionesDe, type Accion } from '../../../../domain/rol';
-import { Aviso, Pagina } from '../componentes/ui';
+import { Pagina } from '../componentes/ui';
 import { useUsuario } from '../sesion';
+import { InicioChofer } from './InicioChofer';
 
 const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: string }>> = {
   facturas: { a: '/facturas', texto: 'FACTURAS DEL DÍA' },
@@ -24,7 +25,7 @@ export const PaginaInicio = () => {
   });
   return (
     <Pagina titulo={`Hola, ${usuario.nombre.split(' ')[0] ?? usuario.nombre}`}>
-      {acciones.includes('mi-ruta') ? <Aviso>Tu ruta del día estará disponible muy pronto.</Aviso> : null}
+      {acciones.includes('mi-ruta') ? <InicioChofer /> : null}
       {enlaces.length > 0 ? (
         <ul className="menu">
           {enlaces.map((e) => (

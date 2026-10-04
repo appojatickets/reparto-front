@@ -1,7 +1,7 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, Camion, ConfigEmpresa, Factura, FilaCliente, FiltroFacturas, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, UsuarioAdmin, UsuarioSesion, VistaRuta,
+  CambiosFactura, Camion, ConfigEmpresa, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
@@ -57,6 +57,10 @@ export interface ApiClient extends SaludApi {
   listarFacturas(filtro?: FiltroFacturas): R<readonly Factura[]>;
   registrarFactura(datos: NuevaFactura): R<Factura>;
   actualizarFactura(id: string, cambios: CambiosFactura): R<Factura>;
+
+  miJornada(): R<Jornada | null>;
+  iniciarJornada(camionId: string): R<Jornada>;
+  terminarJornada(): R<void>;
 
   obtenerConfig(): R<ConfigEmpresa>;
   guardarConfig(config: ConfigEmpresa): R<ConfigEmpresa>;

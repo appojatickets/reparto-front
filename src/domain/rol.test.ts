@@ -3,7 +3,7 @@ import { accionesDe, puedeHacer } from './rol';
 
 describe('acciones por rol (solo para mostrar el menú; la API es quien manda)', () => {
   it('el chofer solo ve su ruta', () => {
-    expect(accionesDe('chofer')).toEqual(['mi-ruta']);
+    expect(accionesDe('chofer')).toEqual(['mi-ruta', 'cargar-facturas']);
   });
 
   it('el despachador ve clientes y pines, pero no usuarios ni importación', () => {

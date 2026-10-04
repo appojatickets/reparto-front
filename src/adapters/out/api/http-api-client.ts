@@ -188,6 +188,13 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     registrarFactura: (datos) => ejecutar(() => client.POST('/v1/facturas', { body: datos, signal: timeout() })),
     actualizarFactura: (id, cambios) => ejecutar(() => client.PATCH('/v1/facturas/{id}', { params: { path: { id } }, body: cambios, signal: timeout() })),
 
+    async miJornada() {
+      const r = await ejecutar(() => client.GET('/v1/jornada', { signal: timeout() }), { repetible: true });
+      return mapear(r, (d) => d.jornada);
+    },
+    iniciarJornada: (camionId) => ejecutar(() => client.POST('/v1/jornada', { body: { camionId }, signal: timeout() })),
+    terminarJornada: async () => sinCuerpo(await ejecutar(() => client.DELETE('/v1/jornada', { signal: timeout() }))),
+
     obtenerConfig: () => ejecutar(() => client.GET('/v1/empresa/config', { signal: timeout() }), { repetible: true }),
     guardarConfig: (config) => ejecutar(() => client.PUT('/v1/empresa/config', { body: config, signal: timeout() })),
 

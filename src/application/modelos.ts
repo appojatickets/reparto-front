@@ -72,7 +72,13 @@ export type NuevaFactura = {
   readonly nota?: string;
 };
 /** `null` quita el valor. */
-export type CambiosFactura = { readonly camionId?: string | null; readonly estado?: 'pendiente' | 'anulada' };
+export type CambiosFactura = {
+  readonly camionId?: string | null;
+  readonly estado?: 'pendiente' | 'anulada';
+  readonly antesDeMin?: number | null;
+  readonly urgente?: boolean;
+  readonly nota?: string | null;
+};
 export type FiltroFacturas = { readonly fecha?: string; readonly incluirAnuladas?: boolean };
 
 export type ConfigEmpresa = {
@@ -123,3 +129,5 @@ export type OperacionRuta =
   | { readonly tipo: 'subir' | 'bajar' | 'primero' | 'despues' | 'quitar'; readonly facturaId: string }
   | { readonly tipo: 'ordenar' | 'insertar' }
   | { readonly tipo: 'salida'; readonly salidaMin: number };
+
+export type Jornada = { readonly id: string; readonly fecha: string; readonly desde: string; readonly camion: CamionResumen };

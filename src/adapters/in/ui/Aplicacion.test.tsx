@@ -61,7 +61,7 @@ describe('entrada y protección por rol', () => {
 
   it('el chofer ve solo su ruta: sin enlaces de clientes, pines, importación ni usuarios', async () => {
     montar({ sesion: CHOFER });
-    expect(await screen.findByText('Tu ruta del día estará disponible muy pronto.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
     expect(screen.queryByRole('link')).toBeNull();
   });
 
@@ -86,7 +86,7 @@ describe('entrada y protección por rol', () => {
 
   it('un chofer que escribe la dirección de una pantalla de administración vuelve al inicio', async () => {
     montar({ ruta: '/admin/usuarios', sesion: CHOFER });
-    expect(await screen.findByText('Tu ruta del día estará disponible muy pronto.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
   });
 
@@ -457,7 +457,7 @@ describe('facturas del día', () => {
 
   it('el chofer no entra a /facturas', async () => {
     montar({ ruta: '/facturas', sesion: CHOFER });
-    expect(await screen.findByText('Tu ruta del día estará disponible muy pronto.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
   });
 });
 
@@ -630,6 +630,102 @@ describe('rutas del día', () => {
 
   it('el chofer no entra a /rutas', async () => {
     montar({ ruta: '/rutas', sesion: CHOFER });
-    expect(await screen.findByText('Tu ruta del día estará disponible muy pronto.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
+  });
+});
+
+describe('el chofer: camión del día y carga de facturas', () => {
+  const CAMION = { id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true };
+  const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
+  const RABET = { localId: 'l1', clienteId: 'k1', razonSocial: 'Minimarket Rabet', direccion: 'Calle 1 123', comuna: 'Maipú', pinEstado: 'validado' as const };
+  const FACTURA = { id: 'f1', folio: '1234', fecha: '2026-10-05', estado: 'pendiente' as const, urgente: false, camion: { id: 'c1', patente: 'AB1234' }, local: { id: 'l1', razonSocial: 'Minimarket Rabet', direccion: 'Calle 1 123', comuna: 'Maipú', tienePin: true } };
+
+  it('sin jornada elige el camión con un toque y entra a su inicio', async () => {
+    const miJornada = vi.fn().mockResolvedValueOnce(ok(null)).mockResolvedValue(ok(JORNADA));
+    const iniciarJornada = vi.fn(() => Promise.resolve(ok(JORNADA)));
+    montar({ sesion: CHOFER, api: { miJornada, iniciarJornada, listarCamiones: () => Promise.resolve(ok([CAMION])) } });
+    await userEvent.click(await screen.findByRole('button', { name: 'Camión 3 · AB·1234' }));
+    expect(iniciarJornada).toHaveBeenCalledWith('c1');
+    expect(await screen.findByText('Camión Camión 3 · AB·1234')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'CARGAR FACTURAS' })).toHaveAttribute('href', '/cargar');
+    expect(screen.getByRole('link', { name: 'MI RUTA' })).toHaveAttribute('href', '/mi-ruta');
+  });
+
+  it('con jornada puede cambiar de camión o terminar su día', async () => {
+    const terminarJornada = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), terminarJornada, listarCamiones: () => Promise.resolve(ok([CAMION])) } });
+    await userEvent.click(await screen.findByRole('button', { name: 'CAMBIAR DE CAMIÓN' }));
+    expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
+  });
+
+  it('terminar el día cierra la jornada', async () => {
+    const terminarJornada = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), terminarJornada } });
+    await userEvent.click(await screen.findByRole('button', { name: 'TERMINAR MI DÍA' }));
+    expect(terminarJornada).toHaveBeenCalledTimes(1);
+  });
+
+  it('carga una factura con una línea dictada: entiende folio y cliente, y guarda al tocar el cliente', async () => {
+    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    const buscarClientes = vi.fn(() => Promise.resolve(ok([RABET])));
+    const listarFacturas = vi.fn(() => Promise.resolve(ok([] as never[])));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), registrarFactura, buscarClientes, listarFacturas } });
+    await userEvent.type(await screen.findByLabelText('Factura y cliente'), 'factura número 1234 minimarket rabet');
+    expect(screen.getByText('1234', { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.getByText('minimarket rabet', { selector: 'strong' })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
+    expect(buscarClientes).toHaveBeenLastCalledWith('minimarket rabet', expect.objectContaining({ limite: 6 }));
+    expect(registrarFactura).toHaveBeenCalledWith({ folio: '1234', localId: 'l1', camionId: 'c1', fecha: '2026-10-05' });
+    expect(await screen.findByText('Factura 1234 cargada para Minimarket Rabet.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Factura y cliente')).toHaveValue('');
+    expect(listarFacturas).toHaveBeenCalledTimes(2);
+  });
+
+  it('sin número de factura avisa y no guarda; un folio repetido muestra el aviso de la API', async () => {
+    const registrarFactura = vi.fn(() => Promise.resolve(http(409, { codigo: 'CONFLICTO', mensaje: 'Ya existe una factura con el folio 1234.' })));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), registrarFactura, buscarClientes: () => Promise.resolve(ok([RABET])), listarFacturas: () => Promise.resolve(ok([])) } });
+    const campo = await screen.findByLabelText('Factura y cliente');
+    await userEvent.type(campo, 'minimarket rabet');
+    expect(await screen.findByText('Falta el número de factura')).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falta el número de factura.');
+    expect(registrarFactura).not.toHaveBeenCalled();
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '1234 minimarket rabet');
+    await userEvent.click(await screen.findByRole('button', { name: /Minimarket Rabet/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ya existe una factura con el folio 1234.');
+    expect(campo).toHaveValue('1234 minimarket rabet');
+  });
+
+  it('lista lo cargado hoy con condiciones; se pueden poner «antes de», urgente y nota, o anular', async () => {
+    const actualizarFactura = vi.fn(() => Promise.resolve(ok({ ...FACTURA, urgente: true })));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarFacturas: () => Promise.resolve(ok([FACTURA])), actualizarFactura } });
+    expect(await screen.findByText('Cargadas hoy (1)')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'CALCULAR MI RUTA' })).toHaveAttribute('href', '/mi-ruta');
+    await userEvent.click(screen.getByRole('button', { name: 'CONDICIONES 1234' }));
+    await userEvent.type(screen.getByLabelText('Entregar antes de (factura 1234)'), '13:00');
+    await userEvent.click(screen.getByLabelText('Urgente'));
+    await userEvent.type(screen.getByLabelText('Nota (factura 1234)'), 'portón verde');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR CONDICIONES' }));
+    expect(actualizarFactura).toHaveBeenCalledWith('f1', { antesDeMin: 780, urgente: true, nota: 'portón verde' });
+    await userEvent.click(screen.getByRole('button', { name: 'ANULAR 1234' }));
+    expect(actualizarFactura).toHaveBeenLastCalledWith('f1', { estado: 'anulada' });
+  });
+
+  it('sin jornada, cargar y ruta mandan a elegir el camión', async () => {
+    montar({ ruta: '/cargar', sesion: CHOFER });
+    expect(await screen.findByText(/Primero elige el camión que manejas hoy/)).toBeInTheDocument();
+  });
+
+  it('mi ruta muestra la ruta de su camión de hoy', async () => {
+    const verRuta = vi.fn(() => Promise.resolve(ok({ camionId: 'c1', fecha: '2026-10-05', planificada: false, salidaMin: 480, horaLimiteRegresoMin: 1260, paradas: [], nuevas: [], sinPin: [], noAtendidas: [], enRiesgo: [] })));
+    montar({ ruta: '/mi-ruta', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta } });
+    expect(await screen.findByText(/Esta ruta aún no está calculada/)).toBeInTheDocument();
+    expect(verRuta).toHaveBeenCalledWith('c1', '2026-10-05');
+  });
+
+  it('el despachador no entra a /cargar ni /mi-ruta', async () => {
+    montar({ ruta: '/cargar', sesion: DESPACHADOR });
+    expect(await screen.findByRole('heading', { name: 'Hola, Ana' })).toBeInTheDocument();
   });
 });

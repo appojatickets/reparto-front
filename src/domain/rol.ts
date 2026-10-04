@@ -2,6 +2,7 @@ export type Rol = 'admin' | 'despachador' | 'chofer';
 
 export type Accion =
   | 'mi-ruta'
+  | 'cargar-facturas'
   | 'buscar-clientes'
   | 'cliente-nuevo'
   | 'revisar-pines'
@@ -17,7 +18,7 @@ export type Accion =
  * esto evita ofrecer botones que fallarían.
  */
 const ACCIONES: Readonly<Record<Rol, readonly Accion[]>> = {
-  chofer: ['mi-ruta'],
+  chofer: ['mi-ruta', 'cargar-facturas'],
   despachador: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines'],
   admin: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines', 'importar-clientes', 'camiones', 'configuracion', 'usuarios'],
 };

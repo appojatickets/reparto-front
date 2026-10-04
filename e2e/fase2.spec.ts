@@ -61,10 +61,10 @@ test.describe('arranque y entrada', () => {
   });
 
   test('un chofer ve solo su ruta y no puede abrir pantallas de administración', async ({ page }) => {
-    await simularApi(page, comunes(CHOFER));
+    await simularApi(page, { ...comunes(CHOFER), 'GET /v1/jornada': () => ({ status: 200, json: { jornada: null } }), 'GET /v1/camiones': () => ({ status: 200, json: { camiones: [] } }) });
     await conSesionGuardada(page);
     await page.goto('/admin/usuarios');
-    await expect(page.getByText('Tu ruta del día estará disponible muy pronto.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeVisible();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('link', { name: 'USUARIOS' })).toHaveCount(0);
   });
