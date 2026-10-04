@@ -479,7 +479,7 @@ describe('camiones', () => {
   });
 
   it('cambia el nombre de un camión (y lo borra si se deja vacío)', async () => {
-    const actualizarCamion = vi.fn((_id: string, _c: { alias?: string | null }) => Promise.resolve(ok({ id: 'c1', patente: 'SDTS23', alias: '23 nuevo', activo: true })));
+    const actualizarCamion = vi.fn(() => Promise.resolve(ok({ id: 'c1', patente: 'SDTS23', alias: '23 nuevo', activo: true })));
     montar({ ruta: '/admin/camiones', sesion: ADMIN, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'SDTS23', alias: '23', activo: true }])), actualizarCamion } });
     await userEvent.click(await screen.findByRole('button', { name: 'CAMBIAR NOMBRE SDTS·23' }));
     const campo = screen.getByLabelText('Nombre del camión SDTS·23');
