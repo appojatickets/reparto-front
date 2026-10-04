@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
+import type { Ubicacion } from '../../../application/ports/ubicacion';
 import type { VistaStore } from '../../../application/ports/vista-store';
 import type { Voz } from '../../../application/ports/voz';
 import type { ApiClient } from '../../../application/ports/api-client';
@@ -18,6 +19,8 @@ export type Casos = {
   readonly ahora: () => Date;
   /** Dictado propio de la app (si el navegador lo tiene). */
   readonly voz: Voz;
+  /** GPS del teléfono (una lectura al llegar o entregar). */
+  readonly ubicacion: Ubicacion;
   /** Vista elegida (grande o normal), recordada en el teléfono. */
   readonly vista: VistaStore;
 };

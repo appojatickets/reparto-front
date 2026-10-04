@@ -50,11 +50,13 @@ export type FilaCliente = FilaClienteCruda;
 export type Camion = { readonly id: string; readonly patente: string; readonly alias?: string; readonly activo: boolean };
 export type CamionResumen = { readonly id: string; readonly patente: string; readonly alias?: string };
 
+export type EstadoEntrega = 'pendiente' | 'entregada' | 'no_entregada' | 'anulada';
+
 export type Factura = {
   readonly id: string;
   readonly folio?: string;
   readonly fecha: string;
-  readonly estado: 'pendiente' | 'anulada';
+  readonly estado: EstadoEntrega;
   readonly total?: number;
   readonly antesDeMin?: number;
   readonly urgente: boolean;
@@ -79,7 +81,17 @@ export type CambiosFactura = {
   readonly urgente?: boolean;
   readonly nota?: string | null;
 };
-export type FiltroFacturas = { readonly fecha?: string; readonly incluirAnuladas?: boolean };
+export type FiltroFacturas = { readonly fecha?: string; readonly incluirAnuladas?: boolean; readonly incluirHechas?: boolean };
+
+export type EventoEntrega = {
+  readonly tipo: 'llegada' | 'entregado' | 'cerrado' | 'espera' | 'no_entregado' | 'vuelve_mas_tarde';
+  readonly lat?: number;
+  readonly lng?: number;
+  readonly precisionM?: number;
+  readonly motivo?: 'cerrado' | 'no_recibe' | 'direccion' | 'otro';
+  readonly minutos?: number;
+};
+export type ResultadoEvento = { readonly estado: EstadoEntrega; readonly pinFijado: boolean };
 
 export type ConfigEmpresa = {
   readonly deposito?: { readonly lat: number; readonly lng: number; readonly nombre?: string };
@@ -94,6 +106,8 @@ export type ItemRuta = {
   readonly cliente: string;
   readonly direccion: string;
   readonly comuna: string;
+  readonly lat?: number;
+  readonly lng?: number;
   readonly urgente: boolean;
   readonly antesDeMin?: number;
   readonly nota?: string;
@@ -116,11 +130,13 @@ export type VistaRuta = {
   readonly modo?: 'sugerida' | 'manual';
   readonly version?: number;
   readonly salidaMin: number;
+  readonly calculadaDesdeMin?: number;
   readonly horaLimiteRegresoMin: number;
   readonly regreso?: number;
   readonly regresoTardio?: boolean;
   readonly paradas: readonly ParadaDeRuta[];
   readonly nuevas: readonly ItemRuta[];
+  readonly hechas: readonly (ItemRuta & { readonly estado: 'entregada' | 'no_entregada' })[];
   readonly sinPin: readonly ItemRuta[];
   readonly noAtendidas: readonly (ItemRuta & { readonly conflictos: readonly string[] })[];
   readonly enRiesgo: readonly (ItemRuta & { readonly cierre: number; readonly conflictos: readonly string[]; readonly sugerencias: readonly SugerenciaRuta[] })[];

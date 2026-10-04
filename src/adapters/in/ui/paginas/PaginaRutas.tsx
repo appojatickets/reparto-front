@@ -1,13 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
 import { horaDeMinutos, horaDelDia, minutosDeHora } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
+import { esDeCamion } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ItemRuta, OperacionRuta, ParadaDeRuta, VistaRuta } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
+import { AccionesParada } from '../componentes/AccionesParada';
 import { useDiaDeReparto } from '../componentes/dia';
+import { useUsuario } from '../sesion';
 import { Aviso, Boton, Campo, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
 const Etiquetas = ({ i }: { readonly i: ItemRuta }) => (
@@ -17,7 +21,7 @@ const Etiquetas = ({ i }: { readonly i: ItemRuta }) => (
   </span>
 );
 
-const TarjetaParada = ({ p, total, ocupado, operar }: { readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void }) => {
+const TarjetaParada = ({ p, total, ocupado, operar, enCamion, alCambiar }: { readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void; readonly enCamion: boolean; readonly alCambiar: () => void }) => {
   const [mas, setMas] = useState(false);
   const motivos = textoMotivos(p.motivos);
   return (
@@ -30,6 +34,7 @@ const TarjetaParada = ({ p, total, ocupado, operar }: { readonly p: ParadaDeRuta
       {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
       {p.nota ? <span>Nota: {p.nota}</span> : null}
       {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
+      {enCamion ? <AccionesParada p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
       <div className="fila-botones">
         <Boton variante="secundario" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>SUBIR</Boton>
         <Boton variante="secundario" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>BAJAR</Boton>
@@ -43,6 +48,23 @@ const TarjetaParada = ({ p, total, ocupado, operar }: { readonly p: ParadaDeRuta
         </div>
       ) : null}
     </li>
+  );
+};
+
+/** Por si se tocó ENTREGADO sin querer: la entrega vuelve a pendiente. */
+const DeshacerHecha = ({ h, alCambiar }: { readonly h: { readonly facturaId: string; readonly cliente: string }; readonly alCambiar: () => void }) => {
+  const { api } = useCasos();
+  const [error, setError] = useState<string | undefined>();
+  const deshacer = async (): Promise<void> => {
+    const r = await api.actualizarFactura(h.facturaId, { estado: 'pendiente' });
+    if (r.ok) alCambiar();
+    else setError(mensajeDeError(r.error));
+  };
+  return (
+    <>
+      <Boton variante="secundario" aria-label={`DESHACER ${h.cliente}`} onClick={() => void deshacer()}>DESHACER</Boton>
+      {error ? <Aviso tipo="error">{error}</Aviso> : null}
+    </>
   );
 };
 
@@ -82,6 +104,13 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   const [ocupado, setOcupado] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
   const [salidaEscrita, setSalidaEscrita] = useState<string | undefined>();
+  const { rol } = useUsuario();
+  const enCamion = esDeCamion(rol);
+  /** Después de entregar o avisar: se vuelve a pedir la ruta (la parada hecha sale de la lista y las horas se corren). */
+  const recargarVista = (): void => {
+    setActualizada(undefined);
+    refrescar();
+  };
 
   const vista = actualizada ?? (estado.tipo === 'ok' ? estado.datos : undefined);
   const salida = salidaEscrita ?? (vista ? horaDeMinutos(vista.salidaMin) : '');
@@ -138,6 +167,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       ) : (
         <>
           <Resumen v={vista} />
+          {vista.calculadaDesdeMin !== undefined ? <Aviso>Las horas se calculan desde las {horaDelDia(vista.calculadaDesdeMin)} (ahora){vista.paradas.length > 0 && vista.hechas.length > 0 ? ' y desde donde quedó el camión' : ''}.</Aviso> : null}
+          {enCamion && vista.paradas.length > 0 ? <a className="big-button big-button--secundario" href={enlaceRutaGoogleMaps(vista.paradas.map((x) => ({ direccion: x.direccion, comuna: x.comuna, lat: x.lat, lng: x.lng }))) ?? '#'} target="_blank" rel="noreferrer">LAS PRÓXIMAS {Math.min(vista.paradas.length, 9)} EN GOOGLE MAPS</a> : null}
           <div className="pagina">
             <Campo etiqueta="Hora de salida de esta ruta" type="time" value={salida} onChange={(e) => { setSalidaEscrita(e.target.value); }} />
             <Boton variante="secundario" disabled={ocupado} onClick={cambiarSalida}>CAMBIAR SALIDA</Boton>
@@ -157,7 +188,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
 
           {vista.paradas.length === 0 ? <Aviso>Ninguna parada se pudo ubicar en la ruta.</Aviso> : null}
           <ol className="tarjetas" aria-label="Paradas en orden">
-            {vista.paradas.map((p) => <TarjetaParada key={p.facturaId} p={p} total={vista.paradas.length} ocupado={ocupado} operar={operar} />)}
+            {vista.paradas.map((p) => <TarjetaParada key={p.facturaId} p={p} total={vista.paradas.length} ocupado={ocupado} operar={operar} enCamion={enCamion} alCambiar={recargarVista} />)}
           </ol>
         </>
       )}
@@ -178,7 +209,23 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
         </section>
       ) : null}
 
-      {vista.planificada ? <ListaItems titulo="Facturas nuevas sin ordenar" items={vista.nuevas} /> : null}
+      {vista.hechas.length > 0 ? (
+        <section className="pagina" aria-label="Hechas hoy">
+          <h2>Hechas hoy ({vista.hechas.length})</h2>
+          <ul className="tarjetas">
+            {vista.hechas.map((h) => (
+              <li key={h.facturaId} className="tarjeta">
+                {h.cliente !== h.direccion ? <strong>{h.cliente}</strong> : null}
+                <Direccion direccion={h.direccion} comuna={h.comuna} />
+                <Insignia>{h.estado === 'entregada' ? 'ENTREGADA' : 'NO ENTREGADA'}</Insignia>
+                {enCamion ? <DeshacerHecha h={h} alCambiar={recargarVista} /> : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {vista.planificada ? <ListaItems titulo="Entregas nuevas sin ordenar" items={vista.nuevas} /> : null}
       {vista.planificada && vista.nuevas.length > 0 ? (
         <Boton disabled={ocupado} onClick={() => { operar({ tipo: 'insertar' }); }}>INSERTAR NUEVAS SIN MOVER LO DEMÁS</Boton>
       ) : null}

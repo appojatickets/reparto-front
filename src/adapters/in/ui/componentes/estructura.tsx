@@ -5,7 +5,7 @@ import { useSesion } from '../sesion';
 import { CambiarVista } from '../vista';
 import { Boton, Cargando, Pagina, Aviso } from './ui';
 
-const ETIQUETA_ROL = { admin: 'Administración', despachador: 'Despacho', chofer: 'Chofer' } as const;
+const ETIQUETA_ROL = { admin: 'Administración', despachador: 'Despacho', chofer: 'Chofer', ayudante: 'Ayudante' } as const;
 
 /** Cabecera común: quién eres y SALIR siempre a mano. */
 export const Marco = () => {

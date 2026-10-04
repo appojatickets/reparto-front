@@ -9,6 +9,7 @@ import { Aviso, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina, Selector }
 
 const ROLES: readonly { valor: Rol; texto: string }[] = [
   { valor: 'chofer', texto: 'Chofer' },
+  { valor: 'ayudante', texto: 'Ayudante' },
   { valor: 'despachador', texto: 'Despachador' },
   { valor: 'admin', texto: 'Administrador' },
 ];

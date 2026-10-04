@@ -27,6 +27,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     ahora: () => new Date('2026-10-05T15:00:00Z'),
     voz: { disponible: false, escuchar: () => ({ detener: () => undefined }) },
     vista: { cargar: () => 'grande' as const, guardar: () => undefined },
+    ubicacion: { disponible: false, actual: () => Promise.resolve(err('NO_DISPONIBLE' as const)) },
     ...opciones.casos,
   };
   return { casos, ...render(<ProveedorCasos casos={casos}><Aplicacion /></ProveedorCasos>) };
@@ -570,7 +571,7 @@ describe('rutas del día', () => {
   const CAMION = { id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true };
   const item = (n: string, extra: object = {}) => ({ facturaId: `f${n}`, folio: `100${n}`, localId: `l${n}`, cliente: `Local ${n}`, direccion: `Calle ${n}`, comuna: 'Maipú', urgente: false, ...extra });
   const parada = (n: string, pos: number, extra: object = {}) => ({ ...item(n), posicion: pos, llegada: 540 + pos * 20, inicioServicio: 540 + pos * 20, salida: 548 + pos * 20, espera: 0, atraso: 0, motivos: ['MENOR_DESVIO' as const], fijada: false, ...extra });
-  const vista = (extra: object = {}) => ({ camionId: 'c1', fecha: '2026-10-05', planificada: true, modo: 'sugerida' as const, version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, regreso: 700, regresoTardio: false, paradas: [parada('A', 0), parada('B', 1), parada('C', 2)], nuevas: [], sinPin: [], noAtendidas: [], enRiesgo: [], ...extra });
+  const vista = (extra: object = {}) => ({ camionId: 'c1', fecha: '2026-10-05', planificada: true, modo: 'sugerida' as const, version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, regreso: 700, regresoTardio: false, paradas: [parada('A', 0), parada('B', 1), parada('C', 2)], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [], ...extra });
   const base = (api: Partial<ApiClient>) => ({ listarCamiones: () => Promise.resolve(ok([CAMION])), ...api });
   const elegirCamion = async () => {
     await screen.findByRole('option', { name: 'Camión 3 · AB·1234' });
@@ -647,7 +648,7 @@ describe('rutas del día', () => {
     const operarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 2 }))));
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ nuevas: [item('N')], sinPin: [item('P')] }))), operarRuta }) });
     await elegirCamion();
-    const nuevas = await screen.findByRole('region', { name: 'Facturas nuevas sin ordenar' });
+    const nuevas = await screen.findByRole('region', { name: 'Entregas nuevas sin ordenar' });
     expect(within(nuevas).getByText('Local N')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'FIJAR EL PIN DE Local P' })).toHaveAttribute('href', '/clientes/lP');
     await userEvent.click(screen.getByRole('button', { name: 'INSERTAR NUEVAS SIN MOVER LO DEMÁS' }));
@@ -860,7 +861,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
   });
 
   it('mi ruta muestra la ruta de su camión de hoy', async () => {
-    const verRuta = vi.fn(() => Promise.resolve(ok({ camionId: 'c1', fecha: '2026-10-05', planificada: false, salidaMin: 480, horaLimiteRegresoMin: 1260, paradas: [], nuevas: [], sinPin: [], noAtendidas: [], enRiesgo: [] })));
+    const verRuta = vi.fn(() => Promise.resolve(ok({ camionId: 'c1', fecha: '2026-10-05', planificada: false, salidaMin: 480, horaLimiteRegresoMin: 1260, paradas: [], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] })));
     montar({ ruta: '/mi-ruta', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta } });
     expect(await screen.findByText(/Esta ruta aún no está calculada/)).toBeInTheDocument();
     expect(verRuta).toHaveBeenCalledWith('c1', '2026-10-05');
@@ -869,5 +870,130 @@ describe('el chofer: camión del día y carga de entregas', () => {
   it('el despachador no entra a /cargar ni /mi-ruta', async () => {
     montar({ ruta: '/cargar', sesion: DESPACHADOR });
     expect(await screen.findByRole('heading', { name: 'Hola, Ana' })).toBeInTheDocument();
+  });
+});
+
+describe('acciones en la parada (chofer)', () => {
+  const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
+  const paradaDe = (n: string, pos: number, extra: object = {}) => ({ facturaId: `f${n}`, localId: `l${n}`, cliente: `Local ${n}`, direccion: `Calle ${n} 100`, comuna: 'San Bernardo', lat: -33.59, lng: -70.7, urgente: false, posicion: pos, llegada: 600 + pos * 20, inicioServicio: 600 + pos * 20, salida: 608 + pos * 20, espera: 0, atraso: 0, motivos: ['MENOR_DESVIO' as const], fijada: false, ...extra });
+  const vistaBase = (extra: object = {}) => ({ camionId: 'c1', fecha: '2026-10-05', planificada: true, modo: 'sugerida' as const, version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, regreso: 800, regresoTardio: false, paradas: [paradaDe('A', 0), paradaDe('B', 1)], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [], ...extra });
+  const abrir = (api: Partial<ApiClient> = {}, casos: Partial<Casos> = {}, sesion = CHOFER) =>
+    montar({ ruta: '/mi-ruta', sesion, casos, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vistaBase())), ...api } });
+  const gps = (precisionM = 10) => ({ disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.5901, lng: -70.7002, precisionM }))) });
+
+  it('cada parada ofrece navegar con Waze y Google Maps usando el pin, o la dirección escrita si no hay pin', async () => {
+    abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [paradaDe('A', 0), paradaDe('B', 1, { lat: undefined, lng: undefined })] }))) });
+    expect(await screen.findByRole('link', { name: 'NAVEGAR CON WAZE a Local A' })).toHaveAttribute('href', 'https://waze.com/ul?ll=-33.59,-70.7&navigate=yes');
+    expect(screen.getByRole('link', { name: 'NAVEGAR CON GOOGLE MAPS a Local A' })).toHaveAttribute('href', expect.stringContaining('destination=-33.59,-70.7'));
+    expect(screen.getByRole('link', { name: 'NAVEGAR CON WAZE a Local B' })).toHaveAttribute('href', expect.stringContaining('waze.com/ul?q=Calle%20B%20100%2C%20San%20Bernardo'));
+    expect(screen.getByRole('link', { name: 'LAS PRÓXIMAS 2 EN GOOGLE MAPS' })).toHaveAttribute('href', expect.stringContaining('waypoints='));
+  });
+
+  it('ESTOY AQUÍ manda la posición del GPS y avisa si fijó el pin del local', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: true })));
+    const ubicacion = gps(8);
+    abrir({ registrarEvento }, { ubicacion });
+    await userEvent.click(await screen.findByRole('button', { name: 'ESTOY AQUÍ Local A' }));
+    expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'llegada', lat: -33.5901, lng: -70.7002, precisionM: 8 });
+    expect(await screen.findByText(/Fijé la ubicación de este local con tu posición/)).toBeInTheDocument();
+  });
+
+  it('si el GPS falla igual se anota, sin ubicación, y se avisa', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })));
+    const ubicacion = { disponible: true, actual: vi.fn(() => Promise.resolve(err('PERMISO' as const))) };
+    abrir({ registrarEvento }, { ubicacion });
+    await userEvent.click(await screen.findByRole('button', { name: 'ESTOY AQUÍ Local A' }));
+    expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'llegada' });
+    expect(await screen.findByText(/No pude leer el GPS; quedó sin ubicación/)).toBeInTheDocument();
+  });
+
+  it('ENTREGADO avisa con la posición y vuelve a pedir la ruta (la parada sale de la lista)', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'entregada' as const, pinFijado: false })));
+    const verRuta = vi.fn()
+      .mockResolvedValueOnce(ok(vistaBase()))
+      .mockResolvedValueOnce(ok(vistaBase({ paradas: [paradaDe('B', 0)], hechas: [{ facturaId: 'fA', localId: 'lA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', urgente: false, estado: 'entregada' }] })));
+    abrir({ registrarEvento, verRuta }, { ubicacion: gps() });
+    await userEvent.click(await screen.findByRole('button', { name: 'ENTREGADO Local A' }));
+    expect(registrarEvento).toHaveBeenCalledWith('fA', expect.objectContaining({ tipo: 'entregado', lat: -33.5901 }));
+    const hechas = await screen.findByRole('region', { name: 'Hechas hoy' });
+    expect(within(hechas).getByText('ENTREGADA')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'ENTREGADO Local A' })).toBeNull();
+    expect(verRuta).toHaveBeenCalledTimes(2);
+  });
+
+  it('una entrega hecha se puede deshacer (vuelve a pendiente)', async () => {
+    const actualizarFactura = vi.fn(() => Promise.resolve(ok({ id: 'fA', fecha: '2026-10-05', estado: 'pendiente' as const, urgente: false, local: { id: 'lA', razonSocial: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', tienePin: true } })));
+    abrir({ actualizarFactura, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [], hechas: [{ facturaId: 'fA', localId: 'lA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', urgente: false, estado: 'no_entregada' }] }))) });
+    expect(await screen.findByText('NO ENTREGADA')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'DESHACER Local A' }));
+    expect(actualizarFactura).toHaveBeenCalledWith('fA', { estado: 'pendiente' });
+  });
+
+  it('ESTÁ CERRADO anota el aviso y ofrece WhatsApp al vendedor con el mensaje armado, esperar o seguir', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })));
+    abrir({ registrarEvento }, { ubicacion: gps() });
+    await userEvent.click(await screen.findByRole('button', { name: 'ESTÁ CERRADO Local A' }));
+    expect(registrarEvento).toHaveBeenCalledWith('fA', expect.objectContaining({ tipo: 'cerrado' }));
+    const panel = within(await screen.findByLabelText('Local cerrado: Local A'));
+    const wa = panel.getByRole('link', { name: 'AVISAR AL VENDEDOR POR WHATSAPP' });
+    const mensaje = decodeURIComponent(wa.getAttribute('href') ?? '');
+    expect(mensaje).toContain('Local A (Calle A 100, San Bernardo) y está cerrado (12:00)');
+    expect(wa.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/);
+    await userEvent.click(panel.getByRole('button', { name: 'ESPERAR 15 MIN' }));
+    expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'espera', minutos: 15 });
+    expect(await screen.findByText(/Esperando 15 minutos \(hasta las 12:15\)/)).toBeInTheDocument();
+  });
+
+  it('cerrado → SEGUIR Y VOLVER MÁS TARDE reordena la ruta (la deja para después)', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })));
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ version: 2 }))));
+    abrir({ registrarEvento, operarRuta });
+    await userEvent.click(await screen.findByRole('button', { name: 'ESTÁ CERRADO Local A' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'SEGUIR Y VOLVER MÁS TARDE' }));
+    expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'vuelve_mas_tarde' });
+    await waitFor(() => { expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'despues', facturaId: 'fA' }); });
+  });
+
+  it('cerrado → DEJAR PARA OTRO DÍA la marca como no entregada por estar cerrado', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'no_entregada' as const, pinFijado: false })));
+    abrir({ registrarEvento });
+    await userEvent.click(await screen.findByRole('button', { name: 'ESTÁ CERRADO Local A' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'SEGUIR: DEJAR PARA OTRO DÍA' }));
+    expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'no_entregado', motivo: 'cerrado' });
+  });
+
+  it('NO LA ENCUENTRO ofrece enviar la dirección por WhatsApp o marcarla como no entregada', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'no_entregada' as const, pinFijado: false })));
+    abrir({ registrarEvento });
+    await userEvent.click(await screen.findByRole('button', { name: 'NO LA ENCUENTRO Local A' }));
+    const panel = within(screen.getByLabelText('No encuentra la dirección: Local A'));
+    expect(decodeURIComponent(panel.getByRole('link', { name: 'ENVIAR LA DIRECCIÓN POR WHATSAPP' }).getAttribute('href') ?? '')).toContain('no encuentro la dirección de Local A: Calle A 100, San Bernardo');
+    await userEvent.click(panel.getByRole('button', { name: 'NO SE PUDO ENTREGAR (DIRECCIÓN)' }));
+    expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'no_entregado', motivo: 'direccion' });
+  });
+
+  it('un error de la API al avisar se muestra y no cambia la lista', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(http(403, { codigo: 'SIN_PERMISO', mensaje: 'Esa entrega no es de tu camión de hoy.' })));
+    abrir({ registrarEvento });
+    await userEvent.click(await screen.findByRole('button', { name: 'ENTREGADO Local A' }));
+    expect(await screen.findByText('No tienes permiso para hacer esto.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ENTREGADO Local A' })).toBeInTheDocument();
+  });
+
+  it('el ayudante también ve las acciones; el despachador no (solo mira y acomoda)', async () => {
+    abrir({}, {}, { id: 'u9', username: 'ayud', nombre: 'Max García', rol: 'ayudante' });
+    expect(await screen.findByRole('button', { name: 'ENTREGADO Local A' })).toBeInTheDocument();
+  });
+
+  it('las horas «desde ahora» se avisan en la ruta de hoy', async () => {
+    abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ calculadaDesdeMin: 630 }))) });
+    expect(await screen.findByText(/Las horas se calculan desde las 10:30 \(ahora\)/)).toBeInTheDocument();
+  });
+});
+
+describe('ayudante', () => {
+  it('ve el mismo inicio que el chofer: elegir camión, cargar y ruta', async () => {
+    montar({ sesion: { id: 'u9', username: 'ayud', nombre: 'Max García', rol: 'ayudante' } });
+    expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
   });
 });

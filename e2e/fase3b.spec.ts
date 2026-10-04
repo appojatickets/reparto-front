@@ -8,7 +8,7 @@ const parada = (n: string, pos: number, extra: object = {}) => ({ ...item(n), po
 const VISTA = {
   camionId: CAMION.id, fecha: '2026-10-05', planificada: true, modo: 'sugerida', version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, regreso: 700, regresoTardio: false,
   paradas: [parada('1', 0, { urgente: true, antesDeMin: 720, motivos: ['VENTANA_DURA'] }), parada('2', 1), parada('3', 2, { atraso: 12 })],
-  nuevas: [item('4')], sinPin: [item('5')], noAtendidas: [{ ...item('6'), conflictos: ['Cierra a las 09:00 y no alcanza a llegar.'] }],
+  nuevas: [item('4')], hechas: [], sinPin: [item('5')], noAtendidas: [{ ...item('6'), conflictos: ['Cierra a las 09:00 y no alcanza a llegar.'] }],
   enRiesgo: [{ ...item('3'), cierre: 600, conflictos: ['Llega 12 min después del cierre.'], sugerencias: [{ tipo: 'SALIR_ANTES', minutos: 15, texto: 'Salir 15 min antes (a las 07:45).' }] }],
 };
 

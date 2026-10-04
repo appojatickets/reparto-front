@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fechaEnChile, fechaLarga, sumarDias } from './fechas';
+import { fechaEnChile, fechaLarga, minutosEnChile, sumarDias } from './fechas';
 
 describe('fechas de reparto', () => {
   it('usa el día de Chile, no el UTC', () => {
@@ -13,5 +13,12 @@ describe('fechas de reparto', () => {
   });
   it('escribe la fecha en español', () => {
     expect(fechaLarga('2026-10-05')).toBe('lunes, 5 de octubre');
+  });
+});
+
+describe('minutosEnChile', () => {
+  it('usa la hora de Chile, no la UTC', () => {
+    expect(minutosEnChile(new Date('2026-10-05T12:00:00Z'))).toBe(540);
+    expect(minutosEnChile(new Date('2026-07-01T12:30:00Z'))).toBe(510);
   });
 });

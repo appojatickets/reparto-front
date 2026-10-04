@@ -15,7 +15,7 @@ export const fakeApi = (extra: Partial<ApiClient> = {}): ApiClient => ({
   resolverPropuesta: sinImplementar, listarUsuarios: sinImplementar, crearUsuario: sinImplementar, resetearPin: sinImplementar,
   cambiarEstadoUsuario: sinImplementar, listarCamiones: () => Promise.resolve(ok([])), crearCamion: sinImplementar, actualizarCamion: sinImplementar,
   listarFacturas: sinImplementar, registrarFactura: sinImplementar, actualizarFactura: sinImplementar,
-  obtenerHorario: () => Promise.resolve(ok([])), guardarHorario: sinImplementar, miJornada: () => Promise.resolve(ok(null)), iniciarJornada: sinImplementar, terminarJornada: sinImplementar, obtenerConfig: sinImplementar, guardarConfig: sinImplementar, verRuta: sinImplementar, planificarRuta: sinImplementar, operarRuta: sinImplementar, ...extra,
+  registrarEvento: sinImplementar, obtenerHorario: () => Promise.resolve(ok([])), guardarHorario: sinImplementar, miJornada: () => Promise.resolve(ok(null)), iniciarJornada: sinImplementar, terminarJornada: sinImplementar, obtenerConfig: sinImplementar, guardarConfig: sinImplementar, verRuta: sinImplementar, planificarRuta: sinImplementar, operarRuta: sinImplementar, ...extra,
 });
 
 export const fakeStore = (inicial?: Tokens) => {

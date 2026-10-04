@@ -11,6 +11,7 @@ import { crearSesionStore } from './adapters/out/sesion/local-storage-store';
 import { browserTimer } from './adapters/out/timer/browser-timer';
 import { App } from './adapters/in/ui/App';
 import { Aplicacion } from './adapters/in/ui/Aplicacion';
+import { crearUbicacionWeb } from './adapters/out/ubicacion/geolocalizacion';
 import { crearVistaStore } from './adapters/out/vista/local-storage-vista';
 import { crearVozWeb } from './adapters/out/voz/voz-web';
 import { ProveedorCasos, type Casos } from './adapters/in/ui/contexto';
@@ -40,6 +41,7 @@ const casos: Casos = {
   subirFotoLocal: crearSubirFotoLocal({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),
   ahora: () => new Date(),
   voz: crearVozWeb(),
+  ubicacion: crearUbicacionWeb(),
   vista: crearVistaStore(),
 };
 const deps = { api, timer: browserTimer, wakingAfterMs: 3000 };

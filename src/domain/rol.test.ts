@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accionesDe, puedeHacer } from './rol';
+import { accionesDe, esDeCamion, puedeHacer } from './rol';
 
 describe('acciones por rol (solo para mostrar el menú; la API es quien manda)', () => {
   it('el chofer solo ve su ruta', () => {
@@ -23,5 +23,13 @@ describe('acciones por rol (solo para mostrar el menú; la API es quien manda)',
     expect(puedeHacer('admin', 'facturas')).toBe(true);
     expect(puedeHacer('admin', 'revisar-pines')).toBe(true);
     expect(puedeHacer('admin', 'mi-ruta')).toBe(false); // el admin no maneja un camión
+  });
+
+  it('el ayudante ve lo mismo que el chofer (va en el mismo camión)', () => {
+    expect(accionesDe('ayudante')).toEqual(accionesDe('chofer'));
+    expect(esDeCamion('ayudante')).toBe(true);
+    expect(esDeCamion('chofer')).toBe(true);
+    expect(esDeCamion('despachador')).toBe(false);
+    expect(esDeCamion('admin')).toBe(false);
   });
 });

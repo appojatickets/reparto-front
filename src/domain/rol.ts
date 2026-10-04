@@ -1,4 +1,4 @@
-export type Rol = 'admin' | 'despachador' | 'chofer';
+export type Rol = 'admin' | 'despachador' | 'chofer' | 'ayudante';
 
 export type Accion =
   | 'mi-ruta'
@@ -19,9 +19,13 @@ export type Accion =
  */
 const ACCIONES: Readonly<Record<Rol, readonly Accion[]>> = {
   chofer: ['mi-ruta', 'cargar-facturas'],
+  ayudante: ['mi-ruta', 'cargar-facturas'],
   despachador: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines'],
   admin: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines', 'importar-clientes', 'camiones', 'configuracion', 'usuarios'],
 };
 
 export const accionesDe = (rol: Rol): readonly Accion[] => ACCIONES[rol];
 export const puedeHacer = (rol: Rol, accion: Accion): boolean => ACCIONES[rol].includes(accion);
+
+/** Chofer y ayudante van en el camión: ven su ruta, cargan entregas y avisan desde la parada. */
+export const esDeCamion = (rol: Rol): boolean => rol === 'chofer' || rol === 'ayudante';

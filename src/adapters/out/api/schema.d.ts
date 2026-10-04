@@ -103,7 +103,7 @@ export interface paths {
                                 username: string;
                                 nombre: string;
                                 /** @enum {string} */
-                                rol: "admin" | "despachador" | "chofer";
+                                rol: "admin" | "despachador" | "chofer" | "ayudante";
                                 activo: boolean;
                             };
                         };
@@ -399,7 +399,7 @@ export interface paths {
                             username: string;
                             nombre: string;
                             /** @enum {string} */
-                            rol: "admin" | "despachador" | "chofer";
+                            rol: "admin" | "despachador" | "chofer" | "ayudante";
                             activo: boolean;
                             empresaId: string;
                         };
@@ -548,7 +548,7 @@ export interface paths {
                                 username: string;
                                 nombre: string;
                                 /** @enum {string} */
-                                rol: "admin" | "despachador" | "chofer";
+                                rol: "admin" | "despachador" | "chofer" | "ayudante";
                                 activo: boolean;
                             }[];
                         };
@@ -676,7 +676,7 @@ export interface paths {
                         apellidoPaterno: string;
                         apellidoMaterno?: string;
                         /** @enum {string} */
-                        rol: "admin" | "despachador" | "chofer";
+                        rol: "admin" | "despachador" | "chofer" | "ayudante";
                         pin: string;
                     };
                 };
@@ -693,7 +693,7 @@ export interface paths {
                             username: string;
                             nombre: string;
                             /** @enum {string} */
-                            rol: "admin" | "despachador" | "chofer";
+                            rol: "admin" | "despachador" | "chofer" | "ayudante";
                             activo: boolean;
                         };
                     };
@@ -3250,7 +3250,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Facturas de un día (hoy en Chile si no se indica), en orden de ingreso */
+        /** Entregas de un día (hoy en Chile si no se indica), en orden de ingreso. Por defecto solo las pendientes. */
         get: {
             parameters: {
                 query?: {
@@ -3258,6 +3258,7 @@ export interface paths {
                     camionId?: string;
                     sinCamion?: "true" | "false";
                     incluirAnuladas?: "true" | "false";
+                    incluirHechas?: "true" | "false";
                 };
                 header?: never;
                 path?: never;
@@ -3277,7 +3278,7 @@ export interface paths {
                                 folio?: string;
                                 fecha: string;
                                 /** @enum {string} */
-                                estado: "pendiente" | "anulada";
+                                estado: "pendiente" | "entregada" | "no_entregada" | "anulada";
                                 total?: number;
                                 antesDeMin?: number;
                                 urgente: boolean;
@@ -3441,7 +3442,7 @@ export interface paths {
                             folio?: string;
                             fecha: string;
                             /** @enum {string} */
-                            estado: "pendiente" | "anulada";
+                            estado: "pendiente" | "entregada" | "no_entregada" | "anulada";
                             total?: number;
                             antesDeMin?: number;
                             urgente: boolean;
@@ -3623,7 +3624,7 @@ export interface paths {
                             folio?: string;
                             fecha: string;
                             /** @enum {string} */
-                            estado: "pendiente" | "anulada";
+                            estado: "pendiente" | "entregada" | "no_entregada" | "anulada";
                             total?: number;
                             antesDeMin?: number;
                             urgente: boolean;
@@ -4077,6 +4078,7 @@ export interface paths {
                             modo?: "sugerida" | "manual";
                             version?: number;
                             salidaMin: number;
+                            calculadaDesdeMin?: number;
                             horaLimiteRegresoMin: number;
                             regreso?: number;
                             regresoTardio?: boolean;
@@ -4113,6 +4115,21 @@ export interface paths {
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
+                            }[];
+                            readonly hechas: {
+                                facturaId: string;
+                                folio?: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                lat?: number;
+                                lng?: number;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                /** @enum {string} */
+                                estado: "entregada" | "no_entregada";
                             }[];
                             readonly sinPin: {
                                 facturaId: string;
@@ -4321,6 +4338,7 @@ export interface paths {
                             modo?: "sugerida" | "manual";
                             version?: number;
                             salidaMin: number;
+                            calculadaDesdeMin?: number;
                             horaLimiteRegresoMin: number;
                             regreso?: number;
                             regresoTardio?: boolean;
@@ -4357,6 +4375,21 @@ export interface paths {
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
+                            }[];
+                            readonly hechas: {
+                                facturaId: string;
+                                folio?: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                lat?: number;
+                                lng?: number;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                /** @enum {string} */
+                                estado: "entregada" | "no_entregada";
                             }[];
                             readonly sinPin: {
                                 facturaId: string;
@@ -4576,6 +4609,7 @@ export interface paths {
                             modo?: "sugerida" | "manual";
                             version?: number;
                             salidaMin: number;
+                            calculadaDesdeMin?: number;
                             horaLimiteRegresoMin: number;
                             regreso?: number;
                             regresoTardio?: boolean;
@@ -4612,6 +4646,21 @@ export interface paths {
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
+                            }[];
+                            readonly hechas: {
+                                facturaId: string;
+                                folio?: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                lat?: number;
+                                lng?: number;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                /** @enum {string} */
+                                estado: "entregada" | "no_entregada";
                             }[];
                             readonly sinPin: {
                                 facturaId: string;
@@ -5485,6 +5534,165 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/entregas/{id}/eventos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Avisar desde la parada: llegué, entregué, está cerrado, espero, no se entregó o vuelvo más tarde (con la posición si hay) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        tipo: "llegada" | "entregado" | "cerrado" | "espera" | "no_entregado" | "vuelve_mas_tarde";
+                        lat?: number;
+                        lng?: number;
+                        precisionM?: number;
+                        /** @enum {string} */
+                        motivo?: "cerrado" | "no_recibe" | "direccion" | "otro";
+                        minutos?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            estado: "pendiente" | "entregada" | "no_entregada" | "anulada";
+                            pinFijado: boolean;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;

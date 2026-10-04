@@ -181,7 +181,11 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     actualizarCamion: (id, cambios) => ejecutar(() => client.PATCH('/v1/camiones/{id}', { params: { path: { id } }, body: cambios, signal: timeout() })),
 
     async listarFacturas(filtro = {}) {
-      const query = { ...(filtro.fecha ? { fecha: filtro.fecha } : {}), ...(filtro.incluirAnuladas ? { incluirAnuladas: 'true' as const } : {}) };
+      const query = {
+        ...(filtro.fecha ? { fecha: filtro.fecha } : {}),
+        ...(filtro.incluirAnuladas ? { incluirAnuladas: 'true' as const } : {}),
+        ...(filtro.incluirHechas ? { incluirHechas: 'true' as const } : {}),
+      };
       const r = await ejecutar(() => client.GET('/v1/facturas', { params: { query }, signal: timeout() }), { repetible: true });
       return mapear(r, (d) => d.facturas);
     },
@@ -197,6 +201,8 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
 
     obtenerConfig: () => ejecutar(() => client.GET('/v1/empresa/config', { signal: timeout() }), { repetible: true }),
     guardarConfig: (config) => ejecutar(() => client.PUT('/v1/empresa/config', { body: config, signal: timeout() })),
+
+    registrarEvento: (facturaId, evento) => ejecutar(() => client.POST('/v1/entregas/{id}/eventos', { params: { path: { id: facturaId } }, body: evento, signal: timeout() })),
 
     async obtenerHorario(localId) {
       const r = await ejecutar(() => client.GET('/v1/locales/{id}/horario', { params: { path: { id: localId } }, signal: timeout() }), { repetible: true });
