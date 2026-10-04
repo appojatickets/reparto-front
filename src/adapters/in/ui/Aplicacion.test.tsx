@@ -478,6 +478,18 @@ describe('camiones', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Ya existe un camión');
   });
 
+  it('cambia el nombre de un camión (y lo borra si se deja vacío)', async () => {
+    const actualizarCamion = vi.fn((_id: string, _c: { alias?: string | null }) => Promise.resolve(ok({ id: 'c1', patente: 'SDTS23', alias: '23 nuevo', activo: true })));
+    montar({ ruta: '/admin/camiones', sesion: ADMIN, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'SDTS23', alias: '23', activo: true }])), actualizarCamion } });
+    await userEvent.click(await screen.findByRole('button', { name: 'CAMBIAR NOMBRE SDTS·23' }));
+    const campo = screen.getByLabelText('Nombre del camión SDTS·23');
+    expect(campo).toHaveValue('23');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '23 nuevo');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR NOMBRE' }));
+    await waitFor(() => { expect(actualizarCamion).toHaveBeenCalledWith('c1', { alias: '23 nuevo' }); });
+  });
+
   it('saca un camión de servicio', async () => {
     const actualizarCamion = vi.fn(() => Promise.resolve(ok({ id: 'c1', patente: 'AB1234', activo: false })));
     montar({ ruta: '/admin/camiones', sesion: ADMIN, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', activo: true }])), actualizarCamion } });

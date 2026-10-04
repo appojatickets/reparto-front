@@ -44,10 +44,21 @@ const FormularioNuevo = ({ alCrear }: { readonly alCrear: () => void }) => {
 const Fila = ({ c, alCambiar }: { readonly c: Camion; readonly alCambiar: () => void }) => {
   const { api } = useCasos();
   const [error, setError] = useState<string | undefined>();
+  const [editando, setEditando] = useState(false);
+  const [nombre, setNombre] = useState(c.alias ?? '');
   const cambiar = async (): Promise<void> => {
     const r = await api.actualizarCamion(c.id, { activo: !c.activo });
     if (r.ok) alCambiar();
     else setError(mensajeDeError(r.error));
+  };
+  const guardarNombre = async (e: SyntheticEvent): Promise<void> => {
+    e.preventDefault();
+    setError(undefined);
+    const r = await api.actualizarCamion(c.id, { alias: nombre.trim() === '' ? null : nombre.trim() });
+    if (r.ok) {
+      setEditando(false);
+      alCambiar();
+    } else setError(mensajeDeError(r.error));
   };
   return (
     <li className="tarjeta">
@@ -55,8 +66,15 @@ const Fila = ({ c, alCambiar }: { readonly c: Camion; readonly alCambiar: () => 
       {c.alias ? <span>{c.alias}</span> : null}
       <Insignia>{c.activo ? 'ACTIVO' : 'FUERA DE SERVICIO'}</Insignia>
       <div className="fila-botones">
+        <Boton variante="secundario" aria-expanded={editando} aria-label={`CAMBIAR NOMBRE ${formatearPatente(c.patente)}`} onClick={() => { setEditando(!editando); }}>CAMBIAR NOMBRE</Boton>
         <Boton variante={c.activo ? 'peligro' : 'secundario'} onClick={() => void cambiar()}>{c.activo ? 'SACAR DE SERVICIO' : 'VOLVER A ACTIVAR'}</Boton>
       </div>
+      {editando ? (
+        <form className="pagina" onSubmit={(e) => void guardarNombre(e)} noValidate>
+          <Campo etiqueta={`Nombre del camión ${formatearPatente(c.patente)}`} value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />
+          <Boton type="submit">GUARDAR NOMBRE</Boton>
+        </form>
+      ) : null}
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
     </li>
   );
