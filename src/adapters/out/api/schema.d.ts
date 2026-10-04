@@ -3751,6 +3751,1001 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/empresa/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Depósito, hora de salida y hora límite de regreso */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deposito?: {
+                                lat: number;
+                                lng: number;
+                                nombre?: string;
+                            };
+                            salidaPorDefectoMin: number;
+                            horaLimiteRegresoMin: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        /** Guardar la configuración de reparto */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        deposito?: {
+                            lat: number;
+                            lng: number;
+                            nombre?: string;
+                        };
+                        salidaPorDefectoMin: number;
+                        horaLimiteRegresoMin: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deposito?: {
+                                lat: number;
+                                lng: number;
+                                nombre?: string;
+                            };
+                            salidaPorDefectoMin: number;
+                            horaLimiteRegresoMin: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/rutas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ruta de un camión para un día: orden, horas estimadas de llegada, riesgos y facturas sin ubicar */
+        get: {
+            parameters: {
+                query: {
+                    camionId: string;
+                    fecha: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            camionId: string;
+                            fecha: string;
+                            planificada: boolean;
+                            /** @enum {string} */
+                            modo?: "sugerida" | "manual";
+                            version?: number;
+                            salidaMin: number;
+                            horaLimiteRegresoMin: number;
+                            regreso?: number;
+                            regresoTardio?: boolean;
+                            readonly paradas: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                posicion: number;
+                                llegada: number;
+                                inicioServicio: number;
+                                salida: number;
+                                espera: number;
+                                atraso: number;
+                                readonly motivos: ("VENTANA_DURA" | "PRIORIDAD" | "CERCANIA_COMUNA" | "COLACION" | "FIJADA_POR_CHOFER" | "MENOR_DESVIO")[];
+                                fijada: boolean;
+                            }[];
+                            readonly nuevas: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                            }[];
+                            readonly sinPin: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                            }[];
+                            readonly noAtendidas: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                readonly conflictos: string[];
+                            }[];
+                            readonly enRiesgo: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                cierre: number;
+                                readonly conflictos: string[];
+                                readonly sugerencias: {
+                                    /** @enum {string} */
+                                    tipo: "MOVER_AL_INICIO" | "SALIR_ANTES" | "OTRO_CAMION";
+                                    minutos?: number;
+                                    texto: string;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/rutas/planificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Calcular la ruta sugerida desde cero (reemplaza la actual) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        camionId: string;
+                        fecha: string;
+                        salidaMin?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            camionId: string;
+                            fecha: string;
+                            planificada: boolean;
+                            /** @enum {string} */
+                            modo?: "sugerida" | "manual";
+                            version?: number;
+                            salidaMin: number;
+                            horaLimiteRegresoMin: number;
+                            regreso?: number;
+                            regresoTardio?: boolean;
+                            readonly paradas: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                posicion: number;
+                                llegada: number;
+                                inicioServicio: number;
+                                salida: number;
+                                espera: number;
+                                atraso: number;
+                                readonly motivos: ("VENTANA_DURA" | "PRIORIDAD" | "CERCANIA_COMUNA" | "COLACION" | "FIJADA_POR_CHOFER" | "MENOR_DESVIO")[];
+                                fijada: boolean;
+                            }[];
+                            readonly nuevas: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                            }[];
+                            readonly sinPin: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                            }[];
+                            readonly noAtendidas: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                readonly conflictos: string[];
+                            }[];
+                            readonly enRiesgo: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                cierre: number;
+                                readonly conflictos: string[];
+                                readonly sugerencias: {
+                                    /** @enum {string} */
+                                    tipo: "MOVER_AL_INICIO" | "SALIR_ANTES" | "OTRO_CAMION";
+                                    minutos?: number;
+                                    texto: string;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/rutas/operaciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acomodar la ruta: subir, bajar, ir primero, dejar para después, quitar, ordenar lo que queda, insertar nuevas o cambiar la salida */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        camionId: string;
+                        fecha: string;
+                        version: number;
+                        operacion: {
+                            /** @enum {string} */
+                            tipo: "subir" | "bajar" | "primero" | "despues" | "quitar";
+                            /** Format: uuid */
+                            facturaId: string;
+                        } | {
+                            /** @enum {string} */
+                            tipo: "ordenar" | "insertar";
+                        } | {
+                            /** @enum {string} */
+                            tipo: "salida";
+                            salidaMin: number;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            camionId: string;
+                            fecha: string;
+                            planificada: boolean;
+                            /** @enum {string} */
+                            modo?: "sugerida" | "manual";
+                            version?: number;
+                            salidaMin: number;
+                            horaLimiteRegresoMin: number;
+                            regreso?: number;
+                            regresoTardio?: boolean;
+                            readonly paradas: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                posicion: number;
+                                llegada: number;
+                                inicioServicio: number;
+                                salida: number;
+                                espera: number;
+                                atraso: number;
+                                readonly motivos: ("VENTANA_DURA" | "PRIORIDAD" | "CERCANIA_COMUNA" | "COLACION" | "FIJADA_POR_CHOFER" | "MENOR_DESVIO")[];
+                                fijada: boolean;
+                            }[];
+                            readonly nuevas: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                            }[];
+                            readonly sinPin: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                            }[];
+                            readonly noAtendidas: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                readonly conflictos: string[];
+                            }[];
+                            readonly enRiesgo: {
+                                facturaId: string;
+                                folio: string;
+                                localId: string;
+                                cliente: string;
+                                direccion: string;
+                                comuna: string;
+                                urgente: boolean;
+                                antesDeMin?: number;
+                                nota?: string;
+                                cierre: number;
+                                readonly conflictos: string[];
+                                readonly sugerencias: {
+                                    /** @enum {string} */
+                                    tipo: "MOVER_AL_INICIO" | "SALIR_ANTES" | "OTRO_CAMION";
+                                    minutos?: number;
+                                    texto: string;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {

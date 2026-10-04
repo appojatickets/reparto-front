@@ -14,7 +14,8 @@ export const fakeApi = (extra: Partial<ApiClient> = {}): ApiClient => ({
   registrarFoto: sinImplementar, urlFoto: sinImplementar, importarPines: sinImplementar, listarPropuestas: sinImplementar,
   resolverPropuesta: sinImplementar, listarUsuarios: sinImplementar, crearUsuario: sinImplementar, resetearPin: sinImplementar,
   cambiarEstadoUsuario: sinImplementar, listarCamiones: sinImplementar, crearCamion: sinImplementar, actualizarCamion: sinImplementar,
-  listarFacturas: sinImplementar, registrarFactura: sinImplementar, actualizarFactura: sinImplementar, ...extra,
+  listarFacturas: sinImplementar, registrarFactura: sinImplementar, actualizarFactura: sinImplementar,
+  obtenerConfig: sinImplementar, guardarConfig: sinImplementar, verRuta: sinImplementar, planificarRuta: sinImplementar, operarRuta: sinImplementar, ...extra,
 });
 
 export const fakeStore = (inicial?: Tokens) => {

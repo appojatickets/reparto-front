@@ -8,7 +8,9 @@ export type Accion =
   | 'importar-clientes'
   | 'usuarios'
   | 'facturas'
-  | 'camiones';
+  | 'rutas'
+  | 'camiones'
+  | 'configuracion';
 
 /**
  * Qué muestra el menú a cada rol. Es solo presentación: la API aplica los permisos de verdad (y responde 403);
@@ -16,8 +18,8 @@ export type Accion =
  */
 const ACCIONES: Readonly<Record<Rol, readonly Accion[]>> = {
   chofer: ['mi-ruta'],
-  despachador: ['facturas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines'],
-  admin: ['facturas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines', 'importar-clientes', 'camiones', 'usuarios'],
+  despachador: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines'],
+  admin: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines', 'importar-clientes', 'camiones', 'configuracion', 'usuarios'],
 };
 
 export const accionesDe = (rol: Rol): readonly Accion[] => ACCIONES[rol];

@@ -70,6 +70,8 @@ describe('entrada y protección por rol', () => {
     expect(await screen.findByRole('link', { name: 'BUSCAR CLIENTE' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'PINES DE LOCALES' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'FACTURAS DEL DÍA' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'RUTAS DEL DÍA' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'CONFIGURACIÓN' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'USUARIOS' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'CAMIONES' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'IMPORTAR CLIENTES' })).toBeNull();
@@ -77,7 +79,7 @@ describe('entrada y protección por rol', () => {
 
   it('el admin ve todo el menú', async () => {
     montar({ sesion: ADMIN });
-    for (const nombre of ['FACTURAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'USUARIOS']) {
+    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'CONFIGURACIÓN', 'USUARIOS']) {
       expect(await screen.findByRole('link', { name: nombre })).toBeInTheDocument();
     }
   });
@@ -394,5 +396,148 @@ describe('camiones', () => {
   it('el despachador no entra a la administración de camiones', async () => {
     montar({ ruta: '/admin/camiones', sesion: DESPACHADOR });
     expect(await screen.findByRole('heading', { name: 'Hola, Ana' })).toBeInTheDocument();
+  });
+});
+
+describe('configuración del reparto', () => {
+  it('muestra el aviso si falta el depósito y guarda las coordenadas pegadas desde Google Maps', async () => {
+    const guardarConfig = vi.fn((c: unknown) => Promise.resolve(ok(c as never)));
+    montar({ ruta: '/admin/configuracion', sesion: ADMIN, api: { obtenerConfig: () => Promise.resolve(ok({ salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260 })), guardarConfig } });
+    expect(await screen.findByText(/Falta el depósito/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Ubicación del depósito'), '-33.5123, -70.7001');
+    await userEvent.type(screen.getByLabelText('Nombre del depósito (opcional)'), 'Bodega Central');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
+    expect(await screen.findByText('Configuración guardada.')).toBeInTheDocument();
+    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5123, lng: -70.7001, nombre: 'Bodega Central' }, salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260 });
+  });
+
+  it('coordenadas que no se entienden o fuera de la RM no se envían', async () => {
+    const guardarConfig = vi.fn();
+    montar({ ruta: '/admin/configuracion', sesion: ADMIN, api: { obtenerConfig: () => Promise.resolve(ok({ salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260 })), guardarConfig } });
+    await userEvent.type(await screen.findByLabelText('Ubicación del depósito'), '-41.47, -72.94');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
+    expect(await screen.findByText(/No entendí las coordenadas/)).toBeInTheDocument();
+    expect(guardarConfig).not.toHaveBeenCalled();
+  });
+
+  it('carga lo guardado: coordenadas, nombre y horas', async () => {
+    montar({ ruta: '/admin/configuracion', sesion: ADMIN, api: { obtenerConfig: () => Promise.resolve(ok({ deposito: { lat: -33.5, lng: -70.7, nombre: 'Bodega' }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230 })) } });
+    expect(await screen.findByLabelText('Ubicación del depósito')).toHaveValue('-33.5, -70.7');
+    expect(screen.getByLabelText('Hora de salida habitual')).toHaveValue('07:30');
+    expect(screen.getByLabelText('Avisar si el regreso pasa de las')).toHaveValue('20:30');
+  });
+});
+
+describe('rutas del día', () => {
+  const CAMION = { id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true };
+  const item = (n: string, extra: object = {}) => ({ facturaId: `f${n}`, folio: `100${n}`, localId: `l${n}`, cliente: `Local ${n}`, direccion: `Calle ${n}`, comuna: 'Maipú', urgente: false, ...extra });
+  const parada = (n: string, pos: number, extra: object = {}) => ({ ...item(n), posicion: pos, llegada: 540 + pos * 20, inicioServicio: 540 + pos * 20, salida: 548 + pos * 20, espera: 0, atraso: 0, motivos: ['MENOR_DESVIO' as const], fijada: false, ...extra });
+  const vista = (extra: object = {}) => ({ camionId: 'c1', fecha: '2026-10-05', planificada: true, modo: 'sugerida' as const, version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, regreso: 700, regresoTardio: false, paradas: [parada('A', 0), parada('B', 1), parada('C', 2)], nuevas: [], sinPin: [], noAtendidas: [], enRiesgo: [], ...extra });
+  const base = (api: Partial<ApiClient>) => ({ listarCamiones: () => Promise.resolve(ok([CAMION])), ...api });
+  const elegirCamion = async () => {
+    await screen.findByRole('option', { name: 'Camión 3 · AB·1234' });
+    await userEvent.selectOptions(screen.getByLabelText('Camión'), 'c1');
+  };
+
+  it('muestra la ruta con horas de llegada, resumen y motivos', async () => {
+    const verRuta = vi.fn(() => Promise.resolve(ok(vista({ paradas: [parada('A', 0, { motivos: ['VENTANA_DURA', 'CERCANIA_COMUNA'], antesDeMin: 720, urgente: true }), parada('B', 1)] }))));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta }) });
+    await elegirCamion();
+    const primera = await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(within(primera).getByText('1. Local A')).toBeInTheDocument();
+    expect(within(primera).getByText('09:00')).toBeInTheDocument();
+    expect(within(primera).getByText('URGENTE')).toBeInTheDocument();
+    expect(within(primera).getByText('ANTES DE 12:00')).toBeInTheDocument();
+    expect(within(primera).getByText('Cierra pronto · Queda cerca de la anterior')).toBeInTheDocument();
+    expect(screen.getByLabelText('Resumen de la ruta')).toHaveTextContent('Regreso estimado: 11:40');
+    expect(verRuta).toHaveBeenCalledWith('c1', '2026-10-05');
+  });
+
+  it('un regreso tardío se marca con un aviso', async () => {
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ regreso: 1300, regresoTardio: true }))) }) });
+    await elegirCamion();
+    expect(await screen.findByText(/El regreso pasa de las 21:00/)).toBeInTheDocument();
+  });
+
+  it('sin ruta calculada ofrece calcularla y muestra el resultado', async () => {
+    const planificarRuta = vi.fn(() => Promise.resolve(ok(vista())));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ planificada: false, paradas: [], nuevas: [item('A'), item('B')], version: undefined, modo: undefined, regreso: undefined }))), planificarRuta }) });
+    await elegirCamion();
+    expect(await screen.findByText(/Hay 2 facturas por ordenar/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'CALCULAR RUTA SUGERIDA' }));
+    expect(await screen.findByRole('listitem', { name: 'Parada 3' })).toBeInTheDocument();
+    expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05');
+  });
+
+  it('SUBIR y BAJAR mandan la operación con la versión y muestran el orden nuevo; los extremos están deshabilitados', async () => {
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 2, modo: 'manual' as const, paradas: [parada('B', 0), parada('A', 1), parada('C', 2)] }))));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())), operarRuta }) });
+    await elegirCamion();
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(screen.getByRole('button', { name: 'SUBIR 100A' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'BAJAR 100C' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'SUBIR 100B' }));
+    expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'subir', facturaId: 'fB' });
+    expect(await screen.findByText('1. Local B')).toBeInTheDocument();
+    expect(screen.getByText('ACOMODADA A MANO')).toBeInTheDocument();
+  });
+
+  it('IR PRIMERO, DEJAR PARA DESPUÉS y QUITAR están en «MÁS»', async () => {
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 2 }))));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())), operarRuta }) });
+    await elegirCamion();
+    expect(screen.queryByRole('button', { name: 'IR PRIMERO 100C' })).toBeNull();
+    await userEvent.click(await screen.findByRole('button', { name: 'MÁS OPCIONES 100C' }));
+    await userEvent.click(screen.getByRole('button', { name: 'IR PRIMERO 100C' }));
+    expect(operarRuta).toHaveBeenLastCalledWith('c1', '2026-10-05', 1, { tipo: 'primero', facturaId: 'fC' });
+    await userEvent.click(screen.getByRole('button', { name: 'MÁS OPCIONES 100B' }));
+    await userEvent.click(screen.getByRole('button', { name: 'QUITAR DEL CAMIÓN 100B' }));
+    expect(operarRuta).toHaveBeenLastCalledWith('c1', '2026-10-05', 2, { tipo: 'quitar', facturaId: 'fB' });
+  });
+
+  it('las facturas nuevas se pueden insertar sin mover lo demás; las sin pin llevan a fijar el pin', async () => {
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 2 }))));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ nuevas: [item('N')], sinPin: [item('P')] }))), operarRuta }) });
+    await elegirCamion();
+    const nuevas = await screen.findByRole('region', { name: 'Facturas nuevas sin ordenar' });
+    expect(within(nuevas).getByText('Local N')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'FIJAR EL PIN DE Local P' })).toHaveAttribute('href', '/clientes/lP');
+    await userEvent.click(screen.getByRole('button', { name: 'INSERTAR NUEVAS SIN MOVER LO DEMÁS' }));
+    expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'insertar' });
+  });
+
+  it('volver a calcular desde cero pide confirmar antes de descartar el orden', async () => {
+    const planificarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 3 }))));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ modo: 'manual' as const }))), planificarRuta }) });
+    await elegirCamion();
+    await userEvent.click(await screen.findByRole('button', { name: 'VOLVER A CALCULAR DESDE CERO' }));
+    expect(screen.getByText(/incluido lo que acomodaste a mano/)).toBeInTheDocument();
+    expect(planificarRuta).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'SÍ, RECALCULAR' }));
+    await waitFor(() => { expect(planificarRuta).toHaveBeenCalledTimes(1); });
+  });
+
+  it('si otra persona cambió la ruta (409) avisa y recarga la versión nueva', async () => {
+    const verRuta = vi.fn()
+      .mockResolvedValueOnce(ok(vista()))
+      .mockResolvedValueOnce(ok(vista({ version: 5, paradas: [parada('C', 0), parada('A', 1), parada('B', 2)] })));
+    const operarRuta = vi.fn(() => Promise.resolve(http(409, { codigo: 'CONFLICTO', mensaje: 'Otra persona cambió esta ruta. Recarga para ver la versión nueva.', detalle: { codigo: 'RUTA_DESACTUALIZADA' } })));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta, operarRuta }) });
+    await elegirCamion();
+    await userEvent.click(await screen.findByRole('button', { name: 'SUBIR 100B' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Otra persona cambió esta ruta');
+    expect(await screen.findByText('1. Local C')).toBeInTheDocument();
+    expect(verRuta).toHaveBeenCalledTimes(2);
+  });
+
+  it('sin depósito configurado lleva a la configuración', async () => {
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(http(422, { codigo: 'VALIDACION', mensaje: 'x', detalle: { codigo: 'SIN_DEPOSITO' } })) }) });
+    await elegirCamion();
+    expect(await screen.findByRole('link', { name: 'Ir a la configuración' })).toHaveAttribute('href', '/admin/configuracion');
+  });
+
+  it('el chofer no entra a /rutas', async () => {
+    montar({ ruta: '/rutas', sesion: CHOFER });
+    expect(await screen.findByText('Tu ruta del día estará disponible muy pronto.')).toBeInTheDocument();
   });
 });

@@ -187,5 +187,12 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     },
     registrarFactura: (datos) => ejecutar(() => client.POST('/v1/facturas', { body: datos, signal: timeout() })),
     actualizarFactura: (id, cambios) => ejecutar(() => client.PATCH('/v1/facturas/{id}', { params: { path: { id } }, body: cambios, signal: timeout() })),
+
+    obtenerConfig: () => ejecutar(() => client.GET('/v1/empresa/config', { signal: timeout() }), { repetible: true }),
+    guardarConfig: (config) => ejecutar(() => client.PUT('/v1/empresa/config', { body: config, signal: timeout() })),
+
+    verRuta: (camionId, fecha) => ejecutar(() => client.GET('/v1/rutas', { params: { query: { camionId, fecha } }, signal: timeout() }), { repetible: true }),
+    planificarRuta: (camionId, fecha, salidaMin) => ejecutar(() => client.POST('/v1/rutas/planificar', { body: { camionId, fecha, ...(salidaMin !== undefined ? { salidaMin } : {}) }, signal: timeout() })),
+    operarRuta: (camionId, fecha, version, operacion) => ejecutar(() => client.POST('/v1/rutas/operaciones', { body: { camionId, fecha, version, operacion }, signal: timeout() })),
   };
 };

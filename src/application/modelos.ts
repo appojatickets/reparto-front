@@ -1,3 +1,4 @@
+import type { Motivo } from '../domain/motivos';
 import type { Rol } from '../domain/rol';
 import type { FilaClienteCruda } from '../domain/tabla';
 
@@ -73,3 +74,52 @@ export type NuevaFactura = {
 /** `null` quita el valor. */
 export type CambiosFactura = { readonly camionId?: string | null; readonly estado?: 'pendiente' | 'anulada' };
 export type FiltroFacturas = { readonly fecha?: string; readonly incluirAnuladas?: boolean };
+
+export type ConfigEmpresa = {
+  readonly deposito?: { readonly lat: number; readonly lng: number; readonly nombre?: string };
+  readonly salidaPorDefectoMin: number;
+  readonly horaLimiteRegresoMin: number;
+};
+
+export type ItemRuta = {
+  readonly facturaId: string;
+  readonly folio: string;
+  readonly localId: string;
+  readonly cliente: string;
+  readonly direccion: string;
+  readonly comuna: string;
+  readonly urgente: boolean;
+  readonly antesDeMin?: number;
+  readonly nota?: string;
+};
+export type ParadaDeRuta = ItemRuta & {
+  readonly posicion: number;
+  readonly llegada: number;
+  readonly inicioServicio: number;
+  readonly salida: number;
+  readonly espera: number;
+  readonly atraso: number;
+  readonly motivos: readonly Motivo[];
+  readonly fijada: boolean;
+};
+export type SugerenciaRuta = { readonly tipo: 'MOVER_AL_INICIO' | 'SALIR_ANTES' | 'OTRO_CAMION'; readonly minutos?: number; readonly texto: string };
+export type VistaRuta = {
+  readonly camionId: string;
+  readonly fecha: string;
+  readonly planificada: boolean;
+  readonly modo?: 'sugerida' | 'manual';
+  readonly version?: number;
+  readonly salidaMin: number;
+  readonly horaLimiteRegresoMin: number;
+  readonly regreso?: number;
+  readonly regresoTardio?: boolean;
+  readonly paradas: readonly ParadaDeRuta[];
+  readonly nuevas: readonly ItemRuta[];
+  readonly sinPin: readonly ItemRuta[];
+  readonly noAtendidas: readonly (ItemRuta & { readonly conflictos: readonly string[] })[];
+  readonly enRiesgo: readonly (ItemRuta & { readonly cierre: number; readonly conflictos: readonly string[]; readonly sugerencias: readonly SugerenciaRuta[] })[];
+};
+export type OperacionRuta =
+  | { readonly tipo: 'subir' | 'bajar' | 'primero' | 'despues' | 'quitar'; readonly facturaId: string }
+  | { readonly tipo: 'ordenar' | 'insertar' }
+  | { readonly tipo: 'salida'; readonly salidaMin: number };

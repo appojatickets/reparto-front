@@ -1,6 +1,6 @@
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, Camion, Factura, FilaCliente, FiltroFacturas, LocalDetalle, NuevaFactura, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, UsuarioAdmin, UsuarioSesion,
+  CambiosFactura, Camion, ConfigEmpresa, Factura, FilaCliente, FiltroFacturas, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
@@ -56,4 +56,11 @@ export interface ApiClient extends SaludApi {
   listarFacturas(filtro?: FiltroFacturas): R<readonly Factura[]>;
   registrarFactura(datos: NuevaFactura): R<Factura>;
   actualizarFactura(id: string, cambios: CambiosFactura): R<Factura>;
+
+  obtenerConfig(): R<ConfigEmpresa>;
+  guardarConfig(config: ConfigEmpresa): R<ConfigEmpresa>;
+
+  verRuta(camionId: string, fecha: string): R<VistaRuta>;
+  planificarRuta(camionId: string, fecha: string, salidaMin?: number): R<VistaRuta>;
+  operarRuta(camionId: string, fecha: string, version: number, operacion: OperacionRuta): R<VistaRuta>;
 }

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
-import { fechaEnChile, fechaLarga, sumarDias } from '../../../../domain/fechas';
 import { horaDeMinutos, minutosDeHora } from '../../../../domain/hora';
 import { formatearPatente } from '../../../../domain/patente';
 import { mensajeDeError } from '../../../../application/mensajes';
@@ -7,11 +6,10 @@ import type { Camion, Factura, ResultadoBusqueda } from '../../../../application
 import { puedeBuscar } from '../../../../application/use-cases/buscar';
 import { useCasos } from '../contexto';
 import { useCarga, useDebounced } from '../hooks';
+import { useDiaDeReparto } from '../componentes/dia';
 import { Aviso, AreaTexto, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
 const nombreCamion = (c: { patente: string; alias?: string | undefined }): string => (c.alias ? `${c.alias} · ${formatearPatente(c.patente)}` : formatearPatente(c.patente));
-
-type Dia = 'hoy' | 'manana' | 'otro';
 
 const BuscadorCliente = ({ elegido, alElegir }: { readonly elegido: ResultadoBusqueda | undefined; readonly alElegir: (r: ResultadoBusqueda | undefined) => void }) => {
   const { api } = useCasos();
@@ -92,10 +90,7 @@ const FilaFactura = ({ f, camiones, alCambiar }: { readonly f: Factura; readonly
 
 export const PaginaFacturas = () => {
   const { api, ahora } = useCasos();
-  const hoy = fechaEnChile(ahora());
-  const [dia, setDia] = useState<Dia>('hoy');
-  const [otraFecha, setOtraFecha] = useState('');
-  const fecha = dia === 'hoy' ? hoy : dia === 'manana' ? sumarDias(hoy, 1) : otraFecha;
+  const { fecha, campos: camposDia } = useDiaDeReparto(ahora);
 
   const [camionId, setCamionId] = useState('');
   const [cliente, setCliente] = useState<ResultadoBusqueda | undefined>();
@@ -171,13 +166,7 @@ export const PaginaFacturas = () => {
   return (
     <Pagina titulo="Facturas del día">
       <form className="pagina" onSubmit={(e) => void enviar(e)} noValidate>
-        <Selector etiqueta="Día de reparto" value={dia} onChange={(e) => { setDia(e.target.value as Dia); }}>
-          <option value="hoy">Hoy</option>
-          <option value="manana">Mañana</option>
-          <option value="otro">Otro día</option>
-        </Selector>
-        {dia === 'otro' ? <Campo etiqueta="Fecha" type="date" value={otraFecha} onChange={(e) => { setOtraFecha(e.target.value); }} /> : null}
-        {fecha !== '' ? <p role="status"><strong>Se reparte el {fechaLarga(fecha)}</strong></p> : null}
+        {camposDia}
 
         <Selector etiqueta="Camión" value={camionId} onChange={(e) => { setCamionId(e.target.value); }}>
           <option value="">Sin asignar todavía</option>
