@@ -9,6 +9,7 @@ import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { useUsuario } from '../sesion';
 import { EditorHorario, ResumenHorario } from '../componentes/EditorHorario';
+import { PegarUbicacion } from '../componentes/PegarUbicacion';
 import { AreaTexto, Aviso, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina } from '../componentes/ui';
 import { ETIQUETA_PIN } from './PaginaClientes';
 
@@ -59,11 +60,14 @@ const PinLocal = ({ local, recargar }: { readonly local: LocalDetalle; readonly 
     } else setMensaje({ tipo: 'error', texto: mensajeDeError(r.error) });
   };
   return (
+    <>
     <form className="pagina" onSubmit={(e) => void guardar(e)} noValidate>
       <Campo etiqueta="Ubicación del local (pin)" ayuda="En Google Maps toca y mantén el lugar exacto y copia las dos cifras de arriba." value={texto} onChange={(e) => { setTexto(e.target.value); }} autoComplete="off" />
       <Boton type="submit" disabled={ocupado}>GUARDAR UBICACIÓN</Boton>
       {mensaje ? <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
     </form>
+    <PegarUbicacion localId={local.id} etiqueta="O pega el enlace que mandó el vendedor" alGuardar={recargar} />
+    </>
   );
 };
 

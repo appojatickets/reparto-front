@@ -49,6 +49,7 @@ export type FilaCliente = FilaClienteCruda;
 
 export type Camion = { readonly id: string; readonly patente: string; readonly alias?: string; readonly activo: boolean };
 export type Vendedor = { readonly id: string; readonly codigo: string; readonly nombre: string; readonly celular?: string; readonly activo: boolean };
+export type ResultadoPinEnlace = { readonly resultado: 'fijado' | 'propuesto'; readonly lat: number; readonly lng: number };
 export type CamionResumen = { readonly id: string; readonly patente: string; readonly alias?: string };
 
 export type EstadoEntrega = 'pendiente' | 'entregada' | 'no_entregada' | 'anulada';

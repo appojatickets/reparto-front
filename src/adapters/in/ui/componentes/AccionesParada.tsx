@@ -9,8 +9,9 @@ import type { ApiError } from '../../../../application/ports/api-client';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { Aviso, Boton, Campo } from './ui';
+import { PegarUbicacion } from './PegarUbicacion';
 
-type Panel = 'cerrado' | 'direccion' | undefined;
+type Panel = 'cerrado' | 'direccion' | 'ubicacion' | undefined;
 
 /** Un botón de WhatsApp por cada vendedor con celular (ADR 0017); sin vendedores cargados, uno solo para elegir el contacto. */
 const AvisoAlVendedor = ({ mensaje }: { readonly mensaje: (nombre: string) => string }) => {
@@ -79,10 +80,6 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
 
   const nota = (sinGps: boolean): string => (sinGps ? ' No pude leer el GPS; quedó sin ubicación.' : '');
 
-  const llegue = async (): Promise<void> => {
-    const { r, sinGps } = await avisar({ tipo: 'llegada' });
-    if (r.ok) setAviso({ tipo: 'exito', texto: `${r.value.pinFijado ? 'Llegada anotada. Fijé la ubicación de este local con tu posición.' : 'Llegada anotada.'}${nota(sinGps)}` });
-  };
   const entregado = async (): Promise<void> => {
     const { r } = await avisar({ tipo: 'entregado' });
     if (r.ok) alCambiar();
@@ -117,8 +114,8 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
         <a className="big-button big-button--primario" href={enlaceNavegar(destino, 'google')} target="_blank" rel="noreferrer" aria-label={`NAVEGAR CON GOOGLE MAPS a ${p.cliente}`}>GOOGLE MAPS</a>
       </div>
       <div className="fila-botones">
-        <Boton disabled={ocupado} aria-label={`ESTOY AQUÍ ${p.cliente}`} onClick={() => void llegue()}>ESTOY AQUÍ</Boton>
         <Boton disabled={ocupado} aria-label={`ENTREGADO ${p.cliente}`} onClick={() => void entregado()}>ENTREGADO</Boton>
+        <Boton variante="secundario" aria-expanded={panel === 'ubicacion'} aria-label={`UBICACIÓN DEL VENDEDOR ${p.cliente}`} onClick={() => { setPanel(panel === 'ubicacion' ? undefined : 'ubicacion'); }}>UBICACIÓN DEL VENDEDOR</Boton>
       </div>
       <div className="fila-botones">
         <Boton variante="secundario" disabled={ocupado} aria-label={`ESTÁ CERRADO ${p.cliente}`} onClick={() => void cerrado()}>ESTÁ CERRADO</Boton>
@@ -135,6 +132,12 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
           </div>
           <Boton variante="secundario" disabled={ocupado} onClick={() => void volverMasTarde()}>SEGUIR Y VOLVER MÁS TARDE</Boton>
           <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('cerrado')}>SEGUIR: DEJAR PARA OTRO DÍA</Boton>
+        </div>
+      ) : null}
+
+      {panel === 'ubicacion' ? (
+        <div className="tarjeta" aria-label={`Ubicación del vendedor: ${p.cliente}`}>
+          <PegarUbicacion localId={p.localId} />
         </div>
       ) : null}
 

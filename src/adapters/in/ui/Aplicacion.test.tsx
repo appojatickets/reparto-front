@@ -313,6 +313,14 @@ describe('horario del local (editor con botones)', () => {
 
 describe('pin del local', () => {
   const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Kiosko', direccion: 'Calle 1', comuna: 'Maipú', pinEstado: 'pendiente' as const };
+  it('en la ficha también se pega el enlace que mandó el vendedor', async () => {
+    const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(ok({ resultado: 'fijado' as const, lat: -33.5972, lng: -70.7019 })));
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), fijarPinDesdeEnlace } });
+    await userEvent.type(await screen.findByLabelText('O pega el enlace que mandó el vendedor'), 'https://maps.google.com/?q=-33.5972,-70.7019');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR UBICACIÓN DEL VENDEDOR' }));
+    expect(fijarPinDesdeEnlace).toHaveBeenCalledWith('l1', 'https://maps.google.com/?q=-33.5972,-70.7019');
+    expect(await screen.findByText(/Ubicación guardada. Desde ahora sirve para todos/)).toBeInTheDocument();
+  });
   it('guarda la ubicación pegada desde Google Maps y rechaza lo que no se entiende', async () => {
     const actualizarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
     montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), actualizarLocal } });
@@ -946,22 +954,45 @@ describe('acciones en la parada (chofer)', () => {
     expect(screen.getByRole('link', { name: 'LAS PRÓXIMAS 2 EN GOOGLE MAPS' })).toHaveAttribute('href', expect.stringContaining('waypoints='));
   });
 
-  it('ESTOY AQUÍ manda la posición del GPS y avisa si fijó el pin del local', async () => {
-    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: true })));
-    const ubicacion = gps(8);
-    abrir({ registrarEvento }, { ubicacion });
-    await userEvent.click(await screen.findByRole('button', { name: 'ESTOY AQUÍ Local A' }));
-    expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'llegada', lat: -33.5901, lng: -70.7002, precisionM: 8 });
-    expect(await screen.findByText(/Fijé la ubicación de este local con tu posición/)).toBeInTheDocument();
+  it('ya no hay botón ESTOY AQUÍ: la posición se guarda sola al entregar o al encontrar cerrado', async () => {
+    abrir({}, { ubicacion: gps() });
+    await screen.findByRole('button', { name: 'ENTREGADO Local A' });
+    expect(screen.queryByRole('button', { name: /ESTOY AQUÍ/ })).toBeNull();
   });
 
-  it('si el GPS falla igual se anota, sin ubicación, y se avisa', async () => {
+  it('si el GPS falla igual se anota el aviso, sin ubicación, y se avisa', async () => {
     const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })));
     const ubicacion = { disponible: true, actual: vi.fn(() => Promise.resolve(err('PERMISO' as const))) };
     abrir({ registrarEvento }, { ubicacion });
-    await userEvent.click(await screen.findByRole('button', { name: 'ESTOY AQUÍ Local A' }));
-    expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'llegada' });
+    await userEvent.click(await screen.findByRole('button', { name: 'ESTÁ CERRADO Local A' }));
+    expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'cerrado' });
     expect(await screen.findByText(/No pude leer el GPS; quedó sin ubicación/)).toBeInTheDocument();
+  });
+
+  it('UBICACIÓN DEL VENDEDOR: pega el enlace y la API fija el pin del local', async () => {
+    const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(ok({ resultado: 'fijado' as const, lat: -33.5972, lng: -70.7019 })));
+    abrir({ fijarPinDesdeEnlace });
+    await userEvent.click(await screen.findByRole('button', { name: 'UBICACIÓN DEL VENDEDOR Local A' }));
+    const panel = within(await screen.findByLabelText('Ubicación del vendedor: Local A'));
+    await userEvent.type(panel.getByLabelText('Enlace de la ubicación'), 'https://maps.app.goo.gl/AbC123');
+    await userEvent.click(panel.getByRole('button', { name: 'GUARDAR UBICACIÓN DEL VENDEDOR' }));
+    expect(fijarPinDesdeEnlace).toHaveBeenCalledWith('lA', 'https://maps.app.goo.gl/AbC123');
+    expect(await panel.findByText(/Ubicación guardada. Desde ahora sirve para todos/)).toBeInTheDocument();
+  });
+
+  it('UBICACIÓN DEL VENDEDOR: si el local ya tiene un pin confirmado por una persona, avisa que quedó propuesta; un enlace ilegible muestra el error', async () => {
+    const fijarPinDesdeEnlace = vi.fn()
+      .mockResolvedValueOnce(ok({ resultado: 'propuesto' as const, lat: -33.5972, lng: -70.7019 }))
+      .mockResolvedValueOnce(http(400, { codigo: 'VALIDACION', mensaje: 'No pude leer la ubicación de ese enlace.' }));
+    abrir({ fijarPinDesdeEnlace });
+    await userEvent.click(await screen.findByRole('button', { name: 'UBICACIÓN DEL VENDEDOR Local A' }));
+    const panel = within(await screen.findByLabelText('Ubicación del vendedor: Local A'));
+    await userEvent.type(panel.getByLabelText('Enlace de la ubicación'), 'https://maps.google.com/?q=-33.5972,-70.7019');
+    await userEvent.click(panel.getByRole('button', { name: 'GUARDAR UBICACIÓN DEL VENDEDOR' }));
+    expect(await panel.findByText(/quedó propuesta para que la revisen/)).toBeInTheDocument();
+    await userEvent.type(panel.getByLabelText('Enlace de la ubicación'), 'hola');
+    await userEvent.click(panel.getByRole('button', { name: 'GUARDAR UBICACIÓN DEL VENDEDOR' }));
+    expect(await panel.findByRole('alert')).toHaveTextContent('No pude leer la ubicación');
   });
 
   it('ENTREGADO avisa con la posición y vuelve a pedir la ruta (la parada sale de la lista)', async () => {
