@@ -23,6 +23,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     restaurarSesion: vi.fn(() => Promise.resolve(estado)),
     cerrarSesion: vi.fn(),
     importarClientesEnLotes: vi.fn(),
+    importarEnlaces: vi.fn(),
     buscarDireccion: vi.fn(() => Promise.resolve(err('SIN_RESULTADO' as const))),
     completarComunas: vi.fn(() => Promise.resolve({ comunas: {}, sinRespuesta: 0, detenido: false })),
     subirFotoLocal: vi.fn(),
@@ -381,6 +382,48 @@ describe('cliente nuevo', () => {
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR CLIENTE' }));
     expect(await screen.findByRole('heading', { name: 'Kiosko Sol' })).toBeInTheDocument();
     expect(crearCliente).toHaveBeenLastCalledWith({ razonSocial: 'Kiosko Sol', direccion: 'Calle 1', comuna: 'Maipú' });
+  });
+});
+
+describe('importar una lista de direcciones con enlace de Google Maps', () => {
+  const lista = 'Avenida Portales 4180, San Bernardo\n\nhttps://maps.app.goo.gl/Unz8sebYG5ooFVh66\n\nLos Suspiros 16463 San Bernardo\nhttps://www.google.com/maps/search/?api=1&query=Los+Suspiros+16463+San+Bernardo%2C+Chile\n\nCalle Sin Comuna 12\nhttps://maps.app.goo.gl/abc';
+
+  it('se reconoce (ya no pide columnas), cuenta lo que hay y bloquea nada si hay algo listo', async () => {
+    montar({ ruta: '/admin/importar', sesion: ADMIN });
+    await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
+    await userEvent.paste(lista);
+    const region = await screen.findByRole('region', { name: 'Lista de direcciones con enlace' });
+    expect(region).toHaveTextContent('3 leídas. Listas: 2 · con el lugar exacto (enlace corto): 1 · sin lugar, el sistema lo busca por la dirección: 1 · repetidas (se unen): 0 · para revisar: 1');
+    expect(within(region).getByText(/Falta la comuna/)).toBeInTheDocument();
+    expect(screen.queryByText(/Faltan columnas obligatorias/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'IMPORTAR' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'IMPORTAR 2 DIRECCIONES' })).toBeEnabled();
+  });
+
+  it('importa solo las listas y muestra el resultado con lo que falta por buscar', async () => {
+    const importarEnlaces = vi.fn(() => Promise.resolve({ total: 2, creados: 1, yaExistian: 1, pinesFijados: 1, pinesPropuestos: 0, porBuscar: 1, pinesNoLeidos: [], fallos: [] }));
+    montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarEnlaces } });
+    await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
+    await userEvent.paste(lista);
+    await userEvent.click(await screen.findByRole('button', { name: 'IMPORTAR 2 DIRECCIONES' }));
+    const resultado = await screen.findByRole('region', { name: 'Resultado de la importación de direcciones' });
+    expect(resultado).toHaveTextContent('Listo: 1 clientes nuevos · 1 ya existían (se completaron) · pines fijados con el enlace: 1');
+    expect(resultado).toHaveTextContent('por buscar por dirección: 1');
+    expect(within(resultado).getByText(/BUSCAR LOS PINES POR DIRECCIÓN/)).toBeInTheDocument();
+    const entradas = (importarEnlaces.mock.calls[0] as unknown as [readonly { estado: string; direccion?: string }[]])[0];
+    expect(entradas.filter((e) => e.estado === 'lista').map((e) => e.direccion)).toEqual(['Avenida Portales 4180', 'Los Suspiros 16463']);
+  });
+
+  it('si algunos no se pudieron cargar o su enlace no se leyó, lo dice con la dirección', async () => {
+    const importarEnlaces = vi.fn(() => Promise.resolve({ total: 2, creados: 1, yaExistian: 0, pinesFijados: 0, pinesPropuestos: 0, porBuscar: 0, pinesNoLeidos: [{ numero: 1, direccion: 'Avenida Portales 4180', mensaje: 'x' }], fallos: [{ numero: 2, direccion: 'Los Suspiros 16463', mensaje: 'Sin conexión. Revisa tu señal e intenta de nuevo.' }] }));
+    montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarEnlaces } });
+    await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
+    await userEvent.paste(lista);
+    await userEvent.click(await screen.findByRole('button', { name: 'IMPORTAR 2 DIRECCIONES' }));
+    expect(await screen.findByText(/No se pudo leer el enlace de 1/)).toBeInTheDocument();
+    expect(screen.getByText(/#1 Avenida Portales 4180/)).toBeInTheDocument();
+    expect(screen.getByText(/No se pudieron cargar 1\. Vuelve a tocar IMPORTAR/)).toBeInTheDocument();
+    expect(screen.getByText(/#2 Los Suspiros 16463: Sin conexión/)).toBeInTheDocument();
   });
 });
 

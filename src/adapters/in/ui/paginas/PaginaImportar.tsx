@@ -1,10 +1,12 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { COMUNAS_RM } from '../../../../domain/comunas';
+import { analizarListaEnlaces, esListaDeEnlaces } from '../../../../domain/lista-enlaces';
 import { analizarListaMaps, completarEntrada, esListaDeMaps, faltaSolo, filasParaImportar, resumir, type Correccion, type EntradaMapa } from '../../../../domain/lista-maps';
 import { mapearClientes, parsearTabla, type CampoCliente } from '../../../../domain/tabla';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ResultadoImportacion } from '../../../../application/modelos';
 import type { Progreso } from '../../../../application/use-cases/importar-clientes';
+import type { AvanceEnlaces, ResultadoEnlaces } from '../../../../application/use-cases/importar-enlaces';
 import { useCasos } from '../contexto';
 import { AreaTexto, Aviso, Boton, Campo, Pagina, Selector } from '../componentes/ui';
 import { BuscarPines } from '../componentes/BuscarPines';
@@ -36,7 +38,7 @@ const FilaRevisar = ({ e, alCambiar, alOmitir }: { readonly e: EntradaMapa; read
 );
 
 export const PaginaImportar = () => {
-  const { importarClientesEnLotes, completarComunas } = useCasos();
+  const { importarClientesEnLotes, importarEnlaces, completarComunas } = useCasos();
   const [texto, setTexto] = useState('');
   const [progreso, setProgreso] = useState<Progreso | undefined>();
   const [resultado, setResultado] = useState<ResultadoImportacion | undefined>();
@@ -52,7 +54,22 @@ export const PaginaImportar = () => {
   const [avisoComunas, setAvisoComunas] = useState<string | undefined>();
 
   const esMaps = esListaDeMaps(texto);
-  const mapeo = useMemo(() => mapearClientes(parsearTabla(esMaps ? '' : texto)), [texto, esMaps]);
+  const esEnlaces = !esMaps && esListaDeEnlaces(texto);
+  const modoTabla = !esMaps && !esEnlaces;
+  const mapeo = useMemo(() => mapearClientes(parsearTabla(modoTabla ? texto : '')), [texto, modoTabla]);
+  const analisisEnlaces = useMemo(() => (esEnlaces ? analizarListaEnlaces(texto) : undefined), [texto, esEnlaces]);
+  const [avanceEnlaces, setAvanceEnlaces] = useState<AvanceEnlaces | undefined>();
+  const [resultadoEnlaces, setResultadoEnlaces] = useState<ResultadoEnlaces | undefined>();
+  const importarListaEnlaces = async (): Promise<void> => {
+    if (!analisisEnlaces) return;
+    setOcupado(true);
+    setResultadoEnlaces(undefined);
+    setAvanceEnlaces({ procesadas: 0, total: analisisEnlaces.resumen.listas });
+    const r = await importarEnlaces(analisisEnlaces.entradas, setAvanceEnlaces);
+    setOcupado(false);
+    setAvanceEnlaces(undefined);
+    setResultadoEnlaces(r);
+  };
   const analisisMaps = useMemo(() => (esMaps ? analizarListaMaps(texto) : undefined), [texto, esMaps]);
   const entradasMaps = useMemo(() => (analisisMaps ? analisisMaps.entradas.map((e) => completarEntrada(e, correcciones[e.numero] ?? {})) : []), [analisisMaps, correcciones]);
   const resumenMaps = useMemo(() => resumir(entradasMaps), [entradasMaps]);
@@ -126,7 +143,7 @@ export const PaginaImportar = () => {
         <label htmlFor="archivo">Archivo CSV o TXT</label>
         <input id="archivo" type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" onChange={(e) => void leerArchivo(e)} />
       </div>
-      <AreaTexto etiqueta="O pega aquí la planilla" ayuda="Pega aquí la lista tal como la copiaste de Google Maps, o una planilla con columnas: RUT (opcional), razón social, giro, dirección, comuna, latitud y longitud (opcionales)." value={texto} onChange={(e) => { setTexto(e.target.value); setResultado(undefined); setCorrecciones({}); setOmitidas(new Set()); }} rows={6} />
+      <AreaTexto etiqueta="O pega aquí la planilla" ayuda="Pega aquí la lista tal como la copiaste de Google Maps, o una planilla con columnas: RUT (opcional), razón social, giro, dirección, comuna, latitud y longitud (opcionales)." value={texto} onChange={(e) => { setTexto(e.target.value); setResultado(undefined); setResultadoEnlaces(undefined); setCorrecciones({}); setOmitidas(new Set()); }} rows={6} />
 
       {esMaps ? (
         <section aria-label="Lista de Google Maps" className="pagina">
@@ -173,9 +190,53 @@ export const PaginaImportar = () => {
           ) : null}
         </section>
       ) : null}
-      {!esMaps && texto.trim() !== '' && !hayFilas ? <Aviso tipo="error">No se encontraron filas de datos. La primera línea debe tener los títulos de las columnas.</Aviso> : null}
-      {!esMaps && mapeo.faltantes.length > 0 && texto.trim() !== '' ? <Aviso tipo="error">Faltan columnas obligatorias: {mapeo.faltantes.map((c) => NOMBRE_CAMPO[c]).join(', ')}.</Aviso> : null}
-      {!esMaps && mapeo.ignoradas.length > 0 && hayFilas ? <Aviso>Se ignorarán estas columnas: {mapeo.ignoradas.join(', ')}.</Aviso> : null}
+      {esEnlaces && analisisEnlaces ? (
+        <section aria-label="Lista de direcciones con enlace" className="pagina">
+          <Aviso tipo="exito">
+            Lista de direcciones con enlace de Google Maps: {analisisEnlaces.resumen.total} leídas. Listas: {analisisEnlaces.resumen.listas} · con el lugar exacto (enlace corto): {analisisEnlaces.resumen.conLugarExacto} · sin lugar, el sistema lo busca por la dirección: {analisisEnlaces.resumen.porBusqueda} · repetidas (se unen): {analisisEnlaces.resumen.repetidas} · para revisar: {analisisEnlaces.resumen.revisar}.
+          </Aviso>
+          <p>Cada una queda como cliente con su dirección como nombre (después se cruza con el RUT y la razón social). El enlace corto fija el pin exacto para todos; a los demás les busca el pin el sistema por la dirección. Reimportar es seguro: no duplica.</p>
+          {analisisEnlaces.resumen.revisar > 0 ? (
+            <>
+              <h2>Para revisar ({analisisEnlaces.resumen.revisar})</h2>
+              <p>No se importan hasta que los corrijas en el texto de arriba (la dirección debe terminar con la comuna).</p>
+              <ul className="tarjetas">
+                {analisisEnlaces.entradas.filter((e) => e.estado === 'revisar').slice(0, MAX_REVISAR_VISIBLES).map((e) => (
+                  <li key={e.numero} className="tarjeta"><strong>#{e.numero}</strong><span>{e.crudo}</span><span>{e.motivos.join(' ')}</span></li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          <Boton disabled={ocupado || analisisEnlaces.resumen.listas === 0} onClick={() => void importarListaEnlaces()}>
+            {ocupado && avanceEnlaces ? `IMPORTANDO… ${avanceEnlaces.procesadas} DE ${avanceEnlaces.total}` : `IMPORTAR ${analisisEnlaces.resumen.listas} DIRECCIONES`}
+          </Boton>
+          {ocupado && avanceEnlaces ? <progress max={avanceEnlaces.total} value={avanceEnlaces.procesadas} aria-label="Avance de la importación" /> : null}
+          {resultadoEnlaces ? (
+            <section aria-label="Resultado de la importación de direcciones" className="pagina">
+              <Aviso tipo={resultadoEnlaces.fallos.length === 0 ? 'exito' : 'info'}>
+                Listo: {resultadoEnlaces.creados} clientes nuevos · {resultadoEnlaces.yaExistian} ya existían (se completaron) · pines fijados con el enlace: {resultadoEnlaces.pinesFijados}
+                {resultadoEnlaces.pinesPropuestos > 0 ? ` · quedaron como propuesta para revisar (ya tenían un pin validado): ${resultadoEnlaces.pinesPropuestos}` : ''} · por buscar por dirección: {resultadoEnlaces.porBuscar}.
+              </Aviso>
+              {resultadoEnlaces.porBuscar > 0 ? <p>Para ubicar los que faltan usa «BUSCAR LOS PINES POR DIRECCIÓN» más abajo.</p> : null}
+              {resultadoEnlaces.pinesNoLeidos.length > 0 ? (
+                <>
+                  <Aviso>No se pudo leer el enlace de {resultadoEnlaces.pinesNoLeidos.length} (los clientes quedaron cargados; su pin se completa por dirección o pegando el enlace en su ficha).</Aviso>
+                  <ul>{resultadoEnlaces.pinesNoLeidos.slice(0, MAX_ERRORES_VISIBLES).map((f) => <li key={f.numero}>#{f.numero} {f.direccion}</li>)}</ul>
+                </>
+              ) : null}
+              {resultadoEnlaces.fallos.length > 0 ? (
+                <>
+                  <Aviso tipo="error">No se pudieron cargar {resultadoEnlaces.fallos.length}. Vuelve a tocar IMPORTAR: lo ya cargado no se duplica.</Aviso>
+                  <ul>{resultadoEnlaces.fallos.slice(0, MAX_ERRORES_VISIBLES).map((f) => <li key={f.numero}>#{f.numero} {f.direccion}: {f.mensaje}</li>)}</ul>
+                </>
+              ) : null}
+            </section>
+          ) : null}
+        </section>
+      ) : null}
+      {modoTabla && texto.trim() !== '' && !hayFilas ? <Aviso tipo="error">No se encontraron filas de datos. La primera línea debe tener los títulos de las columnas.</Aviso> : null}
+      {modoTabla && mapeo.faltantes.length > 0 && texto.trim() !== '' ? <Aviso tipo="error">Faltan columnas obligatorias: {mapeo.faltantes.map((c) => NOMBRE_CAMPO[c]).join(', ')}.</Aviso> : null}
+      {modoTabla && mapeo.ignoradas.length > 0 && hayFilas ? <Aviso>Se ignorarán estas columnas: {mapeo.ignoradas.join(', ')}.</Aviso> : null}
       {completa ? <Aviso tipo="exito">{filas.length} filas {esMaps ? 'listas para importar' : 'detectadas'}. El servidor revisará cada una al importar.</Aviso> : null}
 
       {completa ? (
@@ -190,8 +251,8 @@ export const PaginaImportar = () => {
         </div>
       ) : null}
 
-      <Boton disabled={!completa || ocupado} onClick={() => void importar()}>{ocupado ? 'IMPORTANDO…' : esMaps ? `IMPORTAR ${filas.length} CLIENTES` : 'IMPORTAR'}</Boton>
-      {ocupado && progreso ? <><progress max={progreso.total} value={progreso.procesadas} aria-label="Avance de la importación" /><p role="status">{progreso.procesadas} de {progreso.total} filas</p></> : null}
+      {!esEnlaces ? <Boton disabled={!completa || ocupado} onClick={() => void importar()}>{ocupado ? 'IMPORTANDO…' : esMaps ? `IMPORTAR ${filas.length} CLIENTES` : 'IMPORTAR'}</Boton> : null}
+      {ocupado && progreso && !esEnlaces ? <><progress max={progreso.total} value={progreso.procesadas} aria-label="Avance de la importación" /><p role="status">{progreso.procesadas} de {progreso.total} filas</p></> : null}
       {fallo ? <Aviso tipo="error">{fallo}</Aviso> : null}
 
       <BuscarPines />
