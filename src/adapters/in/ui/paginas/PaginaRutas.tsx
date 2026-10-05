@@ -11,6 +11,7 @@ import type { ItemRuta, OperacionRuta, ParadaDeRuta, VistaRuta } from '../../../
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { AccionesParada } from '../componentes/AccionesParada';
+import { FotoFachada } from '../componentes/FotoFachada';
 import { useDiaDeReparto } from '../componentes/dia';
 import { useUsuario } from '../sesion';
 import { Aviso, Boton, Campo, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
@@ -52,6 +53,7 @@ const FilaParada = ({ p, total, ocupado, operar, enCamion, alCambiar, abierta, a
       {abierta ? (
         <div className="parada-detalle" id={idDetalle}>
           {p.cliente !== p.direccion ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
+          <FotoFachada localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} />
           <span>Llega a las <strong>{horaDelDia(p.llegada)}</strong>{p.espera > 0.5 ? ` (espera ${Math.round(p.espera)} min a que abra)` : ''}{p.folio ? ` · Factura ${p.folio}` : ''}</span>
           <Etiquetas i={p} />
           {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}

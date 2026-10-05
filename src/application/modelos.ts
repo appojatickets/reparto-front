@@ -113,6 +113,8 @@ export type ItemRuta = {
   readonly lng?: number;
   /** Sin pin exacto todavía: la ruta lo ubica por la comuna o por una búsqueda de la dirección (se afina con el GPS de la entrega). */
   readonly ubicacionAproximada?: boolean;
+  /** El local tiene foto de la fachada (se pide aparte, con URL firmada). */
+  readonly tieneFoto?: boolean;
   readonly urgente: boolean;
   readonly antesDeMin?: number;
   readonly nota?: string;

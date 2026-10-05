@@ -1111,6 +1111,37 @@ describe('acciones en la parada (chofer)', () => {
     montar({ ruta: '/mi-ruta', sesion, casos, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vistaBase())), ...api } });
   const gps = (precisionM = 10) => ({ disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.5901, lng: -70.7002, precisionM }))) });
 
+  it('la tarjeta de la parada muestra la foto de la fachada si el local la tiene', async () => {
+    const urlFoto = vi.fn(() => Promise.resolve(ok({ url: 'https://alm.test/fachada.webp', expiraEnSegundos: 600 })));
+    abrir({ urlFoto, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [paradaDe('A', 0, { tieneFoto: true })] }))) });
+    const imagen = await screen.findByRole('img', { name: 'Fachada de Local A' });
+    expect(imagen).toHaveAttribute('src', 'https://alm.test/fachada.webp');
+    expect(urlFoto).toHaveBeenCalledWith('lA');
+    expect(screen.getByRole('button', { name: 'CAMBIAR LA FOTO' })).toBeInTheDocument();
+  });
+
+  it('sin foto, el chofer toma la de la fachada al llegar y queda para todos', async () => {
+    const subirFotoLocal = vi.fn(() => Promise.resolve(ok('empresa/lA/foto.webp')));
+    const urlFoto = vi.fn(() => Promise.resolve(ok({ url: 'https://alm.test/nueva.webp', expiraEnSegundos: 600 })));
+    abrir({ urlFoto }, { subirFotoLocal });
+    expect(await screen.findByText(/Todavía no hay foto de esta fachada/)).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Fachada de Local A' })).toBeNull();
+    const archivo = new File(['x'], 'fachada.jpg', { type: 'image/jpeg' });
+    await userEvent.upload(screen.getByLabelText('Foto de la fachada de Local A'), archivo);
+    expect(subirFotoLocal).toHaveBeenCalledWith('lA', archivo);
+    expect(await screen.findByText('Foto guardada. Ahora la ven todos.')).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'Fachada de Local A' })).toHaveAttribute('src', 'https://alm.test/nueva.webp');
+  });
+
+  it('si la foto no se puede subir, avisa y no cambia nada', async () => {
+    const subirFotoLocal = vi.fn(() => Promise.resolve(err('No se pudo subir la foto. Revisa tu señal e intenta de nuevo.')));
+    abrir({}, { subirFotoLocal });
+    await screen.findByText(/Todavía no hay foto de esta fachada/);
+    await userEvent.upload(screen.getByLabelText('Foto de la fachada de Local A'), new File(['x'], 'f.jpg', { type: 'image/jpeg' }));
+    expect(await screen.findByText(/No se pudo subir la foto/)).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Fachada de Local A' })).toBeNull();
+  });
+
   it('el chofer no arma su ruta: con facturas cargadas y sin ordenar, el sistema la calcula solo', async () => {
     const nueva = { facturaId: 'fN', localId: 'lN', cliente: 'Local N', direccion: 'Calle N 1', comuna: 'San Bernardo', urgente: false };
     const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase())));

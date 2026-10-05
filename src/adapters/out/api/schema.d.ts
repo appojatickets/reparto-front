@@ -4962,6 +4962,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4984,6 +4985,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4998,6 +5000,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5014,6 +5017,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5028,6 +5032,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5043,6 +5048,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5228,6 +5234,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5250,6 +5257,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5264,6 +5272,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5280,6 +5289,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5294,6 +5304,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5309,6 +5320,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5505,6 +5517,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5527,6 +5540,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5541,6 +5555,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5557,6 +5572,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5571,6 +5587,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5586,6 +5603,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                tieneFoto?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
