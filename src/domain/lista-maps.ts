@@ -449,18 +449,43 @@ export const analizarListaMaps = (texto: string): { readonly entradas: readonly 
   return { entradas, resumen };
 };
 
+/** Qué es lo único que le falta a una entrada para revisar: el nombre, la dirección, o algo más (la comuna, o más de una cosa). */
+export const faltaSolo = (e: EntradaMapa): 'nombre' | 'direccion' | undefined => {
+  if (e.estado !== 'revisar' || e.comuna === undefined || !COMUNAS_RM.includes(e.comuna)) return undefined;
+  if (e.razonSocial === undefined && e.direccion !== undefined) return 'nombre';
+  if (e.razonSocial !== undefined && e.direccion === undefined) return 'direccion';
+  return undefined;
+};
+
+export type OpcionesImportacion = {
+  /** Las que solo traen una referencia «Cerca de…» (entran con la referencia como dirección). */
+  readonly aproximadas: boolean;
+  /** Las que no tienen nombre: se guardan como «Sin nombre · dirección» (así se encuentran buscando por dirección). */
+  readonly sinNombre: boolean;
+  /** Las que tienen nombre pero ninguna dirección ni pin: se guardan con la dirección «Sin dirección». */
+  readonly sinDireccion: boolean;
+};
+
+export const NOMBRE_SIN_NOMBRE = 'Sin nombre';
+export const DIRECCION_SIN_DIRECCION = 'Sin dirección';
+
 /** Las filas que entran a la importación de clientes (la misma de la planilla). */
-export const filasParaImportar = (entradas: readonly EntradaMapa[], incluirAproximadas: boolean): FilaClienteCruda[] =>
-  entradas
-    .filter((e) => e.estado === 'lista' || (incluirAproximadas && e.estado === 'aproximada'))
-    .map((e) => ({
-      ...(e.razonSocial !== undefined ? { razonSocial: e.razonSocial } : {}),
-      ...(e.direccion !== undefined ? { direccion: e.direccion } : {}),
+export const filasParaImportar = (entradas: readonly EntradaMapa[], opciones: OpcionesImportacion): FilaClienteCruda[] =>
+  entradas.flatMap((e) => {
+    const falta = faltaSolo(e);
+    const entra = e.estado === 'lista' || (opciones.aproximadas && e.estado === 'aproximada') || (opciones.sinNombre && falta === 'nombre') || (opciones.sinDireccion && falta === 'direccion');
+    if (!entra) return [];
+    const razonSocial = e.razonSocial ?? (e.direccion !== undefined ? `${NOMBRE_SIN_NOMBRE} · ${e.direccion}` : undefined);
+    const direccion = e.direccion ?? DIRECCION_SIN_DIRECCION;
+    return [{
+      ...(razonSocial !== undefined ? { razonSocial } : {}),
+      direccion,
       ...(e.comuna !== undefined ? { comuna: e.comuna } : {}),
       ...(e.lat !== undefined && e.lng !== undefined ? { lat: String(e.lat), lng: String(e.lng) } : {}),
       ...(e.giro !== undefined ? { giro: e.giro } : {}),
       ...(e.nota !== undefined ? { nota: e.nota } : {}),
-    }));
+    }];
+  });
 
 export type Correccion = { readonly razonSocial?: string; readonly direccion?: string; readonly comuna?: string };
 const limpiaVacio = (c: Correccion): boolean => [c.razonSocial, c.direccion, c.comuna].every((v) => v === undefined || v.trim() === '');

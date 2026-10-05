@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { analizarListaMaps, completarEntrada, esListaDeMaps, filasParaImportar, ordenarTexto, resumir } from './lista-maps';
+import { analizarListaMaps, completarEntrada, esListaDeMaps, faltaSolo, filasParaImportar, ordenarTexto, resumir, type OpcionesImportacion } from './lista-maps';
+
+const SIN_EXTRAS: OpcionesImportacion = { aproximadas: false, sinNombre: false, sinDireccion: false };
 
 const uno = (texto: string) => {
   const { entradas } = analizarListaMaps(texto);
@@ -211,8 +213,8 @@ calle 1 100 buin`;
 
   it('las filas para importar traen solo lo listo (y las aproximadas si se piden), con el pin como texto', () => {
     const { entradas } = analizarListaMaps(`${texto}\n\n\nPin colocado\nCerca de Botilleria Nolasko, Calera de Tango, Región Metropolitana\nClemencia Muñoz`);
-    expect(filasParaImportar(entradas, false)).toHaveLength(4);
-    const con = filasParaImportar(entradas, true);
+    expect(filasParaImportar(entradas, SIN_EXTRAS)).toHaveLength(4);
+    const con = filasParaImportar(entradas, { ...SIN_EXTRAS, aproximadas: true });
     expect(con).toHaveLength(5);
     expect(con[1]).toEqual({ razonSocial: 'Elias Hernán Vidal Pradines', direccion: 'Calle Doctor García 236', comuna: 'Pirque', nota: 'Cerca de Av. Hernán Prieto' });
     expect(con[3]).toMatchObject({ lat: '-33.7', lng: '-70.7', comuna: 'Buin' });
@@ -229,7 +231,7 @@ describe('completar una entrada a mano', () => {
     expect(completarEntrada(e, { comuna: 'Mentira' }).estado).toBe('revisar');
     const lista = completarEntrada(e, { comuna: 'Melipilla' });
     expect(lista).toMatchObject({ estado: 'lista', comuna: 'Melipilla', motivos: [], lat: -33.606873 });
-    expect(filasParaImportar([lista], false)).toEqual([{ razonSocial: 'Rosa Gonzalez Osses', direccion: 'Camino Mallarauco 16', comuna: 'Melipilla', lat: '-33.606873', lng: '-70.917985' }]);
+    expect(filasParaImportar([lista], SIN_EXTRAS)).toEqual([{ razonSocial: 'Rosa Gonzalez Osses', direccion: 'Camino Mallarauco 16', comuna: 'Melipilla', lat: '-33.606873', lng: '-70.917985' }]);
     expect(resumir([lista, e])).toMatchObject({ total: 2, listas: 1, revisar: 1, conPin: 2 });
   });
 
@@ -253,7 +255,7 @@ describe('repetidos', () => {
     expect(entradas.map((e) => e.estado)).toEqual(['lista', 'repetida']);
     expect(entradas[1]?.motivos[0]).toContain('#1');
     expect(resumen).toMatchObject({ listas: 1, repetidas: 1 });
-    expect(filasParaImportar(entradas, true)).toHaveLength(1);
+    expect(filasParaImportar(entradas, { ...SIN_EXTRAS, aproximadas: true })).toHaveLength(1);
   });
 
   it('la repetida aporta lo que le faltaba a la primera (el pin, la dirección escrita)', () => {
@@ -282,5 +284,43 @@ describe('repetidos', () => {
     expect(e.sugerenciasComuna).toEqual(['Peñaflor', 'Talagante']);
     expect(completarEntrada(e, {})).toBe(e);
     expect(completarEntrada(e, { comuna: 'Talagante' }).sugerenciasComuna).toBeUndefined();
+  });
+});
+
+describe('importar también los que no tienen nombre o dirección', () => {
+  const { entradas } = analizarListaMaps(`Eliodoro Yañez 1909
+8082075 San Bernardo
+Región Metropolitana
+
+
+Pin colocado
+Cerca de Paine, Región Metropolitana
+Gisela Andrea Carrasco Guajardo
+
+
+Pin colocado
+-33.7,-70.7
+Ana Pérez
+calle 1 100 buin
+
+
+Pin colocado
+Cerca de Buin, Región Metropolitana
+Hahahaha`);
+
+  it('reconoce qué es lo único que les falta', () => {
+    expect(entradas.map(faltaSolo)).toEqual(['nombre', 'direccion', undefined, 'direccion']);
+    const sinDir = analizarListaMaps('Pin colocado\nCerca de Paine, Región Metropolitana\nGisela Carrasco\npaine').entradas[0];
+    expect(sinDir && faltaSolo(sinDir)).toBe('direccion');
+  });
+
+  it('solo entran si se pide, con nombre y dirección de reemplazo identificables', () => {
+    expect(filasParaImportar(entradas, SIN_EXTRAS)).toHaveLength(1);
+    const con = filasParaImportar(entradas, { ...SIN_EXTRAS, sinNombre: true });
+    expect(con).toHaveLength(2);
+    expect(con[0]).toEqual({ razonSocial: 'Sin nombre · Eliodoro Yañez 1909', direccion: 'Eliodoro Yañez 1909', comuna: 'San Bernardo' });
+    const sinDir = analizarListaMaps('Pin colocado\nCerca de Paine, Región Metropolitana\nGisela Carrasco\npaine').entradas;
+    expect(filasParaImportar(sinDir, { ...SIN_EXTRAS, sinDireccion: true })).toEqual([{ razonSocial: 'Gisela Carrasco', direccion: 'Sin dirección', comuna: 'Paine' }]);
+    expect(filasParaImportar(sinDir, SIN_EXTRAS)).toEqual([]);
   });
 });

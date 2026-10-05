@@ -1,6 +1,6 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { COMUNAS_RM } from '../../../../domain/comunas';
-import { analizarListaMaps, completarEntrada, esListaDeMaps, filasParaImportar, resumir, type Correccion, type EntradaMapa } from '../../../../domain/lista-maps';
+import { analizarListaMaps, completarEntrada, esListaDeMaps, faltaSolo, filasParaImportar, resumir, type Correccion, type EntradaMapa } from '../../../../domain/lista-maps';
 import { mapearClientes, parsearTabla, type CampoCliente } from '../../../../domain/tabla';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ResultadoImportacion } from '../../../../application/modelos';
@@ -44,6 +44,8 @@ export const PaginaImportar = () => {
 
   const [correcciones, setCorrecciones] = useState<Readonly<Record<number, Correccion>>>({});
   const [incluirAproximadas, setIncluirAproximadas] = useState(true);
+  const [incluirSinNombre, setIncluirSinNombre] = useState(false);
+  const [incluirSinDireccion, setIncluirSinDireccion] = useState(false);
   const [omitidas, setOmitidas] = useState<ReadonlySet<number>>(new Set());
   const [buscando, setBuscando] = useState<{ readonly hechos: number; readonly total: number } | undefined>();
   const [avisoComunas, setAvisoComunas] = useState<string | undefined>();
@@ -53,9 +55,11 @@ export const PaginaImportar = () => {
   const analisisMaps = useMemo(() => (esMaps ? analizarListaMaps(texto) : undefined), [texto, esMaps]);
   const entradasMaps = useMemo(() => (analisisMaps ? analisisMaps.entradas.map((e) => completarEntrada(e, correcciones[e.numero] ?? {})) : []), [analisisMaps, correcciones]);
   const resumenMaps = useMemo(() => resumir(entradasMaps), [entradasMaps]);
-  const filasMaps = useMemo(() => filasParaImportar(entradasMaps, incluirAproximadas), [entradasMaps, incluirAproximadas]);
+  const filasMaps = useMemo(() => filasParaImportar(entradasMaps, { aproximadas: incluirAproximadas, sinNombre: incluirSinNombre, sinDireccion: incluirSinDireccion }), [entradasMaps, incluirAproximadas, incluirSinNombre, incluirSinDireccion]);
   const aRevisar = entradasMaps.filter((e) => e.estado === 'revisar' && !omitidas.has(e.numero));
   const sinNombre = aRevisar.filter((e) => e.razonSocial === undefined);
+  const soloSinNombre = aRevisar.filter((e) => faltaSolo(e) === 'nombre').length;
+  const soloSinDireccion = aRevisar.filter((e) => faltaSolo(e) === 'direccion').length;
   const pinesSinComuna = aRevisar.filter((e) => e.comuna === undefined && e.lat !== undefined && e.lng !== undefined);
   const omitir = (numeros: readonly number[]): void => { setOmitidas((prev) => new Set([...prev, ...numeros])); };
   const buscarComunas = async (): Promise<void> => {
@@ -133,6 +137,16 @@ export const PaginaImportar = () => {
           <label className="campo">
             <input type="checkbox" checked={incluirAproximadas} onChange={(e) => { setIncluirAproximadas(e.target.checked); }} /> Incluir los que solo tienen una referencia («Cerca de…») como dirección
           </label>
+          {soloSinNombre > 0 ? (
+            <label className="campo">
+              <input type="checkbox" checked={incluirSinNombre} onChange={(e) => { setIncluirSinNombre(e.target.checked); }} /> Importar también los {soloSinNombre} que no tienen nombre (quedan como «Sin nombre · dirección» y se encuentran buscando por dirección)
+            </label>
+          ) : null}
+          {soloSinDireccion > 0 ? (
+            <label className="campo">
+              <input type="checkbox" checked={incluirSinDireccion} onChange={(e) => { setIncluirSinDireccion(e.target.checked); }} /> Importar también los {soloSinDireccion} que tienen nombre y comuna pero ninguna dirección (quedan con la dirección «Sin dirección»; su pin se completa con la primera entrega)
+            </label>
+          ) : null}
           {aRevisar.length > 0 ? (
             <>
               <h2>Para revisar ({aRevisar.length})</h2>
