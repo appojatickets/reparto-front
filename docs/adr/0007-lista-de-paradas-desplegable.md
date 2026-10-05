@@ -1,0 +1,14 @@
+# 0007 — La ruta del chofer es una lista numerada que se despliega al tocarla
+
+Estado: aceptada. Pedido del dueño, 2026-10-05: el chofer debe estar pendiente del tránsito y de la ruta; la pantalla tiene que ser simple y no confundir.
+
+## Decisión
+- La ruta es **una lista numerada** con, por parada, solo lo esencial: número, **nombre**, **comuna** y la hora a la que llega (más marcas cortas: SIGUIENTE, URGENTE, LLEGA N MIN TARDE).
+- **Al tocar una fila se despliega** su detalle (dirección, horario, nota, navegar con Waze o Google Maps, ENTREGADO, ESTÁ CERRADO, NO LA ENCUENTRO, UBICACIÓN DEL VENDEDOR, SUBIR/BAJAR/MÁS). Solo hay una abierta a la vez y la **siguiente viene abierta**: al entregar, la siguiente se abre sola.
+- Lo que ya se hizo **queda en la lista con el nombre tachado** y su resultado en texto (✓ ENTREGADA / ✗ NO ENTREGADA, nunca solo color); al tocarlo se puede deshacer.
+- La lista **se mantiene al día sola**: se vuelve a pedir cada 3 minutos y al volver a la app (por ejemplo desde Waze), y dice «Actualizada a las HH:MM». Las horas se recalculan desde ahora y desde donde quedó el camión (última entrega).
+- Una parada con **ubicación aproximada** (sin pin exacto, ADR 0019 del back) lo dice en su detalle y enlaza a fijar el pin; el GPS de la entrega la mejora.
+- Accesibilidad: botones de al menos 4,5 rem en vista grande, estado con texto y no solo color, `aria-expanded`/`aria-controls` en cada fila y foco visible; funciona en los tres modos de color.
+
+## Pendiente
+- Enviar la posición del camión en forma periódica para recalcular mientras se mueve (hoy solo se conoce al registrar una entrega); requiere un aviso de posición en la API y el aviso de privacidad (B4).

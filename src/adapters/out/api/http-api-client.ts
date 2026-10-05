@@ -181,6 +181,8 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     actualizarCamion: (id, cambios) => ejecutar(() => client.PATCH('/v1/camiones/{id}', { params: { path: { id } }, body: cambios, signal: timeout() })),
 
     fijarPinDesdeEnlace: (localId, enlace) => ejecutar(() => client.POST('/v1/locales/{id}/pin-desde-enlace', { params: { path: { id: localId } }, body: { enlace }, signal: timeout() })),
+    buscarPinesPendientes: () => ejecutar(() => client.POST('/v1/locales/buscar-pines', { signal: timeout() })),
+    estadoBusquedaPines: () => ejecutar(() => client.GET('/v1/locales/buscar-pines', { signal: timeout() }), { repetible: true }),
     async listarVendedores(opciones = {}) {
       const r = await ejecutar(() => client.GET('/v1/vendedores', { params: { query: opciones.incluirInactivos ? { incluirInactivos: 'true' } : {} }, signal: timeout() }), { repetible: true });
       return mapear(r, (d) => d.vendedores);

@@ -7,6 +7,7 @@ import type { ResultadoImportacion } from '../../../../application/modelos';
 import type { Progreso } from '../../../../application/use-cases/importar-clientes';
 import { useCasos } from '../contexto';
 import { AreaTexto, Aviso, Boton, Campo, Pagina, Selector } from '../componentes/ui';
+import { BuscarPines } from '../componentes/BuscarPines';
 
 const NOMBRE_CAMPO: Record<CampoCliente, string> = {
   rut: 'RUT', razonSocial: 'Razón social', giro: 'Giro', direccion: 'Dirección', comuna: 'Comuna', lat: 'Latitud', lng: 'Longitud', nota: 'Nota',
@@ -192,6 +193,8 @@ export const PaginaImportar = () => {
       <Boton disabled={!completa || ocupado} onClick={() => void importar()}>{ocupado ? 'IMPORTANDO…' : esMaps ? `IMPORTAR ${filas.length} CLIENTES` : 'IMPORTAR'}</Boton>
       {ocupado && progreso ? <><progress max={progreso.total} value={progreso.procesadas} aria-label="Avance de la importación" /><p role="status">{progreso.procesadas} de {progreso.total} filas</p></> : null}
       {fallo ? <Aviso tipo="error">{fallo}</Aviso> : null}
+
+      <BuscarPines />
 
       {resultado ? (
         <section aria-label="Resultado de la importación" className="pagina">

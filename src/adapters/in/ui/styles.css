@@ -442,3 +442,99 @@ html[data-vista='normal'] td {
 .comuna {
   text-transform: uppercase;
 }
+
+/* Lista de paradas: numerada, con nombre y comuna; se despliega al tocarla. Lo hecho queda tachado. */
+.paradas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.parada {
+  border: 4px solid var(--fg);
+  border-radius: 0.5rem;
+}
+.parada--siguiente {
+  border-width: 6px;
+}
+.parada--hecha {
+  border-style: dashed;
+}
+.parada-fila {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.5rem 0.75rem;
+  box-sizing: border-box;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.parada-fila:focus-visible {
+  outline: 6px solid var(--fg);
+  outline-offset: 2px;
+}
+.parada-num {
+  display: grid;
+  place-items: center;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  font-weight: 800;
+  border: 3px solid var(--fg);
+  border-radius: 50%;
+}
+.parada--siguiente .parada-num {
+  background: var(--accent-bg);
+  color: var(--accent-fg);
+}
+.parada-nombre {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.parada-nombre strong {
+  overflow-wrap: anywhere;
+}
+.parada-marca {
+  font-size: 0.8em;
+  font-weight: 800;
+}
+.parada-hora {
+  font-weight: 800;
+  white-space: nowrap;
+}
+.parada-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-top: 3px solid var(--fg);
+}
+.tachado {
+  text-decoration: line-through;
+  text-decoration-thickness: 0.2em;
+}
+html[data-vista='normal'] .parada {
+  border-width: 2px;
+}
+html[data-vista='normal'] .parada--siguiente {
+  border-width: 4px;
+}
+html[data-vista='normal'] .parada-fila {
+  min-height: 3rem;
+  padding: 0.35rem 0.5rem;
+}
+html[data-vista='normal'] .parada-num {
+  min-width: 2rem;
+  height: 2rem;
+  border-width: 2px;
+}

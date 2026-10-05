@@ -50,6 +50,7 @@ export type FilaCliente = FilaClienteCruda;
 export type Camion = { readonly id: string; readonly patente: string; readonly alias?: string; readonly activo: boolean };
 export type Vendedor = { readonly id: string; readonly codigo: string; readonly nombre: string; readonly celular?: string; readonly activo: boolean };
 export type ResultadoPinEnlace = { readonly resultado: 'fijado' | 'propuesto'; readonly lat: number; readonly lng: number };
+export type EstadoBusquedaPines = { readonly sinPin: number; readonly enCola: number; readonly enMarcha: boolean };
 export type CamionResumen = { readonly id: string; readonly patente: string; readonly alias?: string };
 
 export type EstadoEntrega = 'pendiente' | 'entregada' | 'no_entregada' | 'anulada';
@@ -110,6 +111,8 @@ export type ItemRuta = {
   readonly comuna: string;
   readonly lat?: number;
   readonly lng?: number;
+  /** Sin pin exacto todavía: la ruta lo ubica por la comuna o por una búsqueda de la dirección (se afina con el GPS de la entrega). */
+  readonly ubicacionAproximada?: boolean;
   readonly urgente: boolean;
   readonly antesDeMin?: number;
   readonly nota?: string;

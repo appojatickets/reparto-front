@@ -2957,6 +2957,279 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/locales/buscar-pines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Cuántos locales siguen sin pin y cuántos esperan en la cola de búsqueda */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            sinPin: number;
+                            enCola: number;
+                            enMarcha: boolean;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Buscar en el mapa el pin de los locales que no tienen (por su dirección y comuna). Corre en segundo plano, de a una por segundo. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            sinPin: number;
+                            enCola: number;
+                            enMarcha: boolean;
+                            encolados: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/camiones": {
         parameters: {
             query?: never;
@@ -4688,6 +4961,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4709,6 +4983,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4722,6 +4997,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4737,6 +5013,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4750,6 +5027,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4764,6 +5042,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4948,6 +5227,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4969,6 +5249,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4982,6 +5263,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -4997,6 +5279,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5010,6 +5293,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5024,6 +5308,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5219,6 +5504,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5240,6 +5526,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5253,6 +5540,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5268,6 +5556,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5281,6 +5570,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -5295,6 +5585,7 @@ export interface paths {
                                 comuna: string;
                                 lat?: number;
                                 lng?: number;
+                                ubicacionAproximada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;

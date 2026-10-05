@@ -4,6 +4,7 @@ import { enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
 import { horaDeMinutos, horaDelDia, minutosDeHora } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
+import { minutosEnChile } from '../../../../domain/fechas';
 import { esDeCamion } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ItemRuta, OperacionRuta, ParadaDeRuta, VistaRuta } from '../../../../application/modelos';
@@ -14,6 +15,8 @@ import { useDiaDeReparto } from '../componentes/dia';
 import { useUsuario } from '../sesion';
 import { Aviso, Boton, Campo, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
+const REFRESCO_MS = 3 * 60 * 1000;
+
 const Etiquetas = ({ i }: { readonly i: ItemRuta }) => (
   <span className="insignias">
     {i.urgente ? <Insignia>URGENTE</Insignia> : null}
@@ -21,30 +24,82 @@ const Etiquetas = ({ i }: { readonly i: ItemRuta }) => (
   </span>
 );
 
-const TarjetaParada = ({ p, total, ocupado, operar, enCamion, alCambiar }: { readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void; readonly enCamion: boolean; readonly alCambiar: () => void }) => {
+/**
+ * Una fila de la lista de paradas: número, nombre y comuna (y a qué hora llega). Al tocarla se despliega con el resto de los datos y las
+ * acciones; así el chofer ve toda su ruta de un vistazo y solo abre la parada que le toca.
+ */
+const FilaParada = ({ p, total, ocupado, operar, enCamion, alCambiar, abierta, alAbrir, esSiguiente }: {
+  readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void; readonly enCamion: boolean;
+  readonly alCambiar: () => void; readonly abierta: boolean; readonly alAbrir: () => void; readonly esSiguiente: boolean;
+}) => {
   const [mas, setMas] = useState(false);
   const motivos = textoMotivos(p.motivos);
+  const n = p.posicion + 1;
+  const idDetalle = `parada-${p.facturaId}`;
   return (
-    <li className="tarjeta" aria-label={`Parada ${p.posicion + 1}`}>
-      <strong>{p.posicion + 1}. {p.cliente}</strong>
-      {p.cliente !== p.direccion ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : <span><strong className="comuna">{p.comuna}</strong></span>}
-      <span>Llega a las <strong>{horaDelDia(p.llegada)}</strong>{p.espera > 0.5 ? ` (espera ${Math.round(p.espera)} min a que abra)` : ''} · {p.folio ? ` · Factura ${p.folio}` : ''}</span>
-      <Etiquetas i={p} />
-      {p.atraso > 0.5 ? <Insignia>LLEGA {Math.round(p.atraso)} MIN TARDE</Insignia> : null}
-      {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
-      {p.nota ? <span>Nota: {p.nota}</span> : null}
-      {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
-      {enCamion ? <AccionesParada p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
-      <div className="fila-botones">
-        <Boton variante="secundario" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>SUBIR</Boton>
-        <Boton variante="secundario" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>BAJAR</Boton>
-        <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES ${p.cliente}`} onClick={() => { setMas(!mas); }}>MÁS</Boton>
-      </div>
-      {mas ? (
-        <div className="fila-botones">
-          <Boton disabled={ocupado} aria-label={`IR PRIMERO ${p.cliente}`} onClick={() => { operar({ tipo: 'primero', facturaId: p.facturaId }); }}>IR PRIMERO</Boton>
-          <Boton variante="secundario" disabled={ocupado} aria-label={`DEJAR PARA DESPUÉS ${p.cliente}`} onClick={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }}>DEJAR PARA DESPUÉS</Boton>
-          <Boton variante="peligro" disabled={ocupado} aria-label={`QUITAR DEL CAMIÓN ${p.cliente}`} onClick={() => { operar({ tipo: 'quitar', facturaId: p.facturaId }); }}>QUITAR DEL CAMIÓN</Boton>
+    <li className={`parada${esSiguiente ? ' parada--siguiente' : ''}`} aria-label={`Parada ${n}`}>
+      <button type="button" className="parada-fila" aria-expanded={abierta} aria-controls={idDetalle} onClick={alAbrir}>
+        <span className="parada-num" aria-hidden="true">{n}</span>
+        <span className="parada-nombre">
+          <strong>{p.cliente}</strong>
+          <span className="comuna">{p.comuna}</span>
+          {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
+          {p.atraso > 0.5 ? <span className="parada-marca">LLEGA {Math.round(p.atraso)} MIN TARDE</span> : null}
+          {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
+        </span>
+        <span className="parada-hora">{horaDelDia(p.llegada)}</span>
+      </button>
+      {abierta ? (
+        <div className="parada-detalle" id={idDetalle}>
+          {p.cliente !== p.direccion ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
+          <span>Llega a las <strong>{horaDelDia(p.llegada)}</strong>{p.espera > 0.5 ? ` (espera ${Math.round(p.espera)} min a que abra)` : ''}{p.folio ? ` · Factura ${p.folio}` : ''}</span>
+          <Etiquetas i={p} />
+          {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
+          {p.ubicacionAproximada ? (
+            <span className="ayuda">Ubicación aproximada: te guía por la dirección. Al llegar, tu GPS la mejora. <Link to={`/clientes/${p.localId}`}>Fijar el pin</Link></span>
+          ) : null}
+          {p.nota ? <span>Nota: {p.nota}</span> : null}
+          {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
+          {enCamion ? <AccionesParada p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
+          <div className="fila-botones">
+            <Boton variante="secundario" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>SUBIR</Boton>
+            <Boton variante="secundario" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>BAJAR</Boton>
+            <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES ${p.cliente}`} onClick={() => { setMas(!mas); }}>MÁS</Boton>
+          </div>
+          {mas ? (
+            <div className="fila-botones">
+              <Boton disabled={ocupado} aria-label={`IR PRIMERO ${p.cliente}`} onClick={() => { operar({ tipo: 'primero', facturaId: p.facturaId }); }}>IR PRIMERO</Boton>
+              <Boton variante="secundario" disabled={ocupado} aria-label={`DEJAR PARA DESPUÉS ${p.cliente}`} onClick={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }}>DEJAR PARA DESPUÉS</Boton>
+              <Boton variante="peligro" disabled={ocupado} aria-label={`QUITAR DEL CAMIÓN ${p.cliente}`} onClick={() => { operar({ tipo: 'quitar', facturaId: p.facturaId }); }}>QUITAR DEL CAMIÓN</Boton>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </li>
+  );
+};
+
+type Hecha = { readonly facturaId: string; readonly cliente: string; readonly direccion: string; readonly comuna: string; readonly estado: 'entregada' | 'no_entregada' };
+
+/** Una parada ya hecha: queda en la lista con su nombre tachado y su resultado (✓ o ✗, siempre con texto, no solo color). */
+const FilaHecha = ({ h, enCamion, alCambiar, abierta, alAbrir }: { readonly h: Hecha; readonly enCamion: boolean; readonly alCambiar: () => void; readonly abierta: boolean; readonly alAbrir: () => void }) => {
+  const idDetalle = `hecha-${h.facturaId}`;
+  const entregada = h.estado === 'entregada';
+  return (
+    <li className="parada parada--hecha">
+      <button type="button" className="parada-fila" aria-expanded={abierta} aria-controls={idDetalle} onClick={alAbrir}>
+        <span className="parada-num" aria-hidden="true">{entregada ? '✓' : '✗'}</span>
+        <span className="parada-nombre">
+          <strong className="tachado">{h.cliente !== h.direccion ? h.cliente : h.direccion}</strong>
+          <span className="comuna">{h.comuna}</span>
+        </span>
+        <span className="parada-hora">{entregada ? 'ENTREGADA' : 'NO ENTREGADA'}</span>
+      </button>
+      {abierta ? (
+        <div className="parada-detalle" id={idDetalle}>
+          <Direccion direccion={h.direccion} comuna={h.comuna} />
+          <Insignia>{entregada ? 'ENTREGADA' : 'NO ENTREGADA'}</Insignia>
+          {enCamion ? <DeshacerHecha h={h} alCambiar={alCambiar} /> : null}
         </div>
       ) : null}
     </li>
@@ -96,13 +151,15 @@ const ListaItems = ({ titulo, items, children }: { readonly titulo: string; read
 
 /** Todo el estado de UN camión y día vive aquí: al cambiar de camión o de día se vuelve a montar y parte limpio. */
 export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; readonly fecha: string }) => {
-  const { api } = useCasos();
+  const { api, ahora } = useCasos();
   const cargar = useCallback(() => api.verRuta(camionId, fecha), [api, camionId, fecha]);
   const { estado, recargar, refrescar } = useCarga(cargar);
   const [actualizada, setActualizada] = useState<VistaRuta | undefined>();
   const [aviso, setAviso] = useState<string | undefined>();
   const [ocupado, setOcupado] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
+  /** Parada desplegada: sin elegir, la siguiente; `null` = todas cerradas. */
+  const [abierta, setAbierta] = useState<string | null | undefined>(undefined);
   const [salidaEscrita, setSalidaEscrita] = useState<string | undefined>();
   const { rol } = useUsuario();
   const enCamion = esDeCamion(rol);
@@ -147,6 +204,20 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     }
     operar({ tipo: 'salida', salidaMin: m });
   };
+
+  /** La lista se mantiene al día sola: cada pocos minutos y al volver a la app (por ejemplo desde Waze) se recalculan las horas. */
+  useEffect(() => {
+    const actualizar = (): void => {
+      if (document.visibilityState === 'visible') recargarVista();
+    };
+    const cada = setInterval(actualizar, REFRESCO_MS);
+    document.addEventListener('visibilitychange', actualizar);
+    return () => {
+      clearInterval(cada);
+      document.removeEventListener('visibilitychange', actualizar);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recargarVista solo usa setters estables
+  }, []);
 
   /** El chofer no arma su ruta: apenas tiene facturas cargadas y sin ordenar, el sistema la calcula solo (una vez por visita). */
   const calculadaSola = useRef(false);
@@ -211,8 +282,22 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           )}
 
           {vista.paradas.length === 0 ? <Aviso>Ninguna parada se pudo ubicar en la ruta.</Aviso> : null}
-          <ol className="tarjetas" aria-label="Paradas en orden">
-            {vista.paradas.map((p) => <TarjetaParada key={p.facturaId} p={p} total={vista.paradas.length} ocupado={ocupado} operar={operar} enCamion={enCamion} alCambiar={recargarVista} />)}
+          <p role="status" className="ayuda">Actualizada a las {horaDelDia(minutosEnChile(ahora()))}. Toca una parada para ver sus datos y acciones.</p>
+          <ol className="paradas" aria-label="Paradas en orden">
+            {vista.paradas.map((p, i) => (
+              <FilaParada
+                key={p.facturaId}
+                p={p}
+                total={vista.paradas.length}
+                ocupado={ocupado}
+                operar={operar}
+                enCamion={enCamion}
+                alCambiar={recargarVista}
+                esSiguiente={i === 0}
+                abierta={(abierta ?? vista.paradas[0]?.facturaId) === p.facturaId}
+                alAbrir={() => { setAbierta((actual) => ((actual ?? vista.paradas[0]?.facturaId) === p.facturaId ? null : p.facturaId)); }}
+              />
+            ))}
           </ol>
         </>
       )}
@@ -236,14 +321,9 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       {vista.hechas.length > 0 ? (
         <section className="pagina" aria-label="Hechas hoy">
           <h2>Hechas hoy ({vista.hechas.length})</h2>
-          <ul className="tarjetas">
+          <ul className="paradas">
             {vista.hechas.map((h) => (
-              <li key={h.facturaId} className="tarjeta">
-                {h.cliente !== h.direccion ? <strong>{h.cliente}</strong> : null}
-                <Direccion direccion={h.direccion} comuna={h.comuna} />
-                <Insignia>{h.estado === 'entregada' ? 'ENTREGADA' : 'NO ENTREGADA'}</Insignia>
-                {enCamion ? <DeshacerHecha h={h} alCambiar={recargarVista} /> : null}
-              </li>
+              <FilaHecha key={h.facturaId} h={h} enCamion={enCamion} alCambiar={recargarVista} abierta={abierta === h.facturaId} alAbrir={() => { setAbierta((actual) => (actual === h.facturaId ? null : h.facturaId)); }} />
             ))}
           </ul>
         </section>
