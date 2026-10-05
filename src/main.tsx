@@ -1,4 +1,5 @@
 import { StrictMode } from 'react';
+import { registerSW } from 'virtual:pwa-register';
 import { createRoot } from 'react-dom/client';
 import { checkServer } from './application/use-cases/check-server';
 import { crearBuscarDireccion } from './application/use-cases/buscar-direccion';
@@ -58,6 +59,17 @@ const casos: Casos = {
   tema: crearTemaStore(),
 };
 const deps = { api, timer: browserTimer, wakingAfterMs: 3000 };
+
+// Si hay una versión nueva de la app, se baja y la página se recarga sola (con «autoUpdate»); además se busca al volver a la app y cada media hora.
+registerSW({
+  immediate: true,
+  onRegisteredSW: (_url, registro) => {
+    if (!registro) return;
+    const buscar = (): void => { void registro.update(); };
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') buscar(); });
+    setInterval(buscar, 30 * 60 * 1000);
+  },
+});
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Falta #root');

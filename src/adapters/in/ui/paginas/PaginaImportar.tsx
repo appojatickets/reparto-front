@@ -269,6 +269,7 @@ export const PaginaImportar = () => {
       {fallo ? <Aviso tipo="error">{fallo}</Aviso> : null}
 
       <BuscarPines />
+      <p className="ayuda">Versión de la app: {__VERSION__}</p>
 
       {modoTabla && resultadoEnlaces ? <ResultadoDeEnlaces r={resultadoEnlaces} /> : null}
       {resultado ? (
