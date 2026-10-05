@@ -122,7 +122,7 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
   };
   const esperar = async (minutos: number): Promise<void> => {
     const { r } = await avisar({ tipo: 'espera', minutos }, false);
-    if (r.ok) setAviso({ tipo: 'exito', texto: `Esperando ${minutos} minutos (hasta las ${horaDelDia(minutosEnChile(ahora()) + minutos)}). Cuando termine, toca ENTREGADO o decide qué hacer.` });
+    if (r.ok) setAviso({ tipo: 'exito', texto: `Esperando ${minutos} minutos. Cuando termine, toca ENTREGADO o decide qué hacer.` });
   };
   const volverMasTarde = async (): Promise<void> => {
     const { r } = await avisar({ tipo: 'vuelve_mas_tarde' }, false);

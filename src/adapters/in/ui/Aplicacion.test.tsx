@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { err, ok } from '../../../domain/result';
-import type { FilaExportacion, UsuarioSesion } from '../../../application/modelos';
+import type { ConfigEmpresa, FilaExportacion, UsuarioSesion } from '../../../application/modelos';
 import type { ApiClient } from '../../../application/ports/api-client';
 import type { EstadoSesion } from '../../../application/use-cases/sesion';
 import { fakeApi, http } from '../../../application/use-cases/fakes.test-util';
@@ -858,11 +858,15 @@ describe('configuración del reparto', () => {
     expect(guardarConfig).not.toHaveBeenCalled();
   });
 
-  it('carga lo guardado: coordenadas, nombre y horas', async () => {
-    montar({ ruta: '/admin/configuracion', sesion: ADMIN, api: { obtenerConfig: () => Promise.resolve(ok({ deposito: { lat: -33.5, lng: -70.7, nombre: 'Bodega' }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230 })) } });
+  it('carga lo guardado: coordenadas y nombre; las horas ya no se muestran pero se conservan al guardar', async () => {
+    const guardarConfig = vi.fn((c: ConfigEmpresa) => Promise.resolve(ok(c)));
+    montar({ ruta: '/admin/configuracion', sesion: ADMIN, api: { obtenerConfig: () => Promise.resolve(ok({ deposito: { lat: -33.5, lng: -70.7, nombre: 'Bodega' }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230 })), guardarConfig } });
     expect(await screen.findByLabelText('Ubicación del depósito')).toHaveValue('-33.5, -70.7');
-    expect(screen.getByLabelText('Hora de salida habitual')).toHaveValue('07:30');
-    expect(screen.getByLabelText('Avisar si el regreso pasa de las')).toHaveValue('20:30');
+    expect(screen.queryByLabelText('Hora de salida habitual')).toBeNull();
+    expect(screen.queryByLabelText('Avisar si el regreso pasa de las')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
+    expect(await screen.findByText('Configuración guardada.')).toBeInTheDocument();
+    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5, lng: -70.7, nombre: 'Bodega' }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230 });
   });
 });
 
@@ -1469,7 +1473,7 @@ describe('acciones en la parada (chofer)', () => {
     expect(wa.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/);
     await userEvent.click(panel.getByRole('button', { name: 'ESPERAR 15 MIN' }));
     expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'espera', minutos: 15 });
-    expect(await screen.findByText(/Esperando 15 minutos \(hasta las 12:15\)/)).toBeInTheDocument();
+    expect(await screen.findByText(/Esperando 15 minutos\. Cuando termine/)).toBeInTheDocument();
   });
 
   it('ESTÁ CERRADO con vendedores cargados: un botón de WhatsApp por cada uno con celular, al chat de ese vendedor', async () => {

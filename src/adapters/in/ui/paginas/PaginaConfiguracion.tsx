@@ -1,6 +1,5 @@
 import { useCallback, useState, type SyntheticEvent } from 'react';
 import { leerCoordenadas, textoCoordenadas } from '../../../../domain/coordenadas';
-import { horaDeMinutos, minutosDeHora } from '../../../../domain/hora';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ConfigEmpresa } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
@@ -11,8 +10,6 @@ const Formulario = ({ config }: { readonly config: ConfigEmpresa }) => {
   const { api } = useCasos();
   const [coordenadas, setCoordenadas] = useState(config.deposito ? textoCoordenadas(config.deposito) : '');
   const [nombre, setNombre] = useState(config.deposito?.nombre ?? '');
-  const [salida, setSalida] = useState(horaDeMinutos(config.salidaPorDefectoMin));
-  const [limite, setLimite] = useState(horaDeMinutos(config.horaLimiteRegresoMin));
   const [error, setError] = useState<string | undefined>();
   const [guardado, setGuardado] = useState(false);
   const [ocupado, setOcupado] = useState(false);
@@ -26,17 +23,12 @@ const Formulario = ({ config }: { readonly config: ConfigEmpresa }) => {
       setError('No entendí las coordenadas. Pega las dos cifras como las copia Google Maps, por ejemplo: -33.4372, -70.6506 (deben estar en la Región Metropolitana).');
       return;
     }
-    const s = minutosDeHora(salida);
-    const l = minutosDeHora(limite);
-    if (s === undefined || l === undefined) {
-      setError('Revisa las horas.');
-      return;
-    }
     setOcupado(true);
     const r = await api.guardarConfig({
       ...(punto ? { deposito: { ...punto, ...(nombre.trim() !== '' ? { nombre: nombre.trim() } : {}) } } : {}),
-      salidaPorDefectoMin: s,
-      horaLimiteRegresoMin: l,
+      // Las horas ya no se muestran ni se editan (las estimaciones no eran confiables): se conservan tal como estaban.
+      salidaPorDefectoMin: config.salidaPorDefectoMin,
+      horaLimiteRegresoMin: config.horaLimiteRegresoMin,
     });
     setOcupado(false);
     if (r.ok) setGuardado(true);
@@ -54,8 +46,6 @@ const Formulario = ({ config }: { readonly config: ConfigEmpresa }) => {
         autoComplete="off"
       />
       <Campo etiqueta="Nombre del depósito (opcional)" value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />
-      <Campo etiqueta="Hora de salida habitual" type="time" value={salida} onChange={(e) => { setSalida(e.target.value); }} />
-      <Campo etiqueta="Avisar si el regreso pasa de las" ayuda="Si una ruta termina después de esta hora, se marca en rojo." type="time" value={limite} onChange={(e) => { setLimite(e.target.value); }} />
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
       <Boton type="submit" disabled={ocupado}>{ocupado ? 'GUARDANDO…' : 'GUARDAR'}</Boton>
       {guardado ? <Aviso tipo="exito">Configuración guardada.</Aviso> : null}
