@@ -82,7 +82,7 @@ export const PaginaImportar = () => {
         <label htmlFor="archivo">Archivo CSV o TXT</label>
         <input id="archivo" type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" onChange={(e) => void leerArchivo(e)} />
       </div>
-      <AreaTexto etiqueta="O pega aquí la planilla" ayuda="Columnas: RUT (opcional), razón social, giro, dirección, comuna, latitud y longitud (opcionales)." value={texto} onChange={(e) => { setTexto(e.target.value); setResultado(undefined); setCorrecciones({}); }} rows={6} />
+      <AreaTexto etiqueta="O pega aquí la planilla" ayuda="Pega aquí la lista tal como la copiaste de Google Maps, o una planilla con columnas: RUT (opcional), razón social, giro, dirección, comuna, latitud y longitud (opcionales)." value={texto} onChange={(e) => { setTexto(e.target.value); setResultado(undefined); setCorrecciones({}); }} rows={6} />
 
       {esMaps ? (
         <section aria-label="Lista de Google Maps" className="pagina">
