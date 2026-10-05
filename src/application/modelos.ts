@@ -50,6 +50,13 @@ export type FilaCliente = FilaClienteCruda;
 export type Camion = { readonly id: string; readonly patente: string; readonly alias?: string; readonly activo: boolean };
 export type Vendedor = { readonly id: string; readonly codigo: string; readonly nombre: string; readonly celular?: string; readonly activo: boolean };
 export type ResultadoPinEnlace = { readonly resultado: 'fijado' | 'propuesto'; readonly lat: number; readonly lng: number };
+export type { FilaExportacion } from '../domain/exportacion';
+export type FiltroExportacion = {
+  readonly comunas?: readonly string[];
+  readonly pin?: 'con' | 'sin' | 'aproximado';
+  readonly foto?: 'con' | 'sin';
+  readonly texto?: string;
+};
 export type EstadoBusquedaPines = { readonly sinPin: number; readonly enCola: number; readonly enMarcha: boolean };
 export type CamionResumen = { readonly id: string; readonly patente: string; readonly alias?: string };
 

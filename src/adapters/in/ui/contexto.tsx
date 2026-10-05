@@ -3,6 +3,8 @@ import type { Ubicacion } from '../../../application/ports/ubicacion';
 import type { TemaStore } from '../../../application/ports/tema-store';
 import type { VistaStore } from '../../../application/ports/vista-store';
 import type { Voz } from '../../../application/ports/voz';
+import type { Descarga } from '../../../application/ports/descarga';
+import type { ExportacionStore } from '../../../application/ports/exportacion-store';
 import type { ApiClient } from '../../../application/ports/api-client';
 import type { crearBuscarDireccion } from '../../../application/use-cases/buscar-direccion';
 import type { crearCompletarComunas } from '../../../application/use-cases/completar-comunas';
@@ -22,6 +24,10 @@ export type Casos = {
   readonly buscarDireccion: ReturnType<typeof crearBuscarDireccion>;
   readonly completarComunas: ReturnType<typeof crearCompletarComunas>;
   readonly subirFotoLocal: ReturnType<typeof crearSubirFotoLocal>;
+  /** Guarda un archivo de texto en el dispositivo (la exportación de datos). */
+  readonly descarga: Descarga;
+  /** Columnas y formato de la última exportación, recordados en el dispositivo. */
+  readonly exportacion: ExportacionStore;
   /** Hora actual (inyectada para que las pantallas con fechas sean comprobables). */
   readonly ahora: () => Date;
   /** Dictado propio de la app (si el navegador lo tiene). */

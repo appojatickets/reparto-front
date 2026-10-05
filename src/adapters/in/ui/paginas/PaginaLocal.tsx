@@ -107,6 +107,16 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
     } else setMensaje({ tipo: 'error', texto: r.error });
   };
 
+  const quitarFoto = async (): Promise<void> => {
+    setOcupado(true);
+    const r = await api.quitarFoto(local.id);
+    setOcupado(false);
+    if (r.ok) {
+      setMensaje({ tipo: 'exito', texto: 'Foto quitada.' });
+      recargar();
+    } else setMensaje({ tipo: 'error', texto: mensajeDeError(r.error) });
+  };
+
   const tienePin = local.lat !== undefined && local.lng !== undefined;
   return (
     <Pagina titulo={local.razonSocial}>
@@ -126,6 +136,7 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
         <label htmlFor="foto">Foto de la fachada (sin personas)</label>
         <input id="foto" type="file" accept="image/*" capture="environment" disabled={ocupado} onChange={(e) => void subir(e)} />
       </div>
+      {editar && local.fotoPath ? <Boton variante="peligro" disabled={ocupado} onClick={() => void quitarFoto()}>QUITAR FOTO</Boton> : null}
 
       {editar ? (
         <form className="pagina" onSubmit={(e) => void guardar(e)} noValidate>

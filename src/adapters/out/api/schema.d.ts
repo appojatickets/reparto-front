@@ -2654,7 +2654,133 @@ export interface paths {
             };
         };
         post?: never;
-        delete?: never;
+        /** Quitar la foto de la fachada del local (admin o despachador) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": null;
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -4621,6 +4747,174 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/v1/exportaciones/locales": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Datos de los locales y sus clientes para exportar (solo admin). Filtros opcionales; la pantalla elige las columnas. */
+        get: {
+            parameters: {
+                query?: {
+                    comunas?: string;
+                    pin?: "con" | "sin" | "aproximado";
+                    foto?: "con" | "sin";
+                    texto?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            total: number;
+                            filas: {
+                                localId: string;
+                                clienteId: string;
+                                razonSocial: string;
+                                rut?: string;
+                                giro?: string;
+                                /** @enum {string} */
+                                estadoCliente: "nuevo" | "activo" | "inactivo" | "cerrado" | "archivado";
+                                direccion: string;
+                                comuna: string;
+                                lat?: number;
+                                lng?: number;
+                                /** @enum {string} */
+                                pinEstado: "pendiente" | "sugerido" | "validado";
+                                /** @enum {string} */
+                                pinFuente?: "geocodificador" | "manual" | "importado" | "aprendido" | "chofer" | "enlace";
+                                pinConfianza?: number;
+                                nota?: string;
+                                tieneFoto: boolean;
+                                creadoEn: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/empresa/config": {

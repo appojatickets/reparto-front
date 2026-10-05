@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { err, ok } from '../../../domain/result';
-import type { UsuarioSesion } from '../../../application/modelos';
+import type { FilaExportacion, UsuarioSesion } from '../../../application/modelos';
 import type { ApiClient } from '../../../application/ports/api-client';
 import type { EstadoSesion } from '../../../application/use-cases/sesion';
 import { fakeApi, http } from '../../../application/use-cases/fakes.test-util';
@@ -26,6 +26,8 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     buscarDireccion: vi.fn(() => Promise.resolve(err('SIN_RESULTADO' as const))),
     completarComunas: vi.fn(() => Promise.resolve({ comunas: {}, sinRespuesta: 0, detenido: false })),
     subirFotoLocal: vi.fn(),
+    descarga: { guardarTexto: vi.fn() },
+    exportacion: { cargar: () => undefined, guardar: vi.fn() },
     ahora: () => new Date('2026-10-05T15:00:00Z'),
     voz: { disponible: false, escuchar: () => ({ detener: () => undefined }) },
     vista: { cargar: () => 'grande' as const, guardar: () => undefined },
@@ -85,7 +87,7 @@ describe('entrada y protección por rol', () => {
 
   it('el admin ve todo el menú', async () => {
     montar({ sesion: ADMIN });
-    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'VENDEDORES', 'CONFIGURACIÓN', 'USUARIOS']) {
+    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'VENDEDORES', 'EXPORTAR DATOS', 'CONFIGURACIÓN', 'USUARIOS']) {
       expect(await screen.findByRole('link', { name: nombre })).toBeInTheDocument();
     }
   });
@@ -232,6 +234,25 @@ describe('detalle del local', () => {
     montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(sinPin)) } });
     expect(await screen.findByText('Este local todavía no tiene pin.')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'IR CON WAZE' })).toBeNull();
+  });
+
+  it('quitar la foto: el admin y el despachador pueden; la foto desaparece de la ficha', async () => {
+    const quitarFoto = vi.fn(() => Promise.resolve(ok(undefined)));
+    const obtenerLocal = vi.fn()
+      .mockResolvedValueOnce(ok({ ...local, fotoPath: 'e/l1/f.webp' }))
+      .mockResolvedValue(ok(local));
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal, quitarFoto, urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 600 })) } });
+    await userEvent.click(await screen.findByRole('button', { name: 'QUITAR FOTO' }));
+    expect(quitarFoto).toHaveBeenCalledWith('l1');
+    expect(await screen.findByText('Foto quitada.')).toBeInTheDocument();
+    expect(await screen.findByText('Sin foto de la fachada.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'QUITAR FOTO' })).toBeNull();
+  });
+
+  it('sin foto no hay botón de quitar, y el chofer nunca lo ve', async () => {
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)) } });
+    await screen.findByText('Sin foto de la fachada.');
+    expect(screen.queryByRole('button', { name: 'QUITAR FOTO' })).toBeNull();
   });
 
   it('guarda nota y rumbo', async () => {
@@ -644,6 +665,101 @@ describe('buscar pines por dirección (admin)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'BUSCAR LOS PINES POR DIRECCIÓN' }));
     expect(buscarPinesPendientes).toHaveBeenCalledTimes(1);
     expect(await screen.findByText(/se buscaron 40 direcciones. Quedan 12 sin pin/)).toBeInTheDocument();
+  });
+});
+
+describe('exportar datos (admin)', () => {
+  const fila = (extra: Partial<FilaExportacion> = {}): FilaExportacion => ({
+    localId: 'l1', clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', rut: '77975918-0', estadoCliente: 'activo' as const, direccion: 'Av. Colón Sur 765', comuna: 'San Bernardo',
+    lat: -33.6012, lng: -70.7021, pinEstado: 'validado' as const, tieneFoto: true, creadoEn: '2026-10-05T12:00:00.000Z', ...extra,
+  });
+  const sinDatos: FilaExportacion = { localId: 'l2', clienteId: 'c2', razonSocial: 'Kiosko Sol', estadoCliente: 'activo', direccion: 'Av. Colón Sur 765', comuna: 'San Bernardo', pinEstado: 'pendiente', tieneFoto: false, creadoEn: '2026-10-05T12:00:00.000Z' };
+  const dos = [fila(), sinDatos];
+
+  it('solo el admin entra: el despachador vuelve al inicio', async () => {
+    montar({ ruta: '/admin/exportar', sesion: DESPACHADOR });
+    expect(await screen.findByRole('heading', { name: 'Hola, Ana' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Exportar datos' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'EXPORTAR DATOS' })).toBeNull();
+  });
+
+  it('con los filtros elegidos pide los datos, cuenta pines y fotos y muestra una vista previa', async () => {
+    const exportarLocales = vi.fn(() => Promise.resolve(ok({ total: 2, filas: dos })));
+    montar({ ruta: '/admin/exportar', sesion: ADMIN, api: { exportarLocales } });
+    await screen.findByRole('heading', { name: 'Exportar datos' });
+    await userEvent.selectOptions(screen.getByLabelText(/Agregar comuna/), 'San Bernardo');
+    await userEvent.selectOptions(screen.getByLabelText('¿Tiene foto de la fachada?'), 'sin');
+    await userEvent.type(screen.getByLabelText(/Buscar \(razón social/), 'sol');
+    await userEvent.click(screen.getByRole('button', { name: 'VER CUÁNTOS SON' }));
+    expect(exportarLocales).toHaveBeenCalledWith({ comunas: ['San Bernardo'], foto: 'sin', texto: 'sol' });
+    expect(await screen.findByText('2 locales · 1 con pin, 1 sin pin · 1 con foto, 1 sin foto.')).toBeInTheDocument();
+    const vista = screen.getByLabelText('Vista previa');
+    expect(within(vista).getByText('Kiosko Sol')).toBeInTheDocument();
+    expect(within(vista).getByRole('columnheader', { name: 'RUT' })).toBeInTheDocument();
+  });
+
+  it('descarga el CSV con las columnas marcadas y recuerda la elección', async () => {
+    const descarga = { guardarTexto: vi.fn() };
+    const exportacion = { cargar: () => undefined, guardar: vi.fn() };
+    montar({ ruta: '/admin/exportar', sesion: ADMIN, api: { exportarLocales: () => Promise.resolve(ok({ total: 2, filas: dos })) }, casos: { descarga, exportacion } });
+    await screen.findByRole('heading', { name: 'Exportar datos' });
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Latitud' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Longitud' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Foto de la fachada' }));
+    expect(exportacion.guardar).toHaveBeenLastCalledWith({ columnas: ['razonSocial', 'rut', 'direccion', 'comuna', 'foto'], formato: 'excel' });
+    await userEvent.click(screen.getByRole('button', { name: 'VER CUÁNTOS SON' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'DESCARGAR ARCHIVO (CSV)' }));
+    expect(descarga.guardarTexto).toHaveBeenCalledWith(
+      'clientes-2026-10-05.csv',
+      '\uFEFFRazón social;RUT;Dirección;Comuna;Foto de la fachada\r\nRabelo Mágica SpA;77975918-0;Av. Colón Sur 765;San Bernardo;Sí\r\nKiosko Sol;;Av. Colón Sur 765;San Bernardo;No\r\n',
+      'text/csv',
+    );
+    expect(await screen.findByText(/Listo: clientes-2026-10-05.csv con 2 locales y 5 columnas/)).toBeInTheDocument();
+  });
+
+  it('parte con las columnas que quedaron elegidas la vez anterior', async () => {
+    montar({ ruta: '/admin/exportar', sesion: ADMIN, casos: { exportacion: { cargar: () => ({ columnas: ['rut', 'nota'] as const, formato: 'estandar' as const }), guardar: vi.fn() } } });
+    await screen.findByRole('heading', { name: 'Exportar datos' });
+    expect(screen.getByRole('checkbox', { name: 'RUT' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Nota' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Comuna' })).not.toBeChecked();
+    expect(screen.getByLabelText('Formato')).toHaveValue('estandar');
+  });
+
+  it('si cambia un filtro después de consultar, hay que volver a consultar antes de descargar', async () => {
+    montar({ ruta: '/admin/exportar', sesion: ADMIN, api: { exportarLocales: () => Promise.resolve(ok({ total: 2, filas: dos })) } });
+    await userEvent.click(await screen.findByRole('button', { name: 'VER CUÁNTOS SON' }));
+    expect(await screen.findByRole('button', { name: 'DESCARGAR ARCHIVO (CSV)' })).toBeEnabled();
+    await userEvent.selectOptions(screen.getByLabelText('Ubicación (pin)'), 'sin');
+    expect(screen.queryByRole('button', { name: 'DESCARGAR ARCHIVO (CSV)' })).toBeNull();
+  });
+
+  it('sin resultados no hay nada que descargar; sin columnas tampoco; y un error de la API se avisa', async () => {
+    const exportarLocales = vi.fn()
+      .mockResolvedValueOnce(ok({ total: 0, filas: [] }))
+      .mockResolvedValueOnce(err({ kind: 'NETWORK' as const }))
+      .mockResolvedValue(ok({ total: 2, filas: dos }));
+    montar({ ruta: '/admin/exportar', sesion: ADMIN, api: { exportarLocales } });
+    await userEvent.click(await screen.findByRole('button', { name: 'VER CUÁNTOS SON' }));
+    expect(await screen.findByText('No hay locales con esos filtros.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'DESCARGAR ARCHIVO (CSV)' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'VER CUÁNTOS SON' }));
+    expect(await screen.findByText(/Sin conexión/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'VER CUÁNTOS SON' }));
+    await screen.findByText(/2 locales/);
+    for (const c of ['Razón social', 'RUT', 'Dirección', 'Comuna', 'Latitud', 'Longitud']) await userEvent.click(screen.getByRole('checkbox', { name: c }));
+    expect(screen.getByText('Marca al menos una columna.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'DESCARGAR ARCHIVO (CSV)' })).toBeDisabled();
+  });
+
+  it('quitar una comuna elegida la devuelve al selector', async () => {
+    const exportarLocales = vi.fn(() => Promise.resolve(ok({ total: 0, filas: [] })));
+    montar({ ruta: '/admin/exportar', sesion: ADMIN, api: { exportarLocales } });
+    await userEvent.selectOptions(await screen.findByLabelText(/Agregar comuna/), 'Paine');
+    await userEvent.selectOptions(screen.getByLabelText(/Agregar comuna/), 'Buin');
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar Paine' }));
+    await userEvent.click(screen.getByRole('button', { name: 'VER CUÁNTOS SON' }));
+    expect(exportarLocales).toHaveBeenCalledWith({ comunas: ['Buin'] });
   });
 });
 

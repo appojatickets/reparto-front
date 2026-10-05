@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { Marco, RutaProtegida } from './componentes/estructura';
 import { PaginaCamiones } from './paginas/PaginaCamiones';
+import { PaginaExportar } from './paginas/PaginaExportar';
 import { PaginaVendedores } from './paginas/PaginaVendedores';
 import { PaginaConfiguracion } from './paginas/PaginaConfiguracion';
 import { PaginaCargar } from './paginas/PaginaCargar';
@@ -42,6 +43,7 @@ export const Aplicacion = () => (
             <Route path="admin/importar" element={<RutaProtegida accion="importar-clientes"><PaginaImportar /></RutaProtegida>} />
             <Route path="admin/configuracion" element={<RutaProtegida accion="configuracion"><PaginaConfiguracion /></RutaProtegida>} />
             <Route path="admin/camiones" element={<RutaProtegida accion="camiones"><PaginaCamiones /></RutaProtegida>} />
+            <Route path="admin/exportar" element={<RutaProtegida accion="exportar"><PaginaExportar /></RutaProtegida>} />
             <Route path="admin/vendedores" element={<RutaProtegida accion="vendedores"><PaginaVendedores /></RutaProtegida>} />
             <Route path="admin/usuarios" element={<RutaProtegida accion="usuarios"><PaginaUsuarios /></RutaProtegida>} />
           </Route>

@@ -13,6 +13,7 @@ const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: str
   'importar-clientes': { a: '/admin/importar', texto: 'IMPORTAR CLIENTES' },
   configuracion: { a: '/admin/configuracion', texto: 'CONFIGURACIÓN' },
   camiones: { a: '/admin/camiones', texto: 'CAMIONES' },
+  exportar: { a: '/admin/exportar', texto: 'EXPORTAR DATOS' },
   vendedores: { a: '/admin/vendedores', texto: 'VENDEDORES' },
   usuarios: { a: '/admin/usuarios', texto: 'USUARIOS' },
 };

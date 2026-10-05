@@ -15,6 +15,8 @@ import { browserTimer } from './adapters/out/timer/browser-timer';
 import { App } from './adapters/in/ui/App';
 import { Aplicacion } from './adapters/in/ui/Aplicacion';
 import { crearUbicacionWeb } from './adapters/out/ubicacion/geolocalizacion';
+import { crearDescargaNavegador } from './adapters/out/descarga/descarga-navegador';
+import { crearExportacionStore } from './adapters/out/exportacion/local-storage-exportacion';
 import { crearTemaStore } from './adapters/out/tema/local-storage-tema';
 import { crearVistaStore } from './adapters/out/vista/local-storage-vista';
 import { crearVozWeb } from './adapters/out/voz/voz-web';
@@ -45,6 +47,8 @@ const casos: Casos = {
   completarComunas: crearCompletarComunas({ geocodificador: crearNominatim(), timer: browserTimer }),
   buscarDireccion: crearBuscarDireccion({ geocodificador: crearNominatim() }),
   subirFotoLocal: crearSubirFotoLocal({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),
+  descarga: crearDescargaNavegador(),
+  exportacion: crearExportacionStore(),
   ahora: () => new Date(),
   voz: crearVozWeb(),
   ubicacion: crearUbicacionWeb(),

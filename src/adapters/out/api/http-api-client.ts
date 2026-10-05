@@ -183,6 +183,12 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     fijarPinDesdeEnlace: (localId, enlace) => ejecutar(() => client.POST('/v1/locales/{id}/pin-desde-enlace', { params: { path: { id: localId } }, body: { enlace }, signal: timeout() })),
     buscarPinesPendientes: () => ejecutar(() => client.POST('/v1/locales/buscar-pines', { signal: timeout() })),
     estadoBusquedaPines: () => ejecutar(() => client.GET('/v1/locales/buscar-pines', { signal: timeout() }), { repetible: true }),
+    exportarLocales: (filtro = {}) =>
+      ejecutar(() => client.GET('/v1/exportaciones/locales', {
+        params: { query: { ...(filtro.comunas && filtro.comunas.length > 0 ? { comunas: filtro.comunas.join(',') } : {}), ...(filtro.pin ? { pin: filtro.pin } : {}), ...(filtro.foto ? { foto: filtro.foto } : {}), ...(filtro.texto?.trim() ? { texto: filtro.texto.trim() } : {}) } },
+        signal: timeout(),
+      }), { repetible: true }),
+    quitarFoto: async (id) => sinCuerpo(await ejecutar(() => client.DELETE('/v1/locales/{id}/foto', { params: { path: { id } }, signal: timeout() }))),
     async listarVendedores(opciones = {}) {
       const r = await ejecutar(() => client.GET('/v1/vendedores', { params: { query: opciones.incluirInactivos ? { incluirInactivos: 'true' } : {} }, signal: timeout() }), { repetible: true });
       return mapear(r, (d) => d.vendedores);
