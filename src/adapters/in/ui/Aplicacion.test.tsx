@@ -989,8 +989,9 @@ describe('el chofer: camión del día y carga de entregas', () => {
     const verRuta = vi.fn(() => Promise.resolve(ok({ camionId: 'c1', fecha: '2026-10-05', planificada: false, salidaMin: 480, horaLimiteRegresoMin: 1260, paradas: [], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] })));
     montar({ ruta: '/mi-ruta', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta } });
     expect(await screen.findByText(/Esta ruta aún no está calculada/)).toBeInTheDocument();
-    expect(screen.getByText(/la ruta se arma con las facturas del día, no con la lista de clientes/)).toBeInTheDocument();
+    expect(screen.getByText(/Todavía no cargaste las facturas de hoy/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'CARGAR FACTURAS' })).toHaveAttribute('href', '/cargar');
+    expect(screen.getByRole('button', { name: 'CALCULAR RUTA SUGERIDA' })).toBeDisabled();
     expect(verRuta).toHaveBeenCalledWith('c1', '2026-10-05');
   });
 
@@ -1007,6 +1008,25 @@ describe('acciones en la parada (chofer)', () => {
   const abrir = (api: Partial<ApiClient> = {}, casos: Partial<Casos> = {}, sesion = CHOFER) =>
     montar({ ruta: '/mi-ruta', sesion, casos, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vistaBase())), ...api } });
   const gps = (precisionM = 10) => ({ disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.5901, lng: -70.7002, precisionM }))) });
+
+  it('el chofer no arma su ruta: con facturas cargadas y sin ordenar, el sistema la calcula solo', async () => {
+    const nueva = { facturaId: 'fN', localId: 'lN', cliente: 'Local N', direccion: 'Calle N 1', comuna: 'San Bernardo', urgente: false };
+    const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase())));
+    const verRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ planificada: false, paradas: [], nuevas: [nueva] }))));
+    abrir({ verRuta, planificarRuta });
+    expect(await screen.findByRole('button', { name: 'ENTREGADO Local A' })).toBeInTheDocument();
+    expect(planificarRuta).toHaveBeenCalledTimes(1);
+    expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05');
+  });
+
+  it('el despachador no calcula solo: ve el aviso y decide', async () => {
+    const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase())));
+    const nueva = { facturaId: 'fN', localId: 'lN', cliente: 'Local N', direccion: 'Calle N 1', comuna: 'San Bernardo', urgente: false };
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', activo: true }])), verRuta: () => Promise.resolve(ok(vistaBase({ planificada: false, paradas: [], nuevas: [nueva] }))), planificarRuta } });
+    await userEvent.selectOptions(await screen.findByLabelText('Camión'), 'c1');
+    expect(await screen.findByText(/Hay 1 facturas por ordenar/)).toBeInTheDocument();
+    expect(planificarRuta).not.toHaveBeenCalled();
+  });
 
   it('cada parada ofrece navegar con Waze y Google Maps usando el pin, o la dirección escrita si no hay pin', async () => {
     abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [paradaDe('A', 0), paradaDe('B', 1, { lat: undefined, lng: undefined })] }))) });

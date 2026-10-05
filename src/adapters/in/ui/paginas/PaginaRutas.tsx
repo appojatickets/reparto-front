@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
 import { horaDeMinutos, horaDelDia, minutosDeHora } from '../../../../domain/hora';
@@ -148,6 +148,16 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     operar({ tipo: 'salida', salidaMin: m });
   };
 
+  /** El chofer no arma su ruta: apenas tiene facturas cargadas y sin ordenar, el sistema la calcula solo (una vez por visita). */
+  const calculadaSola = useRef(false);
+  const hayQueOrdenar = enCamion && vista !== undefined && !vista.planificada && vista.nuevas.length > 0;
+  useEffect(() => {
+    if (!hayQueOrdenar || calculadaSola.current || ocupado) return;
+    calculadaSola.current = true;
+    void planificar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- se calcula una sola vez cuando aparecen facturas por ordenar
+  }, [hayQueOrdenar]);
+
   if (estado.tipo === 'cargando' && !vista) return <Cargando />;
   if (estado.tipo === 'error') {
     const e = estado.error;
@@ -164,11 +174,17 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           <Aviso>
             Esta ruta aún no está calculada.{' '}
             {vista.nuevas.length === 0 ? (
-              <>
-                Todavía no hay entregas cargadas para este camión ese día: la ruta se arma con las facturas del día, no con la lista de clientes (importar clientes solo llena la base de lugares).{' '}
-                {enCamion ? <Link to="/cargar">CARGAR FACTURAS</Link> : <Link to="/facturas">Cargarlas en FACTURAS DEL DÍA</Link>}
-              </>
-            ) : `Hay ${vista.nuevas.length} facturas por ordenar.`}
+              enCamion ? (
+                <>
+                  Todavía no cargaste las facturas de hoy. Cárgalas (por voz o escribiendo) y la ruta se arma sola, según cercanía, horarios y prioridades.{' '}
+                  <Link to="/cargar">CARGAR FACTURAS</Link>
+                </>
+              ) : (
+                <>
+                  Este camión no tiene facturas cargadas ese día. Las carga su chofer desde el celular (o puedes cargarlas tú en <Link to="/facturas">FACTURAS DEL DÍA</Link>); la ruta se arma con ellas.
+                </>
+              )
+            ) : enCamion ? `Calculando tu ruta con ${vista.nuevas.length} facturas…` : `Hay ${vista.nuevas.length} facturas por ordenar.`}
           </Aviso>
           <Boton disabled={ocupado || vista.nuevas.length === 0} onClick={() => void planificar()}>{ocupado ? 'CALCULANDO…' : 'CALCULAR RUTA SUGERIDA'}</Boton>
         </>
