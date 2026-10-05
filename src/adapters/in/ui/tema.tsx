@@ -7,7 +7,10 @@ type Contexto = { readonly tema: Tema; readonly cambiar: (t: Tema) => void };
 const TemaContexto = createContext<Contexto | undefined>(undefined);
 
 const delSistema = (): Tema => (typeof globalThis.matchMedia === 'function' && globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro');
-const FONDO: Readonly<Record<Tema, string>> = { claro: '#ffffff', oscuro: '#000000' };
+const FONDO: Readonly<Record<Tema, string>> = { claro: '#ffffff', oscuro: '#000000', suave: '#f1e9d6' };
+/** El botón recorre los tres modos en este orden. */
+const SIGUIENTE: Readonly<Record<Tema, Tema>> = { claro: 'oscuro', oscuro: 'suave', suave: 'claro' };
+const ETIQUETA: Readonly<Record<Tema, string>> = { claro: 'MODO CLARO', oscuro: 'MODO OSCURO', suave: 'MODO SUAVE' };
 
 /** Aplica el tema (atributo en <html>): el elegido en este teléfono o, si no eligió, el modo del teléfono. */
 export const ProveedorTema = ({ children }: { readonly children: ReactNode }) => {
@@ -32,13 +35,13 @@ const useTema = (): Contexto => {
   return c;
 };
 
-/** Botón de la cabecera para pasar de colores claros a oscuros y al revés. */
+/** Botón de la cabecera: pasa al siguiente modo de colores (claro → oscuro → suave → claro) y muestra a cuál va. */
 export const CambiarTema = () => {
   const { tema, cambiar } = useTema();
-  const otro: Tema = tema === 'oscuro' ? 'claro' : 'oscuro';
+  const otro = SIGUIENTE[tema];
   return (
     <Boton variante="secundario" aria-label={`COLORES: ahora ${tema}. Cambiar a ${otro}`} onClick={() => { cambiar(otro); }}>
-      {tema === 'oscuro' ? 'MODO CLARO' : 'MODO OSCURO'}
+      {ETIQUETA[otro]}
     </Boton>
   );
 };

@@ -14,6 +14,14 @@
   --accent-fg: #000;
   color-scheme: dark;
 }
+/* Modo suave: tonos cálidos tipo papel y verde apagado, con menos brillo para descansar la vista (texto 10:1, botones 5.9:1). */
+:root[data-tema='suave'] {
+  --fg: #3a3328;
+  --bg: #f1e9d6;
+  --accent-bg: #3f5f4d;
+  --accent-fg: #f1e9d6;
+  color-scheme: light;
+}
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema]) {
     --fg: #fff;

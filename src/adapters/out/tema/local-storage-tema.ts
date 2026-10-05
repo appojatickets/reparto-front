@@ -11,7 +11,7 @@ const almacenDelNavegador = (): Almacen | undefined => {
   }
 };
 
-const esTema = (x: unknown): x is Tema => x === 'claro' || x === 'oscuro';
+const esTema = (x: unknown): x is Tema => x === 'claro' || x === 'oscuro' || x === 'suave';
 
 /** Guarda el tema elegido en el dispositivo; si el almacenamiento no está disponible, lo recuerda solo mientras la app esté abierta. */
 export const crearTemaStore = (almacen: Almacen | undefined = almacenDelNavegador()): TemaStore => {

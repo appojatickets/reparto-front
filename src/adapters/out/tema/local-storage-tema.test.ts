@@ -11,8 +11,10 @@ describe('tema guardado en el teléfono', () => {
     const almacen = almacenFalso();
     const store = crearTemaStore(almacen);
     expect(store.cargar()).toBeUndefined();
+    store.guardar('suave');
+    expect(store.cargar()).toBe('suave');
+    expect(crearTemaStore(almacen).cargar()).toBe('suave');
     store.guardar('oscuro');
-    expect(store.cargar()).toBe('oscuro');
     expect(crearTemaStore(almacen).cargar()).toBe('oscuro');
   });
 

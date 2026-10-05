@@ -116,10 +116,17 @@ describe('modo oscuro', () => {
     montar({ sesion: ADMIN, casos: { tema: { cargar: () => 'claro', guardar } } });
     await screen.findByRole('heading', { name: 'Hola, Matías' });
     expect(document.documentElement.dataset['tema']).toBe('claro');
+    expect(screen.getByRole('button', { name: /Cambiar a oscuro/ })).toHaveTextContent('MODO OSCURO');
     await userEvent.click(screen.getByRole('button', { name: /Cambiar a oscuro/ }));
     expect(guardar).toHaveBeenCalledWith('oscuro');
     expect(document.documentElement.dataset['tema']).toBe('oscuro');
+    await userEvent.click(screen.getByRole('button', { name: /Cambiar a suave/ }));
+    expect(guardar).toHaveBeenLastCalledWith('suave');
+    expect(document.documentElement.dataset['tema']).toBe('suave');
+    expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? '#f1e9d6').toBe('#f1e9d6');
     expect(screen.getByRole('button', { name: /Cambiar a claro/ })).toHaveTextContent('MODO CLARO');
+    await userEvent.click(screen.getByRole('button', { name: /Cambiar a claro/ }));
+    expect(document.documentElement.dataset['tema']).toBe('claro');
   });
 
   it('sin elección previa sigue el modo del teléfono', async () => {
