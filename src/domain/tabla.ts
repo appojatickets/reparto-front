@@ -1,3 +1,5 @@
+import { comunaDelPin } from './comunas';
+
 export type Tabla = { readonly encabezados: readonly string[]; readonly filas: readonly (readonly string[])[] };
 
 const DELIMITADORES = ['\t', ';', ','] as const;
@@ -137,4 +139,29 @@ export const mapearPines = (tabla: Tabla): MapeoPines => {
   });
   const obligatorios = ['direccion', 'lat', 'lng'] as const;
   return { pines, ignoradas, faltantes: obligatorios.filter((c) => !ocupados.has(c)) };
+};
+
+const numero = (t: string | undefined): number | undefined => {
+  if (t === undefined) return undefined;
+  const n = Number(t.trim().replace(',', '.'));
+  return t.trim() !== '' && Number.isFinite(n) ? n : undefined;
+};
+
+/**
+ * Las filas que solo traen el pin (sin dirección o sin comuna) entran igual: la dirección queda como «Ubicación en el mapa (lat, lng)»
+ * y la comuna se calcula por la cercanía del pin (la misma regla de la lista de Google Maps). `completadas` cuenta las que se arreglaron así.
+ */
+export const completarConPin = (filas: readonly FilaClienteCruda[]): { readonly filas: readonly FilaClienteCruda[]; readonly completadas: number } => {
+  let completadas = 0;
+  const salida = filas.map((f) => {
+    if (f.direccion !== undefined && f.comuna !== undefined) return f;
+    const lat = numero(f.lat);
+    const lng = numero(f.lng);
+    if (lat === undefined || lng === undefined) return f;
+    const comuna = f.comuna ?? comunaDelPin(lat, lng).sugerencias[0];
+    if (comuna === undefined) return f;
+    completadas++;
+    return { ...f, direccion: f.direccion ?? `Ubicación en el mapa (${lat}, ${lng})`, comuna };
+  });
+  return { filas: salida, completadas };
 };

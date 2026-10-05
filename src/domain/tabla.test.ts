@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapearClientes, mapearPines, parsearTabla } from './tabla';
+import { completarConPin, mapearClientes, mapearPines, parsearTabla } from './tabla';
 
 describe('parsearTabla', () => {
   it('lee TSV pegado desde Excel', () => {
@@ -74,5 +74,21 @@ describe('mapearPines', () => {
 
   it('informa lo que falta', () => {
     expect(mapearPines(parsearTabla('direccion\nCalle 1')).faltantes).toEqual(['lat', 'lng']);
+  });
+});
+
+describe('filas que solo traen el pin', () => {
+  it('se completan con «Ubicación en el mapa» y la comuna más cercana al pin; las demás no se tocan', () => {
+    const { filas, completadas } = completarConPin([
+      { razonSocial: 'Ventas de Alimentos Dafna', lat: '-33.797267', lng: '-70.776552' },
+      { razonSocial: 'Kiosko Sol', direccion: 'Calle 1 100', comuna: 'Maipú' },
+      { razonSocial: 'Sin nada' },
+      { razonSocial: 'Con dirección', direccion: 'Avenida Irarrazabal S/N', lat: '-33.599886', lng: '-70.893808' },
+    ]);
+    expect(completadas).toBe(2);
+    expect(filas[0]).toMatchObject({ direccion: 'Ubicación en el mapa (-33.797267, -70.776552)', comuna: 'Paine' });
+    expect(filas[1]).toEqual({ razonSocial: 'Kiosko Sol', direccion: 'Calle 1 100', comuna: 'Maipú' });
+    expect(filas[2]).toEqual({ razonSocial: 'Sin nada' });
+    expect(filas[3]).toMatchObject({ direccion: 'Avenida Irarrazabal S/N', comuna: 'Peñaflor' });
   });
 });

@@ -430,6 +430,18 @@ describe('importar una lista de direcciones con enlace de Google Maps', () => {
 describe('importar clientes', () => {
   const planilla = 'Rut\tRazón Social\tDirección\tComuna\n12.345.678-5\tRabelo SpA\tAv. X 1\tMaipú\n\tKiosko Sol\tCalle 2\tÑuñoa';
 
+  it('las filas que solo traen el pin entran como «Ubicación en el mapa» con la comuna calculada, y se avisa', async () => {
+    const importarClientesEnLotes = vi.fn(() => Promise.resolve(ok({ totalFilas: 2, validas: 2, errores: [], resumen: { clientesCreados: 2, clientesActualizados: 0, localesCreados: 2, localesActualizados: 0 } })));
+    montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes } });
+    await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
+    await userEvent.paste('RUT,razón social,giro,dirección,comuna,latitud,longitud\n,Kiosko Sol,,Calle 1 100,Maipú,,\n,Ventas de Alimentos Dafna,,,,-33.797267,-70.776552');
+    expect(await screen.findByText(/1 filas solo traen el pin/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'IMPORTAR' }));
+    await waitFor(() => { expect(importarClientesEnLotes).toHaveBeenCalledTimes(1); });
+    const enviadas = (importarClientesEnLotes.mock.calls[0] as unknown as [readonly Record<string, string>[]])[0];
+    expect(enviadas[1]).toMatchObject({ razonSocial: 'Ventas de Alimentos Dafna', direccion: 'Ubicación en el mapa (-33.797267, -70.776552)', comuna: 'Paine', lat: '-33.797267', lng: '-70.776552' });
+  });
+
   it('reconoce las columnas, muestra la vista previa y bloquea si faltan obligatorias', async () => {
     montar({ ruta: '/admin/importar', sesion: ADMIN });
     const area = await screen.findByLabelText('O pega aquí la planilla');

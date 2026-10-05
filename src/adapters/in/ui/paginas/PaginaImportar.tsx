@@ -2,7 +2,7 @@ import { useMemo, useState, type ChangeEvent } from 'react';
 import { COMUNAS_RM } from '../../../../domain/comunas';
 import { analizarListaEnlaces, esListaDeEnlaces } from '../../../../domain/lista-enlaces';
 import { analizarListaMaps, completarEntrada, esListaDeMaps, faltaSolo, filasParaImportar, resumir, type Correccion, type EntradaMapa } from '../../../../domain/lista-maps';
-import { mapearClientes, parsearTabla, type CampoCliente } from '../../../../domain/tabla';
+import { completarConPin, mapearClientes, parsearTabla, type CampoCliente } from '../../../../domain/tabla';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ResultadoImportacion } from '../../../../application/modelos';
 import type { Progreso } from '../../../../application/use-cases/importar-clientes';
@@ -107,7 +107,8 @@ export const PaginaImportar = () => {
     });
   };
 
-  const filas = esMaps ? filasMaps : mapeo.filas;
+  const conPin = useMemo(() => completarConPin(mapeo.filas), [mapeo.filas]);
+  const filas = esMaps ? filasMaps : conPin.filas;
   const hayFilas = filas.length > 0;
   const completa = esMaps ? filasMaps.length > 0 : hayFilas && mapeo.faltantes.length === 0;
 
@@ -237,6 +238,7 @@ export const PaginaImportar = () => {
       {modoTabla && texto.trim() !== '' && !hayFilas ? <Aviso tipo="error">No se encontraron filas de datos. La primera línea debe tener los títulos de las columnas.</Aviso> : null}
       {modoTabla && mapeo.faltantes.length > 0 && texto.trim() !== '' ? <Aviso tipo="error">Faltan columnas obligatorias: {mapeo.faltantes.map((c) => NOMBRE_CAMPO[c]).join(', ')}.</Aviso> : null}
       {modoTabla && mapeo.ignoradas.length > 0 && hayFilas ? <Aviso>Se ignorarán estas columnas: {mapeo.ignoradas.join(', ')}.</Aviso> : null}
+      {modoTabla && conPin.completadas > 0 ? <Aviso>{conPin.completadas} filas solo traen el pin: se importan como «Ubicación en el mapa (lat, lng)» con la comuna calculada por la cercanía del pin.</Aviso> : null}
       {completa ? <Aviso tipo="exito">{filas.length} filas {esMaps ? 'listas para importar' : 'detectadas'}. El servidor revisará cada una al importar.</Aviso> : null}
 
       {completa ? (
