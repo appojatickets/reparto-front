@@ -989,6 +989,8 @@ describe('el chofer: camión del día y carga de entregas', () => {
     const verRuta = vi.fn(() => Promise.resolve(ok({ camionId: 'c1', fecha: '2026-10-05', planificada: false, salidaMin: 480, horaLimiteRegresoMin: 1260, paradas: [], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] })));
     montar({ ruta: '/mi-ruta', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta } });
     expect(await screen.findByText(/Esta ruta aún no está calculada/)).toBeInTheDocument();
+    expect(screen.getByText(/la ruta se arma con las facturas del día, no con la lista de clientes/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'CARGAR FACTURAS' })).toHaveAttribute('href', '/cargar');
     expect(verRuta).toHaveBeenCalledWith('c1', '2026-10-05');
   });
 

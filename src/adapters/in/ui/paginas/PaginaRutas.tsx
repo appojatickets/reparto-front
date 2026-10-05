@@ -161,7 +161,15 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       {aviso ? <Aviso tipo="error">{aviso}</Aviso> : null}
       {!vista.planificada ? (
         <>
-          <Aviso>Esta ruta aún no está calculada. {vista.nuevas.length === 0 ? 'No hay facturas asignadas a este camión ese día.' : `Hay ${vista.nuevas.length} facturas por ordenar.`}</Aviso>
+          <Aviso>
+            Esta ruta aún no está calculada.{' '}
+            {vista.nuevas.length === 0 ? (
+              <>
+                Todavía no hay entregas cargadas para este camión ese día: la ruta se arma con las facturas del día, no con la lista de clientes (importar clientes solo llena la base de lugares).{' '}
+                {enCamion ? <Link to="/cargar">CARGAR FACTURAS</Link> : <Link to="/facturas">Cargarlas en FACTURAS DEL DÍA</Link>}
+              </>
+            ) : `Hay ${vista.nuevas.length} facturas por ordenar.`}
+          </Aviso>
           <Boton disabled={ocupado || vista.nuevas.length === 0} onClick={() => void planificar()}>{ocupado ? 'CALCULANDO…' : 'CALCULAR RUTA SUGERIDA'}</Boton>
         </>
       ) : (
