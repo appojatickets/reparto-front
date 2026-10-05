@@ -525,13 +525,14 @@ html[data-vista='normal'] td {
   padding: 0 0.75rem 0.75rem;
 }
 .parada-atajos .atajo {
-  flex: 1 1 0;
-  min-width: 3.5rem;
+  flex: 1 1 auto;
+  min-width: 4.5rem;
   min-height: 3.5rem;
-  padding: 0.25rem 0.5rem;
+  padding: 0.25rem 0.75rem;
   display: grid;
   place-items: center;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 800;
   text-decoration: none;
   box-sizing: border-box;
 }
@@ -544,7 +545,7 @@ html[data-vista='normal'] .parada-atajos {
 }
 html[data-vista='normal'] .parada-atajos .atajo {
   min-height: 2.75rem;
-  font-size: 1.25rem;
+  font-size: 1rem;
 }
 .parada-detalle {
   display: flex;

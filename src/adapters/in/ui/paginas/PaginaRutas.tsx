@@ -49,8 +49,8 @@ const FilaParada = ({ p, total, ocupado, operar, enCamion, alCambiar, abierta, a
         </span>
       </button>
       <div className="parada-atajos">
-        <Boton variante="secundario" className="atajo" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} title="Subir" onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>⬆</Boton>
-        <Boton variante="secundario" className="atajo" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} title="Bajar" onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>⬇</Boton>
+        <Boton variante="secundario" className="atajo" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>SUBIR</Boton>
+        <Boton variante="secundario" className="atajo" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>BAJAR</Boton>
         {enCamion ? <AtajoEntregado p={p} alCambiar={alCambiar} /> : null}
         {enCamion ? <AtajoIr p={p} /> : null}
       </div>

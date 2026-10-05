@@ -17,6 +17,6 @@ Estado: aceptada. Pedido del dueño, 2026-10-05 (flujo del chofer: login → ele
 - Privacidad: al buscar una dirección nueva se envía a OpenStreetMap solo el texto de la dirección (calle, número, comuna), nunca el nombre ni el RUT del cliente.
 
 ## Pendiente (siguientes pasos del flujo)
-- Pantalla aparte de la ruta como **lista compacta** (filas, no tarjetas) con atajos ⬆ ⬇ ✓ IR.
+- Pantalla aparte de la ruta como **lista compacta** (filas, no tarjetas) con atajos SUBIR, BAJAR, ENTREGADO e IR (hecho, ver actualización en ADR 0007).
 - Al mover una parada, el resto se reordena solo alrededor de esa decisión.
 - Probar el enlace corto de Google Maps con un caso real (no se pudo desde el entorno del agente).

@@ -80,7 +80,7 @@ const useEventosDeParada = (p: ParadaDeRuta) => {
   return { aviso, setAviso, ocupado, avisar };
 };
 
-/** Atajo de la fila de la ruta: ✓ marca la entrega como hecha con un toque (queda en «Hechas hoy» y se puede deshacer). */
+/** Atajo de la fila de la ruta: ENTREGADO marca la entrega como hecha con un toque (queda en «Hechas hoy» y se puede deshacer). */
 export const AtajoEntregado = ({ p, alCambiar }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void }) => {
   const { aviso, ocupado, avisar } = useEventosDeParada(p);
   const entregar = async (): Promise<void> => {
@@ -89,7 +89,7 @@ export const AtajoEntregado = ({ p, alCambiar }: { readonly p: ParadaDeRuta; rea
   };
   return (
     <>
-      <Boton variante="secundario" className="atajo" disabled={ocupado} aria-label={`MARCAR ENTREGADA ${p.cliente}`} title="Entregada" onClick={() => void entregar()}>✓</Boton>
+      <Boton variante="secundario" className="atajo" disabled={ocupado} aria-label={`MARCAR ENTREGADA ${p.cliente}`} onClick={() => void entregar()}>ENTREGADO</Boton>
       {aviso ? <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso> : null}
     </>
   );
@@ -97,7 +97,7 @@ export const AtajoEntregado = ({ p, alCambiar }: { readonly p: ParadaDeRuta; rea
 
 /** Atajo de la fila de la ruta: IR abre Waze con el destino (Google Maps está en el detalle de la parada). */
 export const AtajoIr = ({ p }: { readonly p: ParadaDeRuta }) => (
-  <a className="big-button big-button--primario atajo" href={enlaceNavegar({ direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng }, 'waze')} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON WAZE`} title="Ir con Waze">IR</a>
+  <a className="big-button big-button--primario atajo" href={enlaceNavegar({ direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng }, 'waze')} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON WAZE`}>IR</a>
 );
 
 export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void }) => {
