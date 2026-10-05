@@ -32,7 +32,8 @@ export interface ApiClient extends SaludApi {
   yo(): R<UsuarioSesion & { readonly empresaId: string }>;
 
   buscarClientes(q: string, opciones?: { comuna?: string; limite?: number; signal?: AbortSignal }): R<readonly ResultadoBusqueda[]>;
-  crearCliente(fila: FilaCliente): R<{ clienteId: string; localId: string }>;
+  /** Si el cliente ya existía con esa dirección (incompleto), se completa y se devuelve el existente (`existente: true`). */
+  crearCliente(fila: FilaCliente): R<{ clienteId: string; localId: string; existente: boolean }>;
   importarClientes(filas: readonly FilaCliente[]): R<ResultadoImportacion>;
   obtenerLocal(localId: string): R<LocalDetalle>;
   actualizarLocal(localId: string, cambios: { nota?: string; streetviewRumbo?: number; lat?: number; lng?: number }): R<void>;

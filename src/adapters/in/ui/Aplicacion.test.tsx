@@ -938,7 +938,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
   });
 
   it('«no lo encuentro»: detecta la comuna del final, crea el cliente solo con dirección y comuna, y lo carga', async () => {
-    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9', existente: false })));
     const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
     const buscarClientes = vi.fn(() => Promise.resolve(ok([])));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura, buscarClientes }) });
@@ -957,7 +957,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
   });
 
   it('«no está»: busca la dirección en el mapa, deja elegir el lugar y lo deja como pin del cliente nuevo', async () => {
-    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9', existente: false })));
     const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(ok({ resultado: 'fijado' as const, lat: -33.6012, lng: -70.7021 })));
     const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
     const buscarDireccion = vi.fn(() => Promise.resolve(ok([
@@ -980,7 +980,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
   });
 
   it('«no está»: si el mapa no la halla ofrece Google Maps; el enlace pegado se manda al servidor y, si no se puede leer, igual se carga con un aviso', async () => {
-    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9', existente: false })));
     const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(http(400, { codigo: 'VALIDACION', mensaje: 'No pude leer la ubicación de ese enlace.' })));
     const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, fijarPinDesdeEnlace, registrarFactura, buscarClientes: () => Promise.resolve(ok([])) }) });
@@ -997,8 +997,24 @@ describe('el chofer: camión del día y carga de entregas', () => {
     expect(await screen.findByText(/Cargado: Camino Santa Rita Parcela 4\..*No pude leer la ubicación/)).toBeInTheDocument();
   });
 
+  it('si el cliente ya existía incompleto, se completa (se le fija el pin) y se carga la entrega, sin rechazarlo', async () => {
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k1', localId: 'l1', existente: true })));
+    const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(ok({ resultado: 'fijado' as const, lat: -33.6, lng: -70.7 })));
+    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, fijarPinDesdeEnlace, registrarFactura, buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Av. Lo Blanco 2871 San Bernardo');
+    await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    await userEvent.type(form.getByLabelText('Enlace copiado de Google Maps'), 'https://maps.app.goo.gl/cn7KfBPY7vY7K5MW8');
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    await waitFor(() => { expect(registrarFactura).toHaveBeenCalledWith({ localId: 'l1', camionId: 'c1', fecha: '2026-10-05' }); });
+    expect(fijarPinDesdeEnlace).toHaveBeenCalledWith('l1', 'https://maps.app.goo.gl/cn7KfBPY7vY7K5MW8');
+    expect(await screen.findByText(/Ya estaba registrado: lo completé con lo que le faltaba/)).toBeInTheDocument();
+    expect(screen.queryByText(/Ya existe ese cliente/)).toBeNull();
+  });
+
   it('sin comuna no se puede guardar el cliente nuevo; con nombre del local lo usa', async () => {
-    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9', existente: false })));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura: () => Promise.resolve(ok(FACTURA)), buscarClientes: () => Promise.resolve(ok([])) }) });
     await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Calle 1 123');
     await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
@@ -1013,7 +1029,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
   });
 
   it('el RUT opcional se completa solo con números y se manda con el dígito verificador; uno inválido no se envía', async () => {
-    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9', existente: false })));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura: () => Promise.resolve(ok(FACTURA)), buscarClientes: () => Promise.resolve(ok([])) }) });
     await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Av. Colón Sur 765 San Bernardo');
     await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));

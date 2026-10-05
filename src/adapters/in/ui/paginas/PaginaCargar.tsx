@@ -124,7 +124,7 @@ type Lugar = { readonly lat: number; readonly lng: number; readonly etiqueta: st
  */
 const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: {
   readonly direccionInicial: string; readonly comunaInicial: string;
-  readonly alCrear: (c: { localId: string; razonSocial: string }, avisoPin?: string) => void; readonly alCancelar: () => void;
+  readonly alCrear: (c: { localId: string; razonSocial: string }, avisos: { readonly existente: boolean; readonly pin?: string }) => void; readonly alCancelar: () => void;
 }) => {
   const { api, buscarDireccion } = useCasos();
   const [direccion, setDireccion] = useState(direccionInicial);
@@ -191,7 +191,7 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
       if (!p.ok) avisoPin = `No pude leer la ubicación (${mensajeDeError(p.error)}). El cliente quedó cargado; el pin se completa con la primera entrega o pegando el enlace después.`;
     }
     setOcupado(false);
-    alCrear({ localId: r.value.localId, razonSocial }, avisoPin);
+    alCrear({ localId: r.value.localId, razonSocial }, { existente: r.value.existente, ...(avisoPin !== undefined ? { pin: avisoPin } : {}) });
   };
 
   return (
@@ -280,7 +280,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
   const buscando = puedeBuscar(escrito.consulta);
   const actual = buscando && resultados?.consulta === consulta && consulta === texto ? resultados : undefined;
 
-  const cargar = async (c: { localId: string; razonSocial: string }, avisoPin?: string): Promise<void> => {
+  const cargar = async (c: { localId: string; razonSocial: string }, avisos?: { readonly existente: boolean; readonly pin?: string }): Promise<void> => {
     setOcupado(true);
     setAviso(undefined);
     setRepetida(undefined);
@@ -290,7 +290,10 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
       setAviso({ tipo: 'error', texto: mensajeDeError(r.error) });
       return;
     }
-    setAviso({ tipo: avisoPin ? 'error' : 'exito', texto: `Cargado: ${c.razonSocial}.${avisoPin ? ` ${avisoPin}` : ''}` });
+    setAviso({
+      tipo: avisos?.pin ? 'error' : 'exito',
+      texto: `Cargado: ${c.razonSocial}.${avisos?.existente ? ' Ya estaba registrado: lo completé con lo que le faltaba.' : ''}${avisos?.pin ? ` ${avisos.pin}` : ''}`,
+    });
     setTexto('');
     setResultados(undefined);
     setCreando(false);
@@ -348,7 +351,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
         </div>
       ) : null}
       {texto.trim() !== '' && !creando ? <Boton variante="secundario" onClick={() => { setCreando(true); }}>NO ESTÁ: BUSCAR Y REGISTRAR</Boton> : null}
-      {creando ? <ClienteNuevo direccionInicial={escrito.consulta} comunaInicial={escrito.comuna ?? ''} alCrear={(c, avisoPin) => void cargar(c, avisoPin)} alCancelar={() => { setCreando(false); }} /> : null}
+      {creando ? <ClienteNuevo direccionInicial={escrito.consulta} comunaInicial={escrito.comuna ?? ''} alCrear={(c, avisos) => void cargar(c, avisos)} alCancelar={() => { setCreando(false); }} /> : null}
       {aviso ? <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso> : null}
 
       <h2>Cargadas hoy ({facturas.length})</h2>

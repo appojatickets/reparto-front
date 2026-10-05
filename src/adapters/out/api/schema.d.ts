@@ -1307,6 +1307,7 @@ export interface paths {
                         "application/json": {
                             clienteId: string;
                             localId: string;
+                            existente: boolean;
                         };
                     };
                 };
