@@ -1,4 +1,4 @@
-import { separarComuna, COMUNAS_RM } from './comunas';
+import { comunaDelPin, separarComuna, COMUNAS_RM } from './comunas';
 import { leerCoordenadas } from './coordenadas';
 import { normalizar } from './texto';
 import type { FilaClienteCruda } from './tabla';
@@ -26,6 +26,8 @@ export type EntradaMapa = {
   readonly lng?: number;
   readonly giro?: string;
   readonly nota?: string;
+  /** La comuna no estaba escrita: se calculó por la cercanía del pin. */
+  readonly comunaEstimada?: boolean;
 };
 
 export type ResumenLista = {
@@ -36,6 +38,7 @@ export type ResumenLista = {
   readonly descartadas: number;
   readonly conPin: number;
   readonly sinPinEnElTexto: number;
+  readonly comunaEstimada: number;
 };
 
 export const esListaDeMaps = (texto: string): boolean => /^\s*(Pin colocado|Ubicaci[oó]n compartida)\s*$/im.test(texto);
@@ -306,20 +309,6 @@ const analizarEntrada = (lineas: readonly string[], numero: number): EntradaMapa
     }
   }
 
-  let aproximada = false;
-  if (direccion === undefined || direccion === '') {
-    if (calleGoogle !== undefined) direccion = calleGoogle;
-    else if (referencia.referencia !== undefined) {
-      direccion = referencia.referencia;
-      aproximada = true;
-    }
-  }
-
-  const razonSocialEscrita = nombres[0] !== undefined ? ordenarTexto(nombres[0]) : undefined;
-  const razonSocial = razonSocialEscrita ?? tituloGoogle?.replace(/\s+/g, ' ').trim();
-  const nombreDeGoogle = nombres[0] === undefined && tituloGoogle !== undefined;
-  const otrosNombres = nombres.slice(1);
-
   // Pin: lo escrito en la lista; si cae fuera de la RM no se usa.
   let lat: number | undefined;
   let lng: number | undefined;
@@ -331,10 +320,35 @@ const analizarEntrada = (lineas: readonly string[], numero: number): EntradaMapa
     } else motivos.push('El pin cae fuera de la Región Metropolitana.');
   }
 
+  // Con pin alcanza: la comuna se estima por cercanía y la dirección es la ubicación en el mapa.
+  let comunaEstimada = false;
+  let sugerenciaComuna: readonly string[] = [];
+  if (comuna === undefined && lat !== undefined && lng !== undefined) {
+    const estimada = comunaDelPin(lat, lng);
+    if (estimada.comuna !== undefined) {
+      comuna = estimada.comuna;
+      comunaEstimada = true;
+    } else sugerenciaComuna = estimada.sugerencias;
+  }
+  let aproximada = false;
+  if (direccion === undefined || direccion === '') {
+    if (calleGoogle !== undefined) direccion = calleGoogle;
+    else if (lat !== undefined && lng !== undefined) direccion = `Ubicación en el mapa (${lat}, ${lng})`;
+    else if (referencia.referencia !== undefined) {
+      direccion = referencia.referencia;
+      aproximada = true;
+    }
+  }
+
+  const razonSocialEscrita = nombres[0] !== undefined ? ordenarTexto(nombres[0]) : undefined;
+  const razonSocial = razonSocialEscrita ?? tituloGoogle?.replace(/\s+/g, ' ').trim();
+  const nombreDeGoogle = nombres[0] === undefined && tituloGoogle !== undefined;
+  const otrosNombres = nombres.slice(1);
+
   if (cerradoPermanente) motivos.push('Google lo marca «cerrado permanentemente».');
   if (razonSocial === undefined) motivos.push('Falta el nombre del cliente.');
   if (direccion === undefined || direccion === '') motivos.push('Falta la dirección (solo hay un pin; el texto copiado no trae sus coordenadas).');
-  if (comuna === undefined) motivos.push('No se pudo saber la comuna.');
+  if (comuna === undefined) motivos.push(sugerenciaComuna.length > 0 ? `No se pudo saber la comuna (el pin está entre ${sugerenciaComuna.join(' y ')}).` : 'No se pudo saber la comuna.');
   if (razonSocial !== undefined && RE_SOSPECHOSO.test(normalizar(razonSocial).replace(/ /g, ''))) motivos.push('El nombre parece texto de prueba.');
 
   const repetida = (a: string | undefined, b: string | undefined): boolean => a !== undefined && b !== undefined && (normalizar(a).includes(normalizar(b)) || normalizar(b).includes(normalizar(a)));
@@ -360,11 +374,12 @@ const analizarEntrada = (lineas: readonly string[], numero: number): EntradaMapa
     estado,
     motivos,
     ...(razonSocial !== undefined ? { razonSocial } : {}),
-    ...(direccion !== undefined && direccion !== '' ? { direccion: ordenarTexto(direccion) } : {}),
+    ...(direccion !== undefined && direccion !== '' ? { direccion: direccion.startsWith('Ubicación en el mapa (') ? direccion : ordenarTexto(direccion) } : {}),
     ...(comuna !== undefined ? { comuna } : {}),
     ...(lat !== undefined && lng !== undefined ? { lat, lng } : {}),
     ...(giro !== undefined ? { giro: ordenarTexto(giro) } : {}),
     ...(nota !== undefined ? { nota } : {}),
+    ...(comunaEstimada ? { comunaEstimada } : {}),
   };
 };
 
@@ -411,6 +426,7 @@ export const completarEntrada = (e: EntradaMapa, c: Correccion): EntradaMapa => 
     ...(e.lat !== undefined && e.lng !== undefined ? { lat: e.lat, lng: e.lng } : {}),
     ...(e.giro !== undefined ? { giro: e.giro } : {}),
     ...(e.nota !== undefined ? { nota: e.nota } : {}),
+    ...(e.comunaEstimada === true && limpio(c.comuna) === undefined ? { comunaEstimada: true } : {}),
     estado,
     motivos, ...(razonSocial !== undefined ? { razonSocial } : {}), ...(direccion !== undefined ? { direccion } : {}), ...(comuna !== undefined ? { comuna } : {}) };
 };
@@ -425,5 +441,6 @@ export const resumir = (entradas: readonly EntradaMapa[]): ResumenLista => {
     descartadas: contar('descartada'),
     conPin: entradas.filter((e) => e.lat !== undefined).length,
     sinPinEnElTexto: entradas.filter((e) => e.estado !== 'descartada' && e.lat === undefined).length,
+    comunaEstimada: entradas.filter((e) => e.comunaEstimada === true && e.estado !== 'descartada').length,
   };
 };

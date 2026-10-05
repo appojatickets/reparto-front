@@ -89,6 +89,7 @@ export const PaginaImportar = () => {
           <Aviso tipo="exito">
             Lista de Google Maps: {resumenMaps.total} lugares leídos. Listos: {resumenMaps.listas} · solo con una referencia «Cerca de…»: {resumenMaps.aproximadas} · para revisar: {resumenMaps.revisar} · cerrados para siempre (se omiten): {resumenMaps.descartadas}. Con pin en el texto: {resumenMaps.conPin}.
           </Aviso>
+          {resumenMaps.comunaEstimada > 0 ? <Aviso>En {resumenMaps.comunaEstimada} lugares la comuna no estaba escrita y se calculó por la ubicación del pin. Los que no traen dirección quedan como «Ubicación en el mapa»: se navega con el pin.</Aviso> : null}
           {resumenMaps.sinPinEnElTexto > 0 ? <Aviso>El texto copiado de Google Maps no trae las coordenadas de {resumenMaps.sinPinEnElTexto} lugares (solo la referencia): su pin se completará con la primera entrega o pegando el enlace que mande el vendedor.</Aviso> : null}
           <label className="campo">
             <input type="checkbox" checked={incluirAproximadas} onChange={(e) => { setIncluirAproximadas(e.target.checked); }} /> Incluir los que solo tienen una referencia («Cerca de…») como dirección

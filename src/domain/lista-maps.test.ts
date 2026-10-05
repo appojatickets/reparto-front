@@ -26,9 +26,26 @@ describe('lista de Google Maps: una entrada', () => {
     expect(esListaDeMaps('rut;razon social\n1;a')).toBe(false);
   });
 
-  it('pin colocado con coordenadas y nombre: queda lista, pero sin dirección falta algo', () => {
+  it('pin colocado con coordenadas y nombre: alcanza; la dirección es la ubicación en el mapa y la comuna se estima por el pin', () => {
     const e = uno('Pin colocado\n-33.797267,-70.776552\nVentas de alimentos dafna');
-    expect(e).toMatchObject({ origen: 'pin_colocado', lat: -33.797267, lng: -70.776552, razonSocial: 'Ventas de Alimentos Dafna', estado: 'revisar' });
+    expect(e).toMatchObject({
+      origen: 'pin_colocado', lat: -33.797267, lng: -70.776552, razonSocial: 'Ventas de Alimentos Dafna', estado: 'lista',
+      direccion: 'Ubicación en el mapa (-33.797267, -70.776552)', comuna: 'Paine', comunaEstimada: true,
+    });
+  });
+
+  it('con pin pero sin comuna clara (entre dos comunas) se pregunta, con sugerencia; con la comuna escrita no se estima', () => {
+    const e = uno('Pin colocado\n-33.606873,-70.917985\nRosa Gonzalez');
+    expect(e.estado).toBe('revisar');
+    expect(e.motivos.join(' ')).toMatch(/el pin está entre Pe[ñn]aflor y Talagante/);
+    const escrita = uno('Pin colocado\n-33.797267,-70.776552\nVentas Dafna\ncalle larga 12 buin');
+    expect(escrita).toMatchObject({ comuna: 'Buin', estado: 'lista' });
+    expect(escrita.comunaEstimada).toBeUndefined();
+  });
+
+  it('sin pin ni dirección no se inventa nada', () => {
+    const e = uno('Pin colocado\nCerca de Paine, Región Metropolitana\nGisela Andrea Carrasco Guajardo');
+    expect(e.estado).toBe('revisar');
     expect(e.motivos.join(' ')).toContain('Falta la dirección');
   });
 
@@ -178,7 +195,7 @@ calle 1 100 buin`;
   it('los bloques sueltos se pegan a la entrada anterior si le falta el nombre o la dirección', () => {
     const { entradas } = analizarListaMaps(texto);
     expect(entradas.map((e) => [e.razonSocial, e.direccion])).toEqual([
-      ['Ventas de Alimentos Dafna', undefined],
+      ['Ventas de Alimentos Dafna', 'Ubicación en el mapa (-33.797267, -70.776552)'],
       ['Elias Hernán Vidal Pradines', 'Calle Doctor García 236'],
       ['Manuel Neira', 'Camino Paine Lonquen 2855'],
       [undefined, 'Mapocho Sur 8188'],
@@ -189,16 +206,16 @@ calle 1 100 buin`;
 
   it('el resumen cuenta listas, aproximadas, para revisar y descartadas', () => {
     const { resumen } = analizarListaMaps(texto);
-    expect(resumen).toMatchObject({ total: 6, listas: 4, revisar: 2, descartadas: 0, conPin: 3, sinPinEnElTexto: 3 });
+    expect(resumen).toMatchObject({ total: 6, listas: 5, revisar: 1, descartadas: 0, conPin: 3, sinPinEnElTexto: 3, comunaEstimada: 1 });
   });
 
   it('las filas para importar traen solo lo listo (y las aproximadas si se piden), con el pin como texto', () => {
     const { entradas } = analizarListaMaps(`${texto}\n\n\nPin colocado\nCerca de Botilleria Nolasko, Calera de Tango, Región Metropolitana\nClemencia Muñoz`);
-    expect(filasParaImportar(entradas, false)).toHaveLength(4);
+    expect(filasParaImportar(entradas, false)).toHaveLength(5);
     const con = filasParaImportar(entradas, true);
-    expect(con).toHaveLength(5);
-    expect(con[0]).toEqual({ razonSocial: 'Elias Hernán Vidal Pradines', direccion: 'Calle Doctor García 236', comuna: 'Pirque', nota: 'Cerca de Av. Hernán Prieto' });
-    expect(con[2]).toMatchObject({ lat: '-33.7', lng: '-70.7', comuna: 'Buin' });
+    expect(con).toHaveLength(6);
+    expect(con[1]).toEqual({ razonSocial: 'Elias Hernán Vidal Pradines', direccion: 'Calle Doctor García 236', comuna: 'Pirque', nota: 'Cerca de Av. Hernán Prieto' });
+    expect(con[3]).toMatchObject({ lat: '-33.7', lng: '-70.7', comuna: 'Buin' });
   });
 });
 
