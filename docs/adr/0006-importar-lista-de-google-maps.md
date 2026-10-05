@@ -17,6 +17,12 @@ El equipo ya juntó cientos de clientes como lista de Google Maps: pines puestos
 - Lo que no se puede entender (sin nombre, sin comuna, sin dirección, fuera de la RM, nombre de prueba) queda **para revisar** con el motivo. La pantalla deja completarlo ahí mismo (razón social, dirección, comuna) y, al completarse, pasa a «listo». Nada se inventa.
 - El pin con coordenadas entra como «sugerido» de fuente «importado» (como cualquier importación) y no pisa un pin validado; se afirma con las entregas o con el enlace del vendedor (ADR 0018).
 
+## Pines sin comuna y repetidos
+- Con las coordenadas basta: sin dirección escrita, la dirección es «Ubicación en el mapa (lat, lng)» y se navega con el pin. La comuna se estima por el centro más cercano solo si es claro (el segundo queda al doble de distancia); si no, se ofrecen las dos más cercanas.
+- El botón **BUSCAR LA COMUNA DE N PINES (OPENSTREETMAP)** consulta a Nominatim (geocodificación inversa, gratuita, 1 consulta por segundo) la comuna real de cada pin. Solo se envían coordenadas, nunca nombres ni direcciones. Es una salida por un puerto (`Geocodificador`) y se detiene con aviso si el servicio no responde o llega al límite.
+- Los repetidos (mismo nombre y misma dirección escrita, o pines a menos de 150 m, o una ficha sin dirección propia) se unen en una sola entrada; el mismo nombre con direcciones distintas son locales distintos.
+- Las entradas sin nombre se pueden omitir (de a una o todas a la vez).
+
 ## Límites conocidos
 - El texto copiado **no trae las coordenadas** de los pines que Google describe como «Cerca de …». Para traerlas todas hay que exportar la lista con coordenadas (por ejemplo Google Takeout o compartir cada lugar); mientras tanto el pin se completa con la primera entrega o pegando el enlace.
 - Distinguir nombre de dirección es heurístico (dígitos, palabras como «parcela», «camino», siglas de empresa); los casos dudosos van a revisar o se corrigen a mano.

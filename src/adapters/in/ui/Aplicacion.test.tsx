@@ -23,6 +23,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     restaurarSesion: vi.fn(() => Promise.resolve(estado)),
     cerrarSesion: vi.fn(),
     importarClientesEnLotes: vi.fn(),
+    completarComunas: vi.fn(() => Promise.resolve({ comunas: {}, sinRespuesta: 0, detenido: false })),
     subirFotoLocal: vi.fn(),
     ahora: () => new Date('2026-10-05T15:00:00Z'),
     voz: { disponible: false, escuchar: () => ({ detener: () => undefined }) },
@@ -430,6 +431,21 @@ describe('importar clientes', () => {
     await userEvent.click(screen.getByRole('button', { name: 'ACEPTAR LA COMUNA MÁS CERCANA EN 1' }));
     expect(await screen.findByRole('button', { name: 'IMPORTAR 2 CLIENTES' })).toBeEnabled();
     expect(aceptar).not.toBeInTheDocument();
+  });
+
+  it('lista de Google Maps: busca la comuna de los pines en OpenStreetMap, y deja omitir los que no tienen nombre', async () => {
+    const completarComunas = vi.fn(() => Promise.resolve({ comunas: { 1: 'Melipilla' }, sinRespuesta: 0, detenido: false }));
+    montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes: vi.fn(), completarComunas } });
+    await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
+    await userEvent.paste(['Pin colocado', '-33.606873,-70.917985', 'rosa gonzalez osses', '', '', 'Eliodoro Yañez 1909', '8082075 San Bernardo', 'Región Metropolitana'].join('\n'));
+    expect(await screen.findByText(/Solo se envían las coordenadas, nunca nombres ni direcciones/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'BUSCAR LA COMUNA DE 1 PINES (OPENSTREETMAP)' }));
+    expect(completarComunas).toHaveBeenCalledWith([{ numero: 1, lat: -33.606873, lng: -70.917985 }], expect.any(Function));
+    expect(await screen.findByText('Listo: se encontró la comuna de 1.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Para revisar 1')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'OMITIR LOS 1 SIN NOMBRE' }));
+    expect(screen.queryByLabelText('Para revisar 2')).toBeNull();
+    expect(screen.getByRole('button', { name: 'IMPORTAR 1 CLIENTES' })).toBeEnabled();
   });
 
   it('si la importación se corta avisa cuánto alcanzó y que reimportar es seguro', async () => {

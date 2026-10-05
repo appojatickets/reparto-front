@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMUNAS_RM, separarComuna } from './comunas';
+import { COMUNAS_RM, comunaDeDireccionOsm, separarComuna } from './comunas';
 
 describe('COMUNAS_RM', () => {
   it('son las 52 comunas, sin repetidas y en orden alfabético para el selector', () => {
@@ -37,5 +37,15 @@ describe('separarComuna', () => {
 
   it('sin comuna devuelve el texto tal cual (espacios simples)', () => {
     expect(separarComuna('minimarket   rabet')).toEqual({ consulta: 'minimarket rabet' });
+  });
+});
+
+describe('comunaDeDireccionOsm', () => {
+  it('prefiere el municipio y descarta lo que no es una comuna de la Región Metropolitana', () => {
+    expect(comunaDeDireccionOsm({ village: 'Hospital', municipality: 'Paine', county: 'Provincia de Maipo' })).toBe('Paine');
+    expect(comunaDeDireccionOsm({ city: 'Peñaflor', state: 'Región Metropolitana de Santiago' })).toBe('Peñaflor');
+    expect(comunaDeDireccionOsm({ municipality: 'Comuna de San Bernardo' })).toBe('San Bernardo');
+    expect(comunaDeDireccionOsm({ municipality: 'Quilpué', county: 'Valparaíso' })).toBeUndefined();
+    expect(comunaDeDireccionOsm({})).toBeUndefined();
   });
 });

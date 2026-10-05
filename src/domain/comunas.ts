@@ -68,3 +68,18 @@ export const comunaDelPin = (lat: number, lng: number): { readonly comuna?: stri
   const segura = primera.km <= segunda.km * 0.5;
   return { ...(segura ? { comuna: primera.nombre } : {}), sugerencias: [primera.nombre, segunda.nombre] };
 };
+
+/**
+ * La comuna dentro de la dirección que devuelve OpenStreetMap para un punto. En Chile la comuna viene como «municipality» (o «city»,
+ * «town»); las demás claves son localidades o la provincia, y solo valen si coinciden con el nombre de una comuna de la Región Metropolitana.
+ */
+export const comunaDeDireccionOsm = (direccion: Readonly<Record<string, unknown>>): string | undefined => {
+  for (const clave of ['municipality', 'city', 'town', 'village', 'city_district', 'suburb', 'county']) {
+    const valor = direccion[clave];
+    if (typeof valor !== 'string') continue;
+    const n = normalizar(valor.replace(/^comuna de /i, ''));
+    const comuna = COMUNAS_RM.find((c) => normalizar(c) === n);
+    if (comuna !== undefined) return comuna;
+  }
+  return undefined;
+};

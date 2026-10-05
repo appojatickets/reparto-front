@@ -14,7 +14,7 @@ const NOMBRE_CAMPO: Record<CampoCliente, string> = {
 const MAX_ERRORES_VISIBLES = 50;
 const MAX_REVISAR_VISIBLES = 40;
 
-const FilaRevisar = ({ e, alCambiar }: { readonly e: EntradaMapa; readonly alCambiar: (c: Correccion) => void }) => (
+const FilaRevisar = ({ e, alCambiar, alOmitir }: { readonly e: EntradaMapa; readonly alCambiar: (c: Correccion) => void; readonly alOmitir: () => void }) => (
   <li className="tarjeta" aria-label={`Para revisar ${e.numero}`}>
     <strong>#{e.numero}</strong>
     <span>{e.motivos.join(' ')}</span>
@@ -30,11 +30,12 @@ const FilaRevisar = ({ e, alCambiar }: { readonly e: EntradaMapa; readonly alCam
       </div>
     ) : null}
     {e.lat !== undefined ? <span>Pin: {e.lat}, {e.lng}</span> : null}
+    <Boton variante="secundario" aria-label={`OMITIR #${e.numero}`} onClick={alOmitir}>OMITIR (NO IMPORTAR)</Boton>
   </li>
 );
 
 export const PaginaImportar = () => {
-  const { importarClientesEnLotes } = useCasos();
+  const { importarClientesEnLotes, completarComunas } = useCasos();
   const [texto, setTexto] = useState('');
   const [progreso, setProgreso] = useState<Progreso | undefined>();
   const [resultado, setResultado] = useState<ResultadoImportacion | undefined>();
@@ -43,6 +44,9 @@ export const PaginaImportar = () => {
 
   const [correcciones, setCorrecciones] = useState<Readonly<Record<number, Correccion>>>({});
   const [incluirAproximadas, setIncluirAproximadas] = useState(true);
+  const [omitidas, setOmitidas] = useState<ReadonlySet<number>>(new Set());
+  const [buscando, setBuscando] = useState<{ readonly hechos: number; readonly total: number } | undefined>();
+  const [avisoComunas, setAvisoComunas] = useState<string | undefined>();
 
   const esMaps = esListaDeMaps(texto);
   const mapeo = useMemo(() => mapearClientes(parsearTabla(esMaps ? '' : texto)), [texto, esMaps]);
@@ -50,7 +54,25 @@ export const PaginaImportar = () => {
   const entradasMaps = useMemo(() => (analisisMaps ? analisisMaps.entradas.map((e) => completarEntrada(e, correcciones[e.numero] ?? {})) : []), [analisisMaps, correcciones]);
   const resumenMaps = useMemo(() => resumir(entradasMaps), [entradasMaps]);
   const filasMaps = useMemo(() => filasParaImportar(entradasMaps, incluirAproximadas), [entradasMaps, incluirAproximadas]);
-  const aRevisar = entradasMaps.filter((e) => e.estado === 'revisar');
+  const aRevisar = entradasMaps.filter((e) => e.estado === 'revisar' && !omitidas.has(e.numero));
+  const sinNombre = aRevisar.filter((e) => e.razonSocial === undefined);
+  const pinesSinComuna = aRevisar.filter((e) => e.comuna === undefined && e.lat !== undefined && e.lng !== undefined);
+  const omitir = (numeros: readonly number[]): void => { setOmitidas((prev) => new Set([...prev, ...numeros])); };
+  const buscarComunas = async (): Promise<void> => {
+    setAvisoComunas(undefined);
+    setBuscando({ hechos: 0, total: pinesSinComuna.length });
+    const r = await completarComunas(pinesSinComuna.flatMap((e) => (e.lat !== undefined && e.lng !== undefined ? [{ numero: e.numero, lat: e.lat, lng: e.lng }] : [])), setBuscando);
+    setBuscando(undefined);
+    setCorrecciones((prev) => {
+      const siguiente = { ...prev };
+      for (const [n, comuna] of Object.entries(r.comunas)) siguiente[Number(n)] = { ...siguiente[Number(n)], comuna };
+      return siguiente;
+    });
+    const encontradas = Object.keys(r.comunas).length;
+    setAvisoComunas(r.detenido
+      ? `Se detuvo (el servicio no respondió o llegó al límite): se completaron ${encontradas}. Espera un minuto y vuelve a tocar el botón para seguir con el resto.`
+      : `Listo: se encontró la comuna de ${encontradas}${r.sinRespuesta > 0 ? ` y ${r.sinRespuesta} no se pudieron ubicar` : ''}.`);
+  };
   const soloFaltaComuna = aRevisar.filter((e) => e.sugerenciasComuna !== undefined && e.razonSocial !== undefined && e.direccion !== undefined);
   const aceptarMasCercanas = (): void => {
     setCorrecciones((prev) => {
@@ -72,6 +94,7 @@ export const PaginaImportar = () => {
     if (archivo) {
       setTexto(await archivo.text());
       setCorrecciones({});
+      setOmitidas(new Set());
       setResultado(undefined);
       setFallo(undefined);
     }
@@ -98,7 +121,7 @@ export const PaginaImportar = () => {
         <label htmlFor="archivo">Archivo CSV o TXT</label>
         <input id="archivo" type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" onChange={(e) => void leerArchivo(e)} />
       </div>
-      <AreaTexto etiqueta="O pega aquí la planilla" ayuda="Pega aquí la lista tal como la copiaste de Google Maps, o una planilla con columnas: RUT (opcional), razón social, giro, dirección, comuna, latitud y longitud (opcionales)." value={texto} onChange={(e) => { setTexto(e.target.value); setResultado(undefined); setCorrecciones({}); }} rows={6} />
+      <AreaTexto etiqueta="O pega aquí la planilla" ayuda="Pega aquí la lista tal como la copiaste de Google Maps, o una planilla con columnas: RUT (opcional), razón social, giro, dirección, comuna, latitud y longitud (opcionales)." value={texto} onChange={(e) => { setTexto(e.target.value); setResultado(undefined); setCorrecciones({}); setOmitidas(new Set()); }} rows={6} />
 
       {esMaps ? (
         <section aria-label="Lista de Google Maps" className="pagina">
@@ -114,11 +137,21 @@ export const PaginaImportar = () => {
             <>
               <h2>Para revisar ({aRevisar.length})</h2>
               <p>Completa lo que falta y quedan listos. Los que no completes no se importan; puedes volver a pegar la lista después.</p>
+              {pinesSinComuna.length > 0 ? (
+                <>
+                  <Boton disabled={buscando !== undefined} onClick={() => void buscarComunas()}>
+                    {buscando ? `BUSCANDO… ${buscando.hechos} DE ${buscando.total}` : `BUSCAR LA COMUNA DE ${pinesSinComuna.length} PINES (OPENSTREETMAP)`}
+                  </Boton>
+                  <p>Consulta el servicio gratuito de OpenStreetMap, un pin por segundo (unos {Math.ceil(pinesSinComuna.length * 1.1 / 60)} min). Solo se envían las coordenadas, nunca nombres ni direcciones.</p>
+                </>
+              ) : null}
+              {avisoComunas ? <Aviso tipo="info">{avisoComunas}</Aviso> : null}
+              {sinNombre.length > 0 ? <Boton variante="secundario" onClick={() => { omitir(sinNombre.map((e) => e.numero)); }}>{`OMITIR LOS ${sinNombre.length} SIN NOMBRE`}</Boton> : null}
               {soloFaltaComuna.length > 0 ? (
                 <Boton variante="secundario" onClick={aceptarMasCercanas}>{`ACEPTAR LA COMUNA MÁS CERCANA EN ${soloFaltaComuna.length}`}</Boton>
               ) : null}
               <ul className="tarjetas">
-                {aRevisar.slice(0, MAX_REVISAR_VISIBLES).map((e) => <FilaRevisar key={e.numero} e={e} alCambiar={(c) => { setCorrecciones((prev) => ({ ...prev, [e.numero]: { ...prev[e.numero], ...c } })); }} />)}
+                {aRevisar.slice(0, MAX_REVISAR_VISIBLES).map((e) => <FilaRevisar key={e.numero} e={e} alOmitir={() => { omitir([e.numero]); }} alCambiar={(c) => { setCorrecciones((prev) => ({ ...prev, [e.numero]: { ...prev[e.numero], ...c } })); }} />)}
               </ul>
               {aRevisar.length > MAX_REVISAR_VISIBLES ? <p>… y {aRevisar.length - MAX_REVISAR_VISIBLES} más (se muestran al completar estos).</p> : null}
             </>

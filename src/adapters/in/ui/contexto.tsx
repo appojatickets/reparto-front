@@ -4,6 +4,7 @@ import type { TemaStore } from '../../../application/ports/tema-store';
 import type { VistaStore } from '../../../application/ports/vista-store';
 import type { Voz } from '../../../application/ports/voz';
 import type { ApiClient } from '../../../application/ports/api-client';
+import type { crearCompletarComunas } from '../../../application/use-cases/completar-comunas';
 import type { crearImportarClientesEnLotes } from '../../../application/use-cases/importar-clientes';
 import type { crearCerrarSesion, crearIniciarSesion, crearRestaurarSesion } from '../../../application/use-cases/sesion';
 import type { crearSubirFotoLocal } from '../../../application/use-cases/subir-foto';
@@ -15,6 +16,8 @@ export type Casos = {
   readonly restaurarSesion: ReturnType<typeof crearRestaurarSesion>;
   readonly cerrarSesion: ReturnType<typeof crearCerrarSesion>;
   readonly importarClientesEnLotes: ReturnType<typeof crearImportarClientesEnLotes>;
+  /** Busca la comuna de un pin en OpenStreetMap (para la importación de listas de Google Maps). */
+  readonly completarComunas: ReturnType<typeof crearCompletarComunas>;
   readonly subirFotoLocal: ReturnType<typeof crearSubirFotoLocal>;
   /** Hora actual (inyectada para que las pantallas con fechas sean comprobables). */
   readonly ahora: () => Date;
