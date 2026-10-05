@@ -89,7 +89,7 @@ describe('entrada y protección por rol', () => {
 
   it('el admin ve todo el menú', async () => {
     montar({ sesion: ADMIN });
-    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'VENDEDORES', 'EXPORTAR DATOS', 'CONFIGURACIÓN', 'USUARIOS']) {
+    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'VENDEDORES', 'EXPORTAR DATOS', 'REVISAR FOTOS', 'CONFIGURACIÓN', 'USUARIOS']) {
       expect(await screen.findByRole('link', { name: nombre })).toBeInTheDocument();
     }
   });
@@ -425,6 +425,109 @@ describe('importar una lista de direcciones con enlace de Google Maps', () => {
     expect(screen.getByText(/#1 Avenida Portales 4180/)).toBeInTheDocument();
     expect(screen.getByText(/No se pudieron cargar 1\. Vuelve a tocar IMPORTAR/)).toBeInTheDocument();
     expect(screen.getByText(/#2 Los Suspiros 16463: Sin conexión/)).toBeInTheDocument();
+  });
+});
+
+describe('revisar fotos (admin)', () => {
+  const reportada = { id: 'r1', localId: 'lA', razonSocial: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', motivo: 'se_ven_personas' as const, detalle: 'sale el dueño', reportadoPor: 'Juan Pérez', reportadoEn: '2026-10-05T15:58:00.000Z', subidaPor: 'Max García', subidaEn: '2026-10-05T14:00:00.000Z' };
+  const reciente = { localId: 'lB', razonSocial: 'Local B', direccion: 'Calle B 200', comuna: 'Paine', subidaPor: 'Ana Soto', subidaEn: '2026-10-05T13:00:00.000Z' };
+  const urlFoto = () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 300 }));
+
+  it('solo el admin entra: el despachador vuelve al inicio', async () => {
+    montar({ ruta: '/admin/fotos', sesion: DESPACHADOR });
+    expect(await screen.findByRole('heading', { name: 'Hola, Ana' })).toBeInTheDocument();
+  });
+
+  it('muestra lo reportado (motivo, quién reportó, quién subió) y lo subido hace poco, cada uno con su foto', async () => {
+    montar({ ruta: '/admin/fotos', sesion: ADMIN, api: { fotosParaRevision: () => Promise.resolve(ok({ reportadas: [reportada], recientes: [reciente] })), urlFoto } });
+    const rep = await screen.findByRole('listitem', { name: 'Foto reportada de Local A' });
+    expect(rep).toHaveTextContent('Se ven personas');
+    expect(rep).toHaveTextContent('sale el dueño');
+    expect(rep).toHaveTextContent('Reportó Juan Pérez');
+    expect(rep).toHaveTextContent('Subió Max García');
+    expect(await within(rep).findByRole('img', { name: 'Fachada de Local A' })).toHaveAttribute('src', 'https://alm.test/f.webp');
+    const rec = screen.getByRole('listitem', { name: 'Foto reciente de Local B' });
+    expect(rec).toHaveTextContent('Subió Ana Soto');
+    expect(screen.getByRole('heading', { name: 'Reportadas (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Subidas hace poco (1)' })).toBeInTheDocument();
+  });
+
+  it('una foto reportada: eliminar pide confirmar y luego la elimina; la lista se actualiza', async () => {
+    const resolverReporteFoto = vi.fn(() => Promise.resolve(ok(undefined)));
+    const fotosParaRevision = vi.fn()
+      .mockResolvedValueOnce(ok({ reportadas: [reportada], recientes: [] }))
+      .mockResolvedValue(ok({ reportadas: [], recientes: [] }));
+    montar({ ruta: '/admin/fotos', sesion: ADMIN, api: { fotosParaRevision, resolverReporteFoto, urlFoto } });
+    await userEvent.click(await screen.findByRole('button', { name: 'ELIMINAR LA FOTO DE Local A' }));
+    expect(resolverReporteFoto).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'SÍ, ELIMINAR LA FOTO DE Local A' }));
+    expect(resolverReporteFoto).toHaveBeenCalledWith('r1', 'eliminar');
+    expect(await screen.findByText('No hay fotos reportadas por revisar.')).toBeInTheDocument();
+  });
+
+  it('«la foto está bien» descarta el reporte sin eliminar nada', async () => {
+    const resolverReporteFoto = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/admin/fotos', sesion: ADMIN, api: { fotosParaRevision: () => Promise.resolve(ok({ reportadas: [reportada], recientes: [] })), resolverReporteFoto, urlFoto } });
+    await userEvent.click(await screen.findByRole('button', { name: 'LA FOTO DE Local A ESTÁ BIEN' }));
+    expect(resolverReporteFoto).toHaveBeenCalledWith('r1', 'descartar');
+  });
+
+  it('una foto reciente se puede eliminar aunque nadie la haya reportado (con confirmación); «no» la deja', async () => {
+    const quitarFoto = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/admin/fotos', sesion: ADMIN, api: { fotosParaRevision: () => Promise.resolve(ok({ reportadas: [], recientes: [reciente] })), quitarFoto, urlFoto } });
+    await userEvent.click(await screen.findByRole('button', { name: 'ELIMINAR LA FOTO DE Local B' }));
+    await userEvent.click(screen.getByRole('button', { name: 'NO' }));
+    expect(quitarFoto).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'ELIMINAR LA FOTO DE Local B' }));
+    await userEvent.click(screen.getByRole('button', { name: 'SÍ, ELIMINAR LA FOTO DE Local B' }));
+    expect(quitarFoto).toHaveBeenCalledWith('lB');
+  });
+
+  it('una foto anterior al panel (sin quién la subió) lo dice; un error al eliminar se avisa', async () => {
+    const quitarFoto = vi.fn(() => Promise.resolve(http(500, { mensaje: 'Algo falló.' })));
+    montar({ ruta: '/admin/fotos', sesion: ADMIN, api: { fotosParaRevision: () => Promise.resolve(ok({ reportadas: [], recientes: [{ localId: 'lC', razonSocial: 'Local C', direccion: 'Calle C 1', comuna: 'Maipú' }] })), quitarFoto, urlFoto } });
+    expect(await screen.findByText(/No se sabe quién la subió/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'ELIMINAR LA FOTO DE Local C' }));
+    await userEvent.click(screen.getByRole('button', { name: 'SÍ, ELIMINAR LA FOTO DE Local C' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+});
+
+describe('reportar una foto desde la parada', () => {
+  const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
+  const parada = { facturaId: 'fA', localId: 'lA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', urgente: false, posicion: 0, llegada: 600, inicioServicio: 600, salida: 608, espera: 0, atraso: 0, motivos: ['MENOR_DESVIO' as const], fijada: false, tieneFoto: true };
+  const vista = { camionId: 'c1', fecha: '2026-10-05', planificada: true, modo: 'sugerida' as const, version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, paradas: [parada], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] };
+  const abrirParada = (api: Partial<ApiClient>) => montar({ ruta: '/mi-ruta', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vista)), urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 300 })), ...api } });
+
+  it('el chofer reporta la foto con un motivo y una explicación; se confirma', async () => {
+    const reportarFoto = vi.fn(() => Promise.resolve(ok(undefined)));
+    abrirParada({ reportarFoto });
+    await userEvent.click(await screen.findByRole('button', { name: 'REPORTAR LA FOTO DE Local A' }));
+    await userEvent.click(screen.getByRole('button', { name: 'ENVIAR REPORTE' }));
+    expect(await screen.findByText('Elige por qué la reportas.')).toBeInTheDocument();
+    expect(reportarFoto).not.toHaveBeenCalled();
+    await userEvent.selectOptions(screen.getByLabelText('¿Qué tiene mal la foto?'), 'se_ven_personas');
+    await userEvent.type(screen.getByLabelText('Explicación (opcional)'), 'sale el dueño');
+    await userEvent.click(screen.getByRole('button', { name: 'ENVIAR REPORTE' }));
+    expect(reportarFoto).toHaveBeenCalledWith('lA', { motivo: 'se_ven_personas', detalle: 'sale el dueño' });
+    expect(await screen.findByText('Gracias. El administrador va a revisar la foto.')).toBeInTheDocument();
+  });
+
+  it('un error al enviar se avisa y se puede cancelar', async () => {
+    const reportarFoto = vi.fn(() => Promise.resolve(http(500, { mensaje: 'Algo falló.' })));
+    abrirParada({ reportarFoto });
+    await userEvent.click(await screen.findByRole('button', { name: 'REPORTAR LA FOTO DE Local A' }));
+    await userEvent.selectOptions(screen.getByLabelText('¿Qué tiene mal la foto?'), 'borrosa');
+    await userEvent.click(screen.getByRole('button', { name: 'ENVIAR REPORTE' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'CANCELAR' }));
+    expect(screen.getByRole('button', { name: 'REPORTAR LA FOTO DE Local A' })).toBeInTheDocument();
+  });
+
+  it('sin foto no hay nada que reportar', async () => {
+    abrirParada({ verRuta: () => Promise.resolve(ok({ ...vista, paradas: [{ ...parada, tieneFoto: false }] })) });
+    await screen.findByText(/Todavía no hay foto de esta fachada/);
+    expect(screen.queryByRole('button', { name: /REPORTAR LA FOTO/ })).toBeNull();
   });
 });
 

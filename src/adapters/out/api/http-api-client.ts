@@ -188,6 +188,9 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
         params: { query: { ...(filtro.comunas && filtro.comunas.length > 0 ? { comunas: filtro.comunas.join(',') } : {}), ...(filtro.pin ? { pin: filtro.pin } : {}), ...(filtro.foto ? { foto: filtro.foto } : {}), ...(filtro.texto?.trim() ? { texto: filtro.texto.trim() } : {}) } },
         signal: timeout(),
       }), { repetible: true }),
+    reportarFoto: async (id, reporte) => sinCuerpo(await ejecutar(() => client.POST('/v1/locales/{id}/foto/reportar', { params: { path: { id } }, body: reporte, signal: timeout() }))),
+    fotosParaRevision: () => ejecutar(() => client.GET('/v1/fotos/revision', { signal: timeout() }), { repetible: true }),
+    resolverReporteFoto: async (id, accion) => sinCuerpo(await ejecutar(() => client.POST('/v1/fotos/reportes/{id}/resolver', { params: { path: { id } }, body: { accion }, signal: timeout() }))),
     quitarFoto: async (id) => sinCuerpo(await ejecutar(() => client.DELETE('/v1/locales/{id}/foto', { params: { path: { id } }, signal: timeout() }))),
     async listarVendedores(opciones = {}) {
       const r = await ejecutar(() => client.GET('/v1/vendedores', { params: { query: opciones.incluirInactivos ? { incluirInactivos: 'true' } : {} }, signal: timeout() }), { repetible: true });

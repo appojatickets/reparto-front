@@ -1,7 +1,7 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
+  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
@@ -64,6 +64,12 @@ export interface ApiClient extends SaludApi {
   exportarLocales(filtro?: FiltroExportacion): R<{ readonly total: number; readonly filas: readonly FilaExportacion[] }>;
   /** Quita la foto de la fachada del local (admin o despachador). */
   quitarFoto(localId: string): R<void>;
+  /** Cualquiera reporta la foto de un local mal tomada; el admin la revisa. */
+  reportarFoto(localId: string, reporte: { readonly motivo: MotivoFoto; readonly detalle?: string }): R<void>;
+  /** Solo admin: las fotos reportadas y las subidas hace poco. */
+  fotosParaRevision(): R<FotosParaRevision>;
+  /** Solo admin: eliminar la foto reportada o dejarla. */
+  resolverReporteFoto(id: string, accion: 'eliminar' | 'descartar'): R<void>;
   listarVendedores(opciones?: { incluirInactivos?: boolean }): R<readonly Vendedor[]>;
   crearVendedor(datos: { codigo: string; nombre: string; celular?: string }): R<Vendedor>;
   actualizarVendedor(id: string, cambios: { nombre?: string; celular?: string | null; activo?: boolean }): R<Vendedor>;

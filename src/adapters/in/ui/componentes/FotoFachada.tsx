@@ -1,19 +1,8 @@
-import { useCallback, useRef, useState, type ChangeEvent } from 'react';
-import { mensajeDeError } from '../../../../application/mensajes';
+import { useRef, useState, type ChangeEvent } from 'react';
 import { useCasos } from '../contexto';
-import { useCarga } from '../hooks';
-import { Aviso, Boton, Cargando } from './ui';
-
-const Imagen = ({ localId, cliente, version }: { readonly localId: string; readonly cliente: string; readonly version: number }) => {
-  const { api } = useCasos();
-  // `version` pide una URL firmada nueva después de subir una foto.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- la URL se vuelve a pedir solo cuando cambia la versión
-  const cargar = useCallback(() => api.urlFoto(localId), [api, localId, version]);
-  const { estado } = useCarga(cargar);
-  if (estado.tipo === 'cargando') return <Cargando texto="Cargando foto…" />;
-  if (estado.tipo === 'error') return <Aviso tipo="error">{mensajeDeError(estado.error, 'No se pudo cargar la foto.')}</Aviso>;
-  return <img className="foto foto-fachada" src={estado.datos.url} alt={`Fachada de ${cliente}`} loading="lazy" />;
-};
+import { ImagenFoto } from './ImagenFoto';
+import { ReportarFoto } from './ReportarFoto';
+import { Aviso, Boton } from './ui';
 
 /**
  * La foto de la fachada que subió alguien del equipo, para reconocer el local al llegar. Si no hay, un solo botón: al llegar el chofer toma
@@ -44,11 +33,12 @@ export const FotoFachada = ({ localId, cliente, tieneFoto }: { readonly localId:
 
   return (
     <div className="pagina" aria-label={`Foto de ${cliente}`}>
-      {hay ? <Imagen localId={localId} cliente={cliente} version={version} /> : <p className="ayuda">Todavía no hay foto de esta fachada. Al llegar, toma una (sin personas): ayuda a todos.</p>}
+      {hay ? <ImagenFoto localId={localId} cliente={cliente} version={version} /> : <p className="ayuda">Todavía no hay foto de esta fachada. Al llegar, toma una (sin personas): ayuda a todos.</p>}
       <input ref={entrada} type="file" accept="image/*" capture="environment" hidden onChange={(e) => void subir(e)} aria-label={`Foto de la fachada de ${cliente}`} />
       <Boton variante={hay ? 'secundario' : 'primario'} disabled={subiendo} onClick={() => { entrada.current?.click(); }}>
         {subiendo ? 'SUBIENDO FOTO…' : hay ? 'CAMBIAR LA FOTO' : 'TOMAR FOTO DE LA FACHADA'}
       </Boton>
+      {hay ? <ReportarFoto localId={localId} cliente={cliente} /> : null}
       {mensaje ? <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
     </div>
   );

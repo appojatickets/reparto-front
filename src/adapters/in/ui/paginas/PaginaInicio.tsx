@@ -14,6 +14,7 @@ const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: str
   configuracion: { a: '/admin/configuracion', texto: 'CONFIGURACIÓN' },
   camiones: { a: '/admin/camiones', texto: 'CAMIONES' },
   exportar: { a: '/admin/exportar', texto: 'EXPORTAR DATOS' },
+  fotos: { a: '/admin/fotos', texto: 'REVISAR FOTOS' },
   vendedores: { a: '/admin/vendedores', texto: 'VENDEDORES' },
   usuarios: { a: '/admin/usuarios', texto: 'USUARIOS' },
 };

@@ -57,6 +57,22 @@ export type FiltroExportacion = {
   readonly foto?: 'con' | 'sin';
   readonly texto?: string;
 };
+export type MotivoFoto = 'no_es_la_fachada' | 'se_ven_personas' | 'borrosa' | 'otra';
+export type ReporteFoto = {
+  readonly id: string;
+  readonly localId: string;
+  readonly razonSocial: string;
+  readonly direccion: string;
+  readonly comuna: string;
+  readonly motivo: MotivoFoto;
+  readonly detalle?: string;
+  readonly reportadoPor?: string;
+  readonly reportadoEn: string;
+  readonly subidaPor?: string;
+  readonly subidaEn?: string;
+};
+export type FotoReciente = { readonly localId: string; readonly razonSocial: string; readonly direccion: string; readonly comuna: string; readonly subidaPor?: string; readonly subidaEn?: string };
+export type FotosParaRevision = { readonly reportadas: readonly ReporteFoto[]; readonly recientes: readonly FotoReciente[] };
 export type EstadoBusquedaPines = { readonly sinPin: number; readonly enCola: number; readonly enMarcha: boolean };
 export type CamionResumen = { readonly id: string; readonly patente: string; readonly alias?: string };
 
