@@ -5245,6 +5245,11 @@ export interface paths {
                             salidaMin: number;
                             calculadaDesdeMin?: number;
                             horaLimiteRegresoMin: number;
+                            deposito: {
+                                lat: number;
+                                lng: number;
+                                nombre?: string;
+                            };
                             regreso?: number;
                             regresoTardio?: boolean;
                             readonly paradas: {
@@ -5517,6 +5522,11 @@ export interface paths {
                             salidaMin: number;
                             calculadaDesdeMin?: number;
                             horaLimiteRegresoMin: number;
+                            deposito: {
+                                lat: number;
+                                lng: number;
+                                nombre?: string;
+                            };
                             regreso?: number;
                             regresoTardio?: boolean;
                             readonly paradas: {
@@ -5800,6 +5810,11 @@ export interface paths {
                             salidaMin: number;
                             calculadaDesdeMin?: number;
                             horaLimiteRegresoMin: number;
+                            deposito: {
+                                lat: number;
+                                lng: number;
+                                nombre?: string;
+                            };
                             regreso?: number;
                             regresoTardio?: boolean;
                             readonly paradas: {
@@ -6735,6 +6750,156 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/jornada/terminar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Terminar la ruta de hoy y devolver el resumen del día (entregadas, no entregadas y pendientes); queda registrada la hora de término */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            resumen: {
+                                fecha: string;
+                                camionId: string;
+                                desde: string;
+                                hasta: string;
+                                entregadas: number;
+                                noEntregadas: number;
+                                pendientes: number;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;

@@ -4,10 +4,11 @@ import { enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
 import { horaDeMinutos } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
+import { llegoAlDeposito } from '../../../../domain/deposito';
 import { esDeCamion } from '../../../../domain/rol';
 import { mismoTexto } from '../../../../domain/texto';
 import { mensajeDeError } from '../../../../application/mensajes';
-import type { ItemRuta, OperacionRuta, ParadaDeRuta, VistaRuta } from '../../../../application/modelos';
+import type { ItemRuta, OperacionRuta, ParadaDeRuta, ResumenJornada, VistaRuta } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { AccionesParada, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
@@ -17,6 +18,8 @@ import { useUsuario } from '../sesion';
 import { Aviso, Boton, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
 const REFRESCO_MS = 3 * 60 * 1000;
+/** Cada cuánto se mira si el camión ya llegó al depósito (solo con la pantalla abierta y después de haber entregado algo). */
+const MIRAR_DEPOSITO_MS = 90 * 1000;
 
 const Etiquetas = ({ i }: { readonly i: ItemRuta }) => (
   <span className="insignias">
@@ -171,7 +174,7 @@ const ListaItems = ({ titulo, items, children }: { readonly titulo: string; read
 
 /** Todo el estado de UN camión y día vive aquí: al cambiar de camión o de día se vuelve a montar y parte limpio. */
 export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; readonly fecha: string }) => {
-  const { api } = useCasos();
+  const { api, ubicacion } = useCasos();
   const cargar = useCallback(() => api.verRuta(camionId, fecha), [api, camionId, fecha]);
   const { estado, recargar, refrescar } = useCarga(cargar);
   const [actualizada, setActualizada] = useState<VistaRuta | undefined>();
@@ -213,6 +216,52 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     if (version === undefined) return;
     void aplicar(() => api.operarRuta(camionId, fecha, version, operacion));
   };
+  // Terminar la ruta: con el botón de abajo o al llegar al depósito. Las entregas pendientes no se tocan: quedan en su día.
+  const [terminada, setTerminada] = useState<{ readonly resumen: ResumenJornada | null } | undefined>();
+  const [confirmandoFin, setConfirmandoFin] = useState(false);
+  const [terminando, setTerminando] = useState(false);
+  const [errorFin, setErrorFin] = useState<string | undefined>();
+  const [llegoAlDep, setLlegoAlDep] = useState(false);
+  const [avisoDescartado, setAvisoDescartado] = useState(false);
+  const pendientes = vista ? vista.paradas.length + vista.nuevas.length + vista.sinPin.length + vista.noAtendidas.length : 0;
+  const terminarRuta = async (): Promise<void> => {
+    setTerminando(true);
+    setErrorFin(undefined);
+    const r = await api.terminarRuta();
+    setTerminando(false);
+    if (r.ok) setTerminada({ resumen: r.value });
+    else setErrorFin(mensajeDeError(r.error));
+  };
+
+  /** Mientras la pantalla está abierta y ya se entregó algo, se lee el GPS de vez en cuando solo para comparar con el depósito (no se envía ni se guarda). */
+  const deposito = vista?.deposito;
+  const hizoEntregas = (vista?.hechas.length ?? 0) > 0;
+  useEffect(() => {
+    if (!enCamion || !deposito || !hizoEntregas || terminada || !ubicacion.disponible) return;
+    let activo = true;
+    const mirar = async (): Promise<void> => {
+      if (document.visibilityState !== 'visible') return;
+      const u = await ubicacion.actual();
+      if (activo && u.ok && llegoAlDeposito(u.value, deposito)) setLlegoAlDep(true);
+    };
+    void mirar();
+    const cada = setInterval(() => { void mirar(); }, MIRAR_DEPOSITO_MS);
+    return () => {
+      activo = false;
+      clearInterval(cada);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo cambia si cambia el depósito o si ya hubo entregas
+  }, [enCamion, deposito?.lat, deposito?.lng, hizoEntregas, terminada, ubicacion]);
+
+  /** Llegó al depósito y no queda nada por entregar: la ruta termina sola. */
+  const terminoSola = useRef(false);
+  useEffect(() => {
+    if (!llegoAlDep || pendientes > 0 || terminada || terminando || terminoSola.current) return;
+    terminoSola.current = true;
+    void terminarRuta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- una sola vez, cuando se cumple la condición
+  }, [llegoAlDep, pendientes, terminada, terminando]);
+
   /** Elegir por cuál se empieza: esa parada queda primera y el resto se vuelve a ordenar desde ahí (también si la ruta estaba acomodada a mano). */
   const elegirPrimera = (facturaId: string): void => {
     const version = vista?.version;
@@ -269,8 +318,36 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   }
   if (!vista) return null;
 
+  if (terminada) {
+    const r = terminada.resumen;
+    return (
+      <section className="pagina" aria-label="Ruta terminada">
+        <Aviso tipo="exito">Ruta terminada. ¡Buen trabajo!</Aviso>
+        {r ? (
+          <div className="tarjeta">
+            <span>Entregadas: <strong>{r.entregadas}</strong></span>
+            <span>No entregadas: <strong>{r.noEntregadas}</strong></span>
+            <span>Sin hacer: <strong>{r.pendientes}</strong></span>
+          </div>
+        ) : null}
+        {(r?.pendientes ?? 0) > 0 ? <Aviso>Lo que no se alcanzó a entregar queda registrado en su día. Mañana empiezas con la lista limpia.</Aviso> : null}
+        <Link className="big-button big-button--primario" to="/">VOLVER AL INICIO</Link>
+      </section>
+    );
+  }
+
   return (
     <>
+      {enCamion && llegoAlDep && pendientes > 0 && !avisoDescartado ? (
+        <div className="tarjeta" role="status" aria-label="Llegaste al depósito">
+          <strong>Llegaste al depósito. ¿Terminaste la ruta?</strong>
+          <span>Quedan {pendientes} entregas sin hacer: si terminas, quedan registradas en su día.</span>
+          <div className="fila-botones">
+            <Boton disabled={terminando} onClick={() => void terminarRuta()}>SÍ, TERMINAR LA RUTA</Boton>
+            <Boton variante="secundario" onClick={() => { setAvisoDescartado(true); }}>NO, SIGO</Boton>
+          </div>
+        </div>
+      ) : null}
       {aviso ? <Aviso tipo="error">{aviso}</Aviso> : null}
       {!vista.planificada ? (
         <>
@@ -357,6 +434,23 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       <ListaItems titulo="Sin ubicación (falta el pin del local)" items={vista.sinPin}>
         {(i) => <Link className="tarjeta-enlace" to={`/clientes/${i.localId}`}>FIJAR EL PIN DE {i.cliente}</Link>}
       </ListaItems>
+
+      {enCamion && (vista.hechas.length > 0 || pendientes > 0) ? (
+        <section className="pagina" aria-label="Terminar la ruta">
+          {!confirmandoFin ? (
+            <Boton variante="secundario" disabled={terminando} onClick={() => { if (pendientes > 0) setConfirmandoFin(true); else void terminarRuta(); }}>{terminando ? 'TERMINANDO…' : 'TERMINAR RUTA'}</Boton>
+          ) : (
+            <div className="tarjeta">
+              <Aviso tipo="error">Quedan {pendientes} entregas sin hacer. Si terminas, quedan registradas en su día y mañana empiezas con la lista limpia.</Aviso>
+              <div className="fila-botones">
+                <Boton variante="peligro" disabled={terminando} onClick={() => void terminarRuta()}>SÍ, TERMINAR</Boton>
+                <Boton variante="secundario" onClick={() => { setConfirmandoFin(false); }}>NO, SEGUIR</Boton>
+              </div>
+            </div>
+          )}
+          {errorFin ? <Aviso tipo="error">{errorFin}</Aviso> : null}
+        </section>
+      ) : null}
     </>
   );
 };

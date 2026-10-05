@@ -18,3 +18,9 @@ Estado: aceptada. Pedido del dueño, 2026-10-05: el chofer debe estar pendiente 
 - La pantalla **no muestra tiempos calculados** (llegada, regreso, atraso, espera, hora de salida): las estimaciones no son confiables todavía y confundían. La ruta se explica por el orden y por los motivos («Queda cerca de la anterior», «Cierra pronto», «Urgente»). Siguen visibles las restricciones del cliente (ANTES DE hh:mm).
 - **Primera entrega**: un selector fija por cuál se empieza y el resto se vuelve a ordenar desde ahí (si la ruta estaba acomodada a mano, se reordena igual al elegirla).
 - Las entregas nuevas del chofer se integran solas: se reordena lo que queda (ruta sugerida) o se insertan sin mover lo demás (ruta acomodada a mano).
+
+## Actualización 2026-10-05 (2): terminar la ruta
+- **TERMINAR RUTA** va siempre **abajo de la lista** (chofer y ayudante). Si quedan entregas sin hacer pide confirmar («quedan N… mañana empiezas con la lista limpia»); si no, termina directo. Al terminar muestra el resumen del día (entregadas, no entregadas, sin hacer) y **VOLVER AL INICIO**. El servidor registra la hora de término (ADR 0020 del back).
+- **Llegada al depósito:** con la pantalla abierta y **después de haber entregado algo**, la app lee el GPS cada 90 s solo para compararlo con el depósito (a menos de 150 m y con precisión de 100 m o mejor). La posición **no se envía ni se guarda**; al salir del depósito, sin entregas hechas, ni siquiera se lee. Si llegó y **no queda nada pendiente**, la ruta termina sola; si quedan pendientes, pregunta («¿Terminaste la ruta?», «No, sigo» deja de preguntar).
+- Las pendientes no se marcan como no entregadas: quedan en su día. El día siguiente parte limpio porque todo va por fecha.
+

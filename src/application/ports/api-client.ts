@@ -1,7 +1,7 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
+  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
@@ -75,6 +75,8 @@ export interface ApiClient extends SaludApi {
   miJornada(): R<Jornada | null>;
   iniciarJornada(camionId: string): R<Jornada>;
   terminarJornada(): R<void>;
+  /** Termina la ruta de hoy: cierra la jornada y devuelve el resumen del día (null si no había jornada). */
+  terminarRuta(): R<ResumenJornada | null>;
 
   obtenerConfig(): R<ConfigEmpresa>;
   guardarConfig(config: ConfigEmpresa): R<ConfigEmpresa>;

@@ -213,6 +213,10 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
       return mapear(r, (d) => d.jornada);
     },
     iniciarJornada: (camionId) => ejecutar(() => client.POST('/v1/jornada', { body: { camionId }, signal: timeout() })),
+    async terminarRuta() {
+      const r = await ejecutar(() => client.POST('/v1/jornada/terminar', { signal: timeout() }));
+      return mapear(r, (d) => d.resumen);
+    },
     terminarJornada: async () => sinCuerpo(await ejecutar(() => client.DELETE('/v1/jornada', { signal: timeout() }))),
 
     obtenerConfig: () => ejecutar(() => client.GET('/v1/empresa/config', { signal: timeout() }), { repetible: true }),

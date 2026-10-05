@@ -146,6 +146,8 @@ export type VistaRuta = {
   readonly salidaMin: number;
   readonly calculadaDesdeMin?: number;
   readonly horaLimiteRegresoMin: number;
+  /** De dónde sale y adónde vuelve el camión: al llegar ahí después de entregar, la ruta termina. */
+  readonly deposito?: { readonly lat: number; readonly lng: number; readonly nombre?: string };
   readonly regreso?: number;
   readonly regresoTardio?: boolean;
   readonly paradas: readonly ParadaDeRuta[];
@@ -160,4 +162,6 @@ export type OperacionRuta =
   | { readonly tipo: 'ordenar' | 'insertar' }
   | { readonly tipo: 'salida'; readonly salidaMin: number };
 
+/** Lo que quedó del día al terminar la ruta (las pendientes no se alcanzaron a entregar y quedan en su día). */
+export type ResumenJornada = { readonly fecha: string; readonly camionId: string; readonly desde: string; readonly hasta: string; readonly entregadas: number; readonly noEntregadas: number; readonly pendientes: number };
 export type Jornada = { readonly id: string; readonly fecha: string; readonly desde: string; readonly camion: CamionResumen };

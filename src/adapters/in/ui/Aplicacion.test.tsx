@@ -1578,6 +1578,85 @@ describe('acciones en la parada (chofer)', () => {
     expect(screen.getByRole('listitem', { name: 'Parada 1' })).toBeInTheDocument();
   });
 
+  const hechaA = { facturaId: 'fH', cliente: 'Local H', direccion: 'Calle H 1', comuna: 'San Bernardo', estado: 'entregada' as const };
+  const enDeposito = { disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.607, lng: -70.5296, precisionM: 12 }))) };
+  const lejos = { disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.5, lng: -70.7, precisionM: 12 }))) };
+  const resumen = { fecha: '2026-10-05', camionId: 'c1', desde: '2026-10-05T11:00:00.000Z', hasta: '2026-10-05T20:00:00.000Z', entregadas: 1, noEntregadas: 0, pendientes: 2 };
+
+  it('TERMINAR RUTA está siempre abajo de la lista; con entregas pendientes pide confirmar y muestra el resumen del día', async () => {
+    const terminarRuta = vi.fn(() => Promise.resolve(ok(resumen)));
+    abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ hechas: [hechaA] }))) });
+    const boton = await screen.findByRole('button', { name: 'TERMINAR RUTA' });
+    const lista = screen.getByRole('list', { name: 'Paradas en orden' });
+    expect(lista.compareDocumentPosition(boton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(boton);
+    expect(terminarRuta).not.toHaveBeenCalled();
+    expect(screen.getByText(/Quedan 2 entregas sin hacer/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'NO, SEGUIR' }));
+    expect(screen.getByRole('button', { name: 'TERMINAR RUTA' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'TERMINAR RUTA' }));
+    await userEvent.click(screen.getByRole('button', { name: 'SÍ, TERMINAR' }));
+    const fin = await screen.findByRole('region', { name: 'Ruta terminada' });
+    expect(terminarRuta).toHaveBeenCalledTimes(1);
+    expect(fin).toHaveTextContent('Entregadas: 1');
+    expect(fin).toHaveTextContent('Sin hacer: 2');
+    expect(within(fin).getByText(/Mañana empiezas con la lista limpia/)).toBeInTheDocument();
+    expect(within(fin).getByRole('link', { name: 'VOLVER AL INICIO' })).toHaveAttribute('href', '/');
+  });
+
+  it('sin nada pendiente, TERMINAR RUTA termina directo; un error se avisa y deja seguir', async () => {
+    const terminarRuta = vi.fn()
+      .mockResolvedValueOnce(http(500, { mensaje: 'Algo falló.' }))
+      .mockResolvedValueOnce(ok({ ...resumen, pendientes: 0 }));
+    abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [], hechas: [hechaA] }))) });
+    await userEvent.click(await screen.findByRole('button', { name: 'TERMINAR RUTA' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'TERMINAR RUTA' }));
+    expect(await screen.findByRole('region', { name: 'Ruta terminada' })).toBeInTheDocument();
+    expect(screen.queryByText(/Lo que no se alcanzó a entregar/)).toBeNull();
+  });
+
+  it('el despachador no ve TERMINAR RUTA: la termina el camión', async () => {
+    montar({ ruta: '/rutas', sesion: { id: 'u3', username: 'desp', nombre: 'Ana Soto', rol: 'despachador' }, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true }])), verRuta: () => Promise.resolve(ok(vistaBase({ hechas: [hechaA] }))) } });
+    await screen.findByRole('option', { name: 'Camión 3 · AB·1234' });
+    await userEvent.selectOptions(screen.getByLabelText('Camión'), 'c1');
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(screen.queryByRole('button', { name: 'TERMINAR RUTA' })).toBeNull();
+  });
+
+  it('al llegar al depósito con entregas hechas y paradas pendientes, avisa y pregunta; «no, sigo» lo deja de mostrar', async () => {
+    const terminarRuta = vi.fn(() => Promise.resolve(ok(resumen)));
+    abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ hechas: [hechaA], deposito: { lat: -33.607, lng: -70.5296 } }))) }, { ubicacion: enDeposito });
+    const aviso = await screen.findByRole('status', { name: 'Llegaste al depósito' });
+    expect(aviso).toHaveTextContent('Quedan 2 entregas sin hacer');
+    expect(terminarRuta).not.toHaveBeenCalled();
+    await userEvent.click(within(aviso).getByRole('button', { name: 'NO, SIGO' }));
+    expect(screen.queryByRole('status', { name: 'Llegaste al depósito' })).toBeNull();
+  });
+
+  it('al llegar al depósito sin nada pendiente, la ruta termina sola', async () => {
+    const terminarRuta = vi.fn(() => Promise.resolve(ok({ ...resumen, pendientes: 0 })));
+    abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [], hechas: [hechaA], deposito: { lat: -33.607, lng: -70.5296 } }))) }, { ubicacion: enDeposito });
+    expect(await screen.findByRole('region', { name: 'Ruta terminada' })).toBeInTheDocument();
+    expect(terminarRuta).toHaveBeenCalledTimes(1);
+  });
+
+  it('lejos del depósito, o sin entregas hechas todavía (al salir de ahí), no pasa nada', async () => {
+    const terminarRuta = vi.fn(() => Promise.resolve(ok(resumen)));
+    abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ hechas: [hechaA], deposito: { lat: -33.607, lng: -70.5296 } }))) }, { ubicacion: lejos });
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    await waitFor(() => { expect(lejos.actual).toHaveBeenCalled(); });
+    expect(screen.queryByRole('status', { name: 'Llegaste al depósito' })).toBeNull();
+    expect(terminarRuta).not.toHaveBeenCalled();
+  });
+
+  it('al salir del depósito (sin entregas hechas todavía) ni siquiera se lee el GPS', async () => {
+    const gpsNuevo = { disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.607, lng: -70.5296, precisionM: 12 }))) };
+    abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: { lat: -33.607, lng: -70.5296 } }))) }, { ubicacion: gpsNuevo });
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(gpsNuevo.actual).not.toHaveBeenCalled();
+  });
+
   it('el ayudante también ve las acciones; el despachador no (solo mira y acomoda)', async () => {
     abrir({}, {}, { id: 'u9', username: 'ayud', nombre: 'Max García', rol: 'ayudante' });
     expect(await screen.findByRole('button', { name: 'ENTREGADO Local A' })).toBeInTheDocument();
