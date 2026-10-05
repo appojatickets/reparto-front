@@ -12,3 +12,9 @@ Estado: aceptada. Pedido del dueño, 2026-10-05: el chofer debe estar pendiente 
 
 ## Pendiente
 - Enviar la posición del camión en forma periódica para recalcular mientras se mueve (hoy solo se conoce al registrar una entrega); requiere un aviso de posición en la API y el aviso de privacidad (B4).
+
+## Actualización 2026-10-05: atajos en la fila, sin tiempos
+- Cada fila trae los atajos **⬆ ⬇** (mover), **✓** (entregada, con el GPS; queda en «Hechas hoy» y se deshace) e **IR** (abre Waze); ✓ e IR solo para el chofer y el ayudante. El detalle conserva Waze/Google Maps, cerrado, no la encuentro, foto y MÁS.
+- La pantalla **no muestra tiempos calculados** (llegada, regreso, atraso, espera, hora de salida): las estimaciones no son confiables todavía y confundían. La ruta se explica por el orden y por los motivos («Queda cerca de la anterior», «Cierra pronto», «Urgente»). Siguen visibles las restricciones del cliente (ANTES DE hh:mm).
+- **Primera entrega**: un selector fija por cuál se empieza y el resto se vuelve a ordenar desde ahí (si la ruta estaba acomodada a mano, se reordena igual al elegirla).
+- Las entregas nuevas del chofer se integran solas: se reordena lo que queda (ruta sugerida) o se insertan sin mover lo demás (ruta acomodada a mano).

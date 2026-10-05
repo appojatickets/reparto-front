@@ -53,13 +53,13 @@ const AvisoAlVendedor = ({ mensaje }: { readonly mensaje: (nombre: string) => st
  * Lo que el chofer hace en cada parada: navegar (Waze / Google Maps), avisar que llegó (y así fijar el pin del local si no lo
  * tenía), entregar, y si el local está cerrado o no encuentra la dirección, avisar al vendedor por WhatsApp (ADR 0014 y 0016).
  */
-export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void }) => {
-  const { api, ubicacion, ahora } = useCasos();
-  const [panel, setPanel] = useState<Panel>(undefined);
-  const [aviso, setAviso] = useState<{ tipo: 'error' | 'exito' | 'info'; texto: string } | undefined>();
+type AvisoParada = { tipo: 'error' | 'exito' | 'info'; texto: string };
+
+/** Lo que se le avisa al servidor de una parada (llegué, entregué, está cerrado…), con la posición del GPS si se puede leer. */
+const useEventosDeParada = (p: ParadaDeRuta) => {
+  const { api, ubicacion } = useCasos();
+  const [aviso, setAviso] = useState<AvisoParada | undefined>();
   const [ocupado, setOcupado] = useState(false);
-  const destino = { direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng };
-  const horaAhora = (): string => horaDelDia(minutosEnChile(ahora()));
 
   /** Manda el aviso con la posición del GPS si se pudo leer; si no, se anota igual (el GPS no debe frenar la entrega). */
   const avisar = async (evento: EventoEntrega, conPosicion = true): Promise<{ r: Result<ResultadoEvento, ApiError>; sinGps: boolean }> => {
@@ -77,6 +77,35 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
     if (!r.ok) setAviso({ tipo: 'error', texto: mensajeDeError(r.error) });
     return { r, sinGps };
   };
+  return { aviso, setAviso, ocupado, avisar };
+};
+
+/** Atajo de la fila de la ruta: ✓ marca la entrega como hecha con un toque (queda en «Hechas hoy» y se puede deshacer). */
+export const AtajoEntregado = ({ p, alCambiar }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void }) => {
+  const { aviso, ocupado, avisar } = useEventosDeParada(p);
+  const entregar = async (): Promise<void> => {
+    const { r } = await avisar({ tipo: 'entregado' });
+    if (r.ok) alCambiar();
+  };
+  return (
+    <>
+      <Boton variante="secundario" className="atajo" disabled={ocupado} aria-label={`MARCAR ENTREGADA ${p.cliente}`} title="Entregada" onClick={() => void entregar()}>✓</Boton>
+      {aviso ? <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso> : null}
+    </>
+  );
+};
+
+/** Atajo de la fila de la ruta: IR abre Waze con el destino (Google Maps está en el detalle de la parada). */
+export const AtajoIr = ({ p }: { readonly p: ParadaDeRuta }) => (
+  <a className="big-button big-button--primario atajo" href={enlaceNavegar({ direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng }, 'waze')} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON WAZE`} title="Ir con Waze">IR</a>
+);
+
+export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void }) => {
+  const { ahora } = useCasos();
+  const [panel, setPanel] = useState<Panel>(undefined);
+  const { aviso, setAviso, ocupado, avisar } = useEventosDeParada(p);
+  const destino = { direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng };
+  const horaAhora = (): string => horaDelDia(minutosEnChile(ahora()));
 
   const nota = (sinGps: boolean): string => (sinGps ? ' No pude leer el GPS; quedó sin ubicación.' : '');
 

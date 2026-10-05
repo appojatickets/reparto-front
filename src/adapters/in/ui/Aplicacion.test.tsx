@@ -967,14 +967,37 @@ describe('rutas del día', () => {
     const segunda = screen.getByRole('listitem', { name: 'Parada 2' });
     expect(within(primera).getByRole('button', { name: /^Local A/ })).toHaveAttribute('aria-expanded', 'true');
     expect(within(segunda).getByRole('button', { name: /^Local B/ })).toHaveAttribute('aria-expanded', 'false');
-    expect(within(segunda).queryByRole('button', { name: 'SUBIR Local B' })).toBeNull();
+    expect(within(segunda).queryByRole('button', { name: 'MÁS OPCIONES Local B' })).toBeNull();
     expect(within(segunda).getAllByText('Maipú')[0]).toHaveClass('comuna');
     await userEvent.click(within(segunda).getByRole('button', { name: /^Local B/ }));
-    expect(within(segunda).getByRole('button', { name: 'SUBIR Local B' })).toBeInTheDocument();
-    expect(within(primera).queryByRole('button', { name: 'SUBIR Local A' })).toBeNull();
+    expect(within(segunda).getByRole('button', { name: 'MÁS OPCIONES Local B' })).toBeInTheDocument();
+    expect(within(primera).queryByRole('button', { name: 'MÁS OPCIONES Local A' })).toBeNull();
     await userEvent.click(within(segunda).getByRole('button', { name: /^Local B/ }));
-    expect(within(segunda).queryByRole('button', { name: 'SUBIR Local B' })).toBeNull();
+    expect(within(segunda).queryByRole('button', { name: 'MÁS OPCIONES Local B' })).toBeNull();
   });
+
+  it('cada fila trae los atajos ⬆ ⬇ siempre a la vista, sin abrir la parada; la primera no sube y la última no baja', async () => {
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 2 }))));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())), operarRuta }) });
+    await elegirCamion();
+    const segunda = await screen.findByRole('listitem', { name: 'Parada 2' });
+    expect(within(segunda).getByRole('button', { name: /^Local B/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'SUBIR Local A' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'BAJAR Local C' })).toBeDisabled();
+    await userEvent.click(within(segunda).getByRole('button', { name: 'SUBIR Local B' }));
+    expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'subir', facturaId: 'fB' });
+    await userEvent.click(within(segunda).getByRole('button', { name: 'BAJAR Local B' }));
+    expect(operarRuta).toHaveBeenLastCalledWith('c1', '2026-10-05', 2, { tipo: 'bajar', facturaId: 'fB' });
+  });
+
+  it('el despachador acomoda con ⬆ ⬇ pero no marca entregas ni navega: ✓ e IR son del camión', async () => {
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())) }) });
+    await elegirCamion();
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(screen.queryByRole('button', { name: /MARCAR ENTREGADA/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /^IR A / })).toBeNull();
+  });
+
 
   it('una parada sin pin exacto avisa que es aproximada y lleva a fijar el pin', async () => {
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, { ubicacionAproximada: true, localId: 'lA' })] }))) }) });
@@ -1495,6 +1518,28 @@ describe('acciones en la parada (chofer)', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'ENTREGADO Local A' }));
     expect(await screen.findByText('No tienes permiso para hacer esto.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ENTREGADO Local A' })).toBeInTheDocument();
+  });
+
+  it('la fila del chofer trae ✓ e IR: un toque marca la entrega (con el GPS) y la parada pasa a hechas; IR abre Waze', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'entregada' as const, pinFijado: false })));
+    const verRuta = vi.fn()
+      .mockResolvedValueOnce(ok(vistaBase()))
+      .mockResolvedValue(ok(vistaBase({ paradas: [paradaDe('B', 0)], hechas: [{ facturaId: 'fA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', estado: 'entregada' as const }] })));
+    abrir({ registrarEvento, verRuta }, { ubicacion: gps() });
+    const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(within(fila).getByRole('link', { name: 'IR A Local A CON WAZE' })).toHaveAttribute('href', expect.stringContaining('waze.com/ul'));
+    await userEvent.click(within(fila).getByRole('button', { name: 'MARCAR ENTREGADA Local A' }));
+    expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'entregado', lat: -33.5901, lng: -70.7002, precisionM: 10 });
+    expect(await screen.findByRole('region', { name: 'Hechas hoy' })).toBeInTheDocument();
+  });
+
+  it('si el ✓ falla, lo dice en la fila y la parada sigue en su lugar', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(http(500, { mensaje: 'Algo falló.' })));
+    abrir({ registrarEvento });
+    const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
+    await userEvent.click(within(fila).getByRole('button', { name: 'MARCAR ENTREGADA Local A' }));
+    expect(await within(fila).findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: 'Parada 1' })).toBeInTheDocument();
   });
 
   it('el ayudante también ve las acciones; el despachador no (solo mira y acomoda)', async () => {

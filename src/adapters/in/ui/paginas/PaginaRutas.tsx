@@ -10,7 +10,7 @@ import { mensajeDeError } from '../../../../application/mensajes';
 import type { ItemRuta, OperacionRuta, ParadaDeRuta, VistaRuta } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
-import { AccionesParada } from '../componentes/AccionesParada';
+import { AccionesParada, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
 import { FotoFachada } from '../componentes/FotoFachada';
 import { useDiaDeReparto } from '../componentes/dia';
 import { useUsuario } from '../sesion';
@@ -48,6 +48,12 @@ const FilaParada = ({ p, total, ocupado, operar, enCamion, alCambiar, abierta, a
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
         </span>
       </button>
+      <div className="parada-atajos">
+        <Boton variante="secundario" className="atajo" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} title="Subir" onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>⬆</Boton>
+        <Boton variante="secundario" className="atajo" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} title="Bajar" onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>⬇</Boton>
+        {enCamion ? <AtajoEntregado p={p} alCambiar={alCambiar} /> : null}
+        {enCamion ? <AtajoIr p={p} /> : null}
+      </div>
       {abierta ? (
         <div className="parada-detalle" id={idDetalle}>
           {!mismoTexto(p.cliente, p.direccion) ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
@@ -62,8 +68,6 @@ const FilaParada = ({ p, total, ocupado, operar, enCamion, alCambiar, abierta, a
           {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
           {enCamion ? <AccionesParada p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
           <div className="fila-botones">
-            <Boton variante="secundario" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>SUBIR</Boton>
-            <Boton variante="secundario" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>BAJAR</Boton>
             <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES ${p.cliente}`} onClick={() => { setMas(!mas); }}>MÁS</Boton>
           </div>
           {mas ? (
