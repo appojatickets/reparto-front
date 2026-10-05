@@ -24,6 +24,11 @@ const FilaRevisar = ({ e, alCambiar }: { readonly e: EntradaMapa; readonly alCam
       <option value="">Elegir comuna…</option>
       {COMUNAS_RM.map((c) => <option key={c} value={c}>{c}</option>)}
     </Selector>
+    {e.sugerenciasComuna ? (
+      <div className="fila-botones">
+        {e.sugerenciasComuna.map((c) => <Boton key={c} variante="secundario" aria-label={`USAR ${c} en #${e.numero}`} onClick={() => { alCambiar({ comuna: c }); }}>{`USAR ${c.toUpperCase()}`}</Boton>)}
+      </div>
+    ) : null}
     {e.lat !== undefined ? <span>Pin: {e.lat}, {e.lng}</span> : null}
   </li>
 );
@@ -46,6 +51,17 @@ export const PaginaImportar = () => {
   const resumenMaps = useMemo(() => resumir(entradasMaps), [entradasMaps]);
   const filasMaps = useMemo(() => filasParaImportar(entradasMaps, incluirAproximadas), [entradasMaps, incluirAproximadas]);
   const aRevisar = entradasMaps.filter((e) => e.estado === 'revisar');
+  const soloFaltaComuna = aRevisar.filter((e) => e.sugerenciasComuna !== undefined && e.razonSocial !== undefined && e.direccion !== undefined);
+  const aceptarMasCercanas = (): void => {
+    setCorrecciones((prev) => {
+      const siguiente = { ...prev };
+      for (const e of soloFaltaComuna) {
+        const primera = e.sugerenciasComuna?.[0];
+        if (primera !== undefined) siguiente[e.numero] = { ...siguiente[e.numero], comuna: primera };
+      }
+      return siguiente;
+    });
+  };
 
   const filas = esMaps ? filasMaps : mapeo.filas;
   const hayFilas = filas.length > 0;
@@ -87,7 +103,7 @@ export const PaginaImportar = () => {
       {esMaps ? (
         <section aria-label="Lista de Google Maps" className="pagina">
           <Aviso tipo="exito">
-            Lista de Google Maps: {resumenMaps.total} lugares leídos. Listos: {resumenMaps.listas} · solo con una referencia «Cerca de…»: {resumenMaps.aproximadas} · para revisar: {resumenMaps.revisar} · cerrados para siempre (se omiten): {resumenMaps.descartadas}. Con pin en el texto: {resumenMaps.conPin}.
+            Lista de Google Maps: {resumenMaps.total} lugares leídos. Listos: {resumenMaps.listas} · solo con una referencia «Cerca de…»: {resumenMaps.aproximadas} · para revisar: {resumenMaps.revisar} · cerrados para siempre (se omiten): {resumenMaps.descartadas} · repetidos (se unieron con otro): {resumenMaps.repetidas}. Con pin en el texto: {resumenMaps.conPin}.
           </Aviso>
           {resumenMaps.comunaEstimada > 0 ? <Aviso>En {resumenMaps.comunaEstimada} lugares la comuna no estaba escrita y se calculó por la ubicación del pin. Los que no traen dirección quedan como «Ubicación en el mapa»: se navega con el pin.</Aviso> : null}
           {resumenMaps.sinPinEnElTexto > 0 ? <Aviso>El texto copiado de Google Maps no trae las coordenadas de {resumenMaps.sinPinEnElTexto} lugares (solo la referencia): su pin se completará con la primera entrega o pegando el enlace que mande el vendedor.</Aviso> : null}
@@ -98,6 +114,9 @@ export const PaginaImportar = () => {
             <>
               <h2>Para revisar ({aRevisar.length})</h2>
               <p>Completa lo que falta y quedan listos. Los que no completes no se importan; puedes volver a pegar la lista después.</p>
+              {soloFaltaComuna.length > 0 ? (
+                <Boton variante="secundario" onClick={aceptarMasCercanas}>{`ACEPTAR LA COMUNA MÁS CERCANA EN ${soloFaltaComuna.length}`}</Boton>
+              ) : null}
               <ul className="tarjetas">
                 {aRevisar.slice(0, MAX_REVISAR_VISIBLES).map((e) => <FilaRevisar key={e.numero} e={e} alCambiar={(c) => { setCorrecciones((prev) => ({ ...prev, [e.numero]: { ...prev[e.numero], ...c } })); }} />)}
               </ul>

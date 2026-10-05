@@ -206,14 +206,14 @@ calle 1 100 buin`;
 
   it('el resumen cuenta listas, aproximadas, para revisar y descartadas', () => {
     const { resumen } = analizarListaMaps(texto);
-    expect(resumen).toMatchObject({ total: 6, listas: 5, revisar: 1, descartadas: 0, conPin: 3, sinPinEnElTexto: 3, comunaEstimada: 1 });
+    expect(resumen).toMatchObject({ total: 6, listas: 4, revisar: 1, descartadas: 0, repetidas: 1, conPin: 3, sinPinEnElTexto: 3, comunaEstimada: 1 });
   });
 
   it('las filas para importar traen solo lo listo (y las aproximadas si se piden), con el pin como texto', () => {
     const { entradas } = analizarListaMaps(`${texto}\n\n\nPin colocado\nCerca de Botilleria Nolasko, Calera de Tango, Región Metropolitana\nClemencia Muñoz`);
-    expect(filasParaImportar(entradas, false)).toHaveLength(5);
+    expect(filasParaImportar(entradas, false)).toHaveLength(4);
     const con = filasParaImportar(entradas, true);
-    expect(con).toHaveLength(6);
+    expect(con).toHaveLength(5);
     expect(con[1]).toEqual({ razonSocial: 'Elias Hernán Vidal Pradines', direccion: 'Calle Doctor García 236', comuna: 'Pirque', nota: 'Cerca de Av. Hernán Prieto' });
     expect(con[3]).toMatchObject({ lat: '-33.7', lng: '-70.7', comuna: 'Buin' });
   });
@@ -242,5 +242,45 @@ describe('completar una entrada a mano', () => {
     const d = analizarListaMaps('Panaderia X\n4.5(48)\nCerrado permanentemente\nAv franc 66 lampa').entradas[0];
     if (!d) throw new Error('sin entrada');
     expect(completarEntrada(d, { comuna: 'Lampa' })).toBe(d);
+  });
+});
+
+describe('repetidos', () => {
+  const base = 'Pin colocado\n-33.7,-70.7\nana perez\ncalle 1 100 buin';
+
+  it('el mismo cliente en la misma dirección se une: queda una y la otra pasa a «repetida»', () => {
+    const { entradas, resumen } = analizarListaMaps(`${base}\n\n\nPin colocado\nCerca de Buin, Región Metropolitana\nAna Pérez\nCALLE 1 100`);
+    expect(entradas.map((e) => e.estado)).toEqual(['lista', 'repetida']);
+    expect(entradas[1]?.motivos[0]).toContain('#1');
+    expect(resumen).toMatchObject({ listas: 1, repetidas: 1 });
+    expect(filasParaImportar(entradas, true)).toHaveLength(1);
+  });
+
+  it('la repetida aporta lo que le faltaba a la primera (el pin, la dirección escrita)', () => {
+    const { entradas } = analizarListaMaps('Pin colocado\nCerca de Buin, Región Metropolitana\nana perez\n\n\nPin colocado\n-33.7,-70.7\nana perez\ncalle 1 100 buin');
+    expect(entradas[0]).toMatchObject({ estado: 'lista', lat: -33.7, lng: -70.7, direccion: 'Calle 1 100', tipoDireccion: 'escrita' });
+    expect(entradas[1]?.estado).toBe('repetida');
+  });
+
+  it('la misma ficha de Google sin dirección propia se une a la que sí la tiene', () => {
+    const { entradas } = analizarListaMaps('Pin colocado\nCerca de G-546, Paine, Región Metropolitana\nNicole vasquez roman\nColonia Kennedy PC 207 LT C\n\n\nC. Media Luna\nPaine\nRegión Metropolitana\nNicole Vasquez Roman');
+    expect(entradas.map((e) => e.estado)).toEqual(['lista', 'repetida']);
+  });
+
+  it('el mismo nombre en direcciones distintas son locales distintos: no se unen', () => {
+    const { entradas } = analizarListaMaps('Pin colocado\n-33.7,-70.7\nana perez\ncalle 1 100 buin\n\n\nPin colocado\n-33.6,-70.9\nana perez\ncalle 9 500 buin');
+    expect(entradas.map((e) => e.estado)).toEqual(['lista', 'lista']);
+  });
+
+  it('dos pines del mismo nombre a menos de 150 m son el mismo lugar', () => {
+    const { entradas } = analizarListaMaps('Pin colocado\n-33.7000,-70.7000\nana perez\ncalle 1 100 buin\n\n\nPin colocado\n-33.7005,-70.7003\nana perez\ncalle 1 100 buin');
+    expect(entradas[1]?.estado).toBe('repetida');
+  });
+
+  it('un pin entre dos comunas guarda las sugerencias para elegir con un toque, y se pierden al elegir', () => {
+    const e = uno('Pin colocado\n-33.606873,-70.917985\nRosa Gonzalez');
+    expect(e.sugerenciasComuna).toEqual(['Peñaflor', 'Talagante']);
+    expect(completarEntrada(e, {})).toBe(e);
+    expect(completarEntrada(e, { comuna: 'Talagante' }).sugerenciasComuna).toBeUndefined();
   });
 });

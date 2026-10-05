@@ -1,4 +1,4 @@
-import { comunaDelPin, separarComuna, COMUNAS_RM } from './comunas';
+import { comunaDelPin, distanciaKm, separarComuna, COMUNAS_RM } from './comunas';
 import { leerCoordenadas } from './coordenadas';
 import { normalizar } from './texto';
 import type { FilaClienteCruda } from './tabla';
@@ -10,8 +10,10 @@ import type { FilaClienteCruda } from './tabla';
  */
 
 export type OrigenMapa = 'pin_colocado' | 'ubicacion_compartida' | 'ficha_google';
-/** lista: se puede importar tal cual · aproximada: solo hay una referencia («Cerca de …») · revisar: falta algo · descartada: cerrado para siempre. */
-export type EstadoEntrada = 'lista' | 'aproximada' | 'revisar' | 'descartada';
+/** lista: se puede importar tal cual · aproximada: solo hay una referencia («Cerca de …») · revisar: falta algo · descartada: cerrado para siempre · repetida: ya está en otra entrada. */
+export type EstadoEntrada = 'lista' | 'aproximada' | 'revisar' | 'descartada' | 'repetida';
+/** De dónde salió la dirección: la escribió el equipo, la trae la ficha de Google, es la ubicación del pin o una referencia «Cerca de…». */
+export type TipoDireccion = 'escrita' | 'google' | 'pin' | 'referencia' | 'ninguna';
 
 export type EntradaMapa = {
   readonly numero: number;
@@ -28,6 +30,9 @@ export type EntradaMapa = {
   readonly nota?: string;
   /** La comuna no estaba escrita: se calculó por la cercanía del pin. */
   readonly comunaEstimada?: boolean;
+  readonly tipoDireccion: TipoDireccion;
+  /** Las dos comunas más cercanas al pin cuando no quedó claro cuál es. */
+  readonly sugerenciasComuna?: readonly string[];
 };
 
 export type ResumenLista = {
@@ -36,6 +41,7 @@ export type ResumenLista = {
   readonly aproximadas: number;
   readonly revisar: number;
   readonly descartadas: number;
+  readonly repetidas: number;
   readonly conPin: number;
   readonly sinPinEnElTexto: number;
   readonly comunaEstimada: number;
@@ -331,12 +337,18 @@ const analizarEntrada = (lineas: readonly string[], numero: number): EntradaMapa
     } else sugerenciaComuna = estimada.sugerencias;
   }
   let aproximada = false;
+  let tipoDireccion: TipoDireccion = direccion !== undefined && direccion !== '' ? 'escrita' : 'ninguna';
   if (direccion === undefined || direccion === '') {
-    if (calleGoogle !== undefined) direccion = calleGoogle;
-    else if (lat !== undefined && lng !== undefined) direccion = `Ubicación en el mapa (${lat}, ${lng})`;
-    else if (referencia.referencia !== undefined) {
+    if (calleGoogle !== undefined) {
+      direccion = calleGoogle;
+      tipoDireccion = 'google';
+    } else if (lat !== undefined && lng !== undefined) {
+      direccion = `Ubicación en el mapa (${lat}, ${lng})`;
+      tipoDireccion = 'pin';
+    } else if (referencia.referencia !== undefined) {
       direccion = referencia.referencia;
       aproximada = true;
+      tipoDireccion = 'referencia';
     }
   }
 
@@ -380,11 +392,59 @@ const analizarEntrada = (lineas: readonly string[], numero: number): EntradaMapa
     ...(giro !== undefined ? { giro: ordenarTexto(giro) } : {}),
     ...(nota !== undefined ? { nota } : {}),
     ...(comunaEstimada ? { comunaEstimada } : {}),
+    tipoDireccion,
+    ...(sugerenciaComuna.length > 0 && comuna === undefined ? { sugerenciasComuna: sugerenciaComuna } : {}),
   };
 };
 
+const claveNombre = (e: EntradaMapa): string => normalizar(e.razonSocial ?? '').replace(/\b(spa|eirl|e i r l|ltda|limitada)\b/g, '').replace(/\s+/g, ' ').trim();
+const MISMO_PIN_KM = 0.15;
+
+const mismoLugar = (a: EntradaMapa, b: EntradaMapa): boolean => {
+  if (a.direccion !== undefined && b.direccion !== undefined && a.tipoDireccion === 'escrita' && b.tipoDireccion === 'escrita' && normalizar(a.direccion) === normalizar(b.direccion)) return true;
+  if (a.lat !== undefined && a.lng !== undefined && b.lat !== undefined && b.lng !== undefined) return distanciaKm([a.lat, a.lng], [b.lat, b.lng]) <= MISMO_PIN_KM;
+  // Una de las dos no aporta una dirección propia: es la misma ficha repetida.
+  return a.tipoDireccion !== 'escrita' || b.tipoDireccion !== 'escrita';
+};
+
+const estadoDe = (e: EntradaMapa): EstadoEntrada =>
+  e.razonSocial !== undefined && e.direccion !== undefined && e.comuna !== undefined && COMUNAS_RM.includes(e.comuna) ? (e.tipoDireccion === 'referencia' ? 'aproximada' : 'lista') : 'revisar';
+
+/** Une las entradas que son el mismo cliente en el mismo lugar: la primera se queda con lo mejor de las dos y la otra pasa a «repetida». */
+export const unirRepetidas = (entradas: readonly EntradaMapa[]): EntradaMapa[] => {
+  const resultado: EntradaMapa[] = [...entradas];
+  const vistas = new Map<string, number[]>();
+  resultado.forEach((e, i) => {
+    const clave = claveNombre(e);
+    if (clave === '' || e.estado === 'descartada') return;
+    const previas = vistas.get(clave) ?? [];
+    const j = previas.find((k) => {
+      const p = resultado[k];
+      return p !== undefined && mismoLugar(p, e);
+    });
+    if (j === undefined) {
+      vistas.set(clave, [...previas, i]);
+      return;
+    }
+    const base = resultado[j];
+    if (base === undefined) return;
+    const mejorDireccion = base.tipoDireccion !== 'escrita' && e.tipoDireccion === 'escrita';
+    const fusion: EntradaMapa = {
+      ...base,
+      ...(base.lat === undefined && e.lat !== undefined && e.lng !== undefined ? { lat: e.lat, lng: e.lng } : {}),
+      ...(base.giro === undefined && e.giro !== undefined ? { giro: e.giro } : {}),
+      ...(mejorDireccion && e.direccion !== undefined ? { direccion: e.direccion, tipoDireccion: e.tipoDireccion } : {}),
+      ...(base.comuna === undefined && e.comuna !== undefined ? { comuna: e.comuna } : {}),
+      ...(base.nota === undefined && e.nota !== undefined ? { nota: e.nota } : {}),
+    };
+    resultado[j] = { ...fusion, estado: base.estado === 'descartada' ? base.estado : estadoDe(fusion), motivos: estadoDe(fusion) === 'revisar' ? base.motivos : [] };
+    resultado[i] = { ...e, estado: 'repetida', motivos: [`Repetida: es el mismo cliente que #${base.numero}.`] };
+  });
+  return resultado;
+};
+
 export const analizarListaMaps = (texto: string): { readonly entradas: readonly EntradaMapa[]; readonly resumen: ResumenLista } => {
-  const entradas = separarEntradas(texto).map((l, i) => analizarEntrada(l, i + 1));
+  const entradas = unirRepetidas(separarEntradas(texto).map((l, i) => analizarEntrada(l, i + 1)));
   const resumen = resumir(entradas);
   return { entradas, resumen };
 };
@@ -403,10 +463,12 @@ export const filasParaImportar = (entradas: readonly EntradaMapa[], incluirAprox
     }));
 
 export type Correccion = { readonly razonSocial?: string; readonly direccion?: string; readonly comuna?: string };
+const limpiaVacio = (c: Correccion): boolean => [c.razonSocial, c.direccion, c.comuna].every((v) => v === undefined || v.trim() === '');
 
 /** Aplica lo que escribió la persona sobre una entrada y vuelve a decidir si ya está lista. Una descartada no se toca. */
 export const completarEntrada = (e: EntradaMapa, c: Correccion): EntradaMapa => {
-  if (e.estado === 'descartada') return e;
+  if (e.estado === 'descartada' || e.estado === 'repetida') return e;
+  if (limpiaVacio(c)) return e;
   const limpio = (t: string | undefined): string | undefined => {
     const v = t?.replace(/\s+/g, ' ').trim();
     return v === undefined || v === '' ? undefined : v;
@@ -428,7 +490,13 @@ export const completarEntrada = (e: EntradaMapa, c: Correccion): EntradaMapa => 
     ...(e.nota !== undefined ? { nota: e.nota } : {}),
     ...(e.comunaEstimada === true && limpio(c.comuna) === undefined ? { comunaEstimada: true } : {}),
     estado,
-    motivos, ...(razonSocial !== undefined ? { razonSocial } : {}), ...(direccion !== undefined ? { direccion } : {}), ...(comuna !== undefined ? { comuna } : {}) };
+    motivos,
+    tipoDireccion: limpio(c.direccion) !== undefined ? 'escrita' : e.tipoDireccion,
+    ...(comuna === undefined && e.sugerenciasComuna !== undefined ? { sugerenciasComuna: e.sugerenciasComuna } : {}),
+    ...(razonSocial !== undefined ? { razonSocial } : {}),
+    ...(direccion !== undefined ? { direccion } : {}),
+    ...(comuna !== undefined ? { comuna } : {}),
+  };
 };
 
 export const resumir = (entradas: readonly EntradaMapa[]): ResumenLista => {
@@ -439,8 +507,9 @@ export const resumir = (entradas: readonly EntradaMapa[]): ResumenLista => {
     aproximadas: contar('aproximada'),
     revisar: contar('revisar'),
     descartadas: contar('descartada'),
+    repetidas: contar('repetida'),
     conPin: entradas.filter((e) => e.lat !== undefined).length,
-    sinPinEnElTexto: entradas.filter((e) => e.estado !== 'descartada' && e.lat === undefined).length,
-    comunaEstimada: entradas.filter((e) => e.comunaEstimada === true && e.estado !== 'descartada').length,
+    sinPinEnElTexto: entradas.filter((e) => e.estado !== 'descartada' && e.estado !== 'repetida' && e.lat === undefined).length,
+    comunaEstimada: entradas.filter((e) => e.comunaEstimada === true && e.estado !== 'descartada' && e.estado !== 'repetida').length,
   };
 };

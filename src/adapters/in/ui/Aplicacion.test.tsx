@@ -406,8 +406,10 @@ describe('importar clientes', () => {
     ].join('\n'));
     const panel = await screen.findByRole('region', { name: 'Lista de Google Maps' });
     expect(within(panel).getByText(/3 lugares leídos. Listos: 1 · solo con una referencia «Cerca de…»: 0 · para revisar: 2/)).toBeInTheDocument();
+    expect(within(panel).getByText(/repetidos \(se unieron con otro\): 0/)).toBeInTheDocument();
     expect(within(panel).getByText(/no trae las coordenadas de 2 lugares/)).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText('Comuna #1'), 'Melipilla');
+    expect(screen.queryByRole('button', { name: 'ACEPTAR LA COMUNA MÁS CERCANA EN 1' })).toBeNull();
     await waitFor(() => { expect(within(screen.getByRole('region', { name: 'Lista de Google Maps' })).getByText(/Listos: 2/)).toBeInTheDocument(); });
     await userEvent.click(screen.getByRole('button', { name: 'IMPORTAR 2 CLIENTES' }));
     await screen.findByRole('region', { name: 'Resultado de la importación' });
@@ -415,6 +417,19 @@ describe('importar clientes', () => {
       { razonSocial: 'Rosa Gonzalez Osses', direccion: 'Camino Mallarauco 16', comuna: 'Melipilla', lat: '-33.606873', lng: '-70.917985' },
       { razonSocial: 'Olga Aguilera Toledo', direccion: 'Avenida Concha y Toro 4089', comuna: 'Pirque', nota: 'Cerca de Av. Hernán Prieto' },
     ]);
+  });
+
+  it('lista de Google Maps: un pin entre dos comunas ofrece las dos con un toque y un botón para aceptar la más cercana en todos', async () => {
+    montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes: vi.fn() } });
+    await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
+    await userEvent.paste(['Pin colocado', '-33.606873,-70.917985', 'rosa gonzalez osses', '', '', 'Pin colocado', '-33.606873,-70.917985', 'juan perez soto'].join('\n'));
+    const aceptar = await screen.findByRole('button', { name: 'ACEPTAR LA COMUNA MÁS CERCANA EN 2' });
+    expect(screen.getAllByText(/el pin está entre Peñaflor y Talagante/)).toHaveLength(2);
+    await userEvent.click(screen.getByRole('button', { name: 'USAR Talagante en #1' }));
+    expect(screen.getByLabelText('Comuna #2')).toHaveValue('');
+    await userEvent.click(screen.getByRole('button', { name: 'ACEPTAR LA COMUNA MÁS CERCANA EN 1' }));
+    expect(await screen.findByRole('button', { name: 'IMPORTAR 2 CLIENTES' })).toBeEnabled();
+    expect(aceptar).not.toBeInTheDocument();
   });
 
   it('si la importación se corta avisa cuánto alcanzó y que reimportar es seguro', async () => {

@@ -46,6 +46,9 @@ const CENTROS: Readonly<Record<string, readonly [number, number]>> = {
   Talagante: [-33.66, -70.93], Tiltil: [-33.08, -70.93], Vitacura: [-33.38, -70.57],
 };
 
+/** Distancia en línea recta entre dos puntos (lat, lng), en km. */
+export const distanciaKm = (a: readonly [number, number], b: readonly [number, number]): number => kmEntre(a, b);
+
 const kmEntre = (a: readonly [number, number], b: readonly [number, number]): number => {
   const r = (g: number): number => (g * Math.PI) / 180;
   const h = Math.sin((r(b[0]) - r(a[0])) / 2) ** 2 + Math.cos(r(a[0])) * Math.cos(r(b[0])) * Math.sin((r(b[1]) - r(a[1])) / 2) ** 2;
