@@ -10,6 +10,7 @@ import type { AvanceEnlaces, ResultadoEnlaces } from '../../../../application/us
 import { useCasos } from '../contexto';
 import { AreaTexto, Aviso, Boton, Campo, Pagina, Selector } from '../componentes/ui';
 import { BuscarPines } from '../componentes/BuscarPines';
+import { HorariosDeNotas } from '../componentes/HorariosDeNotas';
 
 const NOMBRE_CAMPO: Record<CampoCliente, string> = {
   rut: 'RUT', razonSocial: 'Razón social', giro: 'Giro', direccion: 'Dirección', comuna: 'Comuna', lat: 'Latitud', lng: 'Longitud', nota: 'Nota', enlace: 'Enlace de Google Maps',
@@ -269,6 +270,7 @@ export const PaginaImportar = () => {
       {fallo ? <Aviso tipo="error">{fallo}</Aviso> : null}
 
       <BuscarPines />
+      <HorariosDeNotas />
       <p className="ayuda">Versión de la app: {__VERSION__}</p>
 
       {modoTabla && resultadoEnlaces ? <ResultadoDeEnlaces r={resultadoEnlaces} /> : null}

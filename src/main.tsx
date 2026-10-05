@@ -5,6 +5,7 @@ import { checkServer } from './application/use-cases/check-server';
 import { crearBuscarDireccion } from './application/use-cases/buscar-direccion';
 import { crearCompletarComunas } from './application/use-cases/completar-comunas';
 import { crearNominatim } from './adapters/out/geocodificador/nominatim';
+import { crearAplicarHorariosDeNotas } from './application/use-cases/horarios-de-notas';
 import { crearImportarEnlaces } from './application/use-cases/importar-enlaces';
 import { crearImportarClientesEnLotes } from './application/use-cases/importar-clientes';
 import { crearCerrarSesion, crearIniciarSesion, crearRestaurarSesion } from './application/use-cases/sesion';
@@ -47,6 +48,7 @@ const casos: Casos = {
   cerrarSesion: crearCerrarSesion({ store }),
   importarClientesEnLotes: crearImportarClientesEnLotes({ api }),
   importarEnlaces: crearImportarEnlaces({ api }),
+  aplicarHorariosDeNotas: crearAplicarHorariosDeNotas({ api }),
   completarComunas: crearCompletarComunas({ geocodificador: crearNominatim(), timer: browserTimer }),
   buscarDireccion: crearBuscarDireccion({ geocodificador: crearNominatim() }),
   subirFotoLocal: crearSubirFotoLocal({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),

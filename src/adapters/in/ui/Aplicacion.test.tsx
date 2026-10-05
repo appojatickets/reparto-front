@@ -24,6 +24,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     cerrarSesion: vi.fn(),
     importarClientesEnLotes: vi.fn(),
     importarEnlaces: vi.fn(),
+    aplicarHorariosDeNotas: vi.fn(),
     buscarDireccion: vi.fn(() => Promise.resolve(err('SIN_RESULTADO' as const))),
     completarComunas: vi.fn(() => Promise.resolve({ comunas: {}, sinRespuesta: 0, detenido: false })),
     subirFotoLocal: vi.fn(),
@@ -424,6 +425,45 @@ describe('importar una lista de direcciones con enlace de Google Maps', () => {
     expect(screen.getByText(/#1 Avenida Portales 4180/)).toBeInTheDocument();
     expect(screen.getByText(/No se pudieron cargar 1\. Vuelve a tocar IMPORTAR/)).toBeInTheDocument();
     expect(screen.getByText(/#2 Los Suspiros 16463: Sin conexión/)).toBeInTheDocument();
+  });
+});
+
+describe('horarios desde las notas (admin)', () => {
+  const fila = (n: string, nota: string | undefined) => ({
+    localId: `l${n}`, clienteId: `c${n}`, razonSocial: `Local ${n}`, estadoCliente: 'activo' as const, direccion: `Calle ${n} 1`, comuna: 'Paine', pinEstado: 'pendiente' as const, tieneFoto: false, creadoEn: '2026-10-05T12:00:00.000Z',
+    ...(nota !== undefined ? { nota } : {}),
+  });
+  const filas = [fila('1', 'De 7 AM a 10 pm horario continuo'), fila('2', 'Cierra de 2 a 4 pm'), fila('3', 'De 10 pm a 2 am'), fila('4', 'Portón verde'), fila('5', undefined)];
+
+  it('revisa las notas, muestra cómo quedarían y las que no entendió; solo guarda al aplicar', async () => {
+    const exportarLocales = vi.fn(() => Promise.resolve(ok({ total: 5, filas })));
+    const aplicarHorariosDeNotas = vi.fn(() => Promise.resolve({ aplicados: 1, yaTenian: 1, fallos: [] }));
+    montar({ ruta: '/admin/importar', sesion: ADMIN, api: { exportarLocales }, casos: { aplicarHorariosDeNotas } });
+    await userEvent.click(await screen.findByRole('button', { name: 'REVISAR LAS NOTAS CON HORARIOS' }));
+    const region = await screen.findByRole('region', { name: 'Horarios desde las notas' });
+    expect(region).toHaveTextContent('4 clientes con nota · horario entendido: 2 · parecen horario y no los entendí: 1');
+    const muestra = within(region).getByRole('list', { name: 'Así quedarían' });
+    expect(muestra).toHaveTextContent('Quedaría: Abre 07:00 · cierra 22:00 (lunes a sábado)');
+    expect(muestra).toHaveTextContent('Quedaría: 00:00 a 14:00 y 16:00 a 23:59 (lunes a sábado)');
+    expect(within(region).getByText(/Local 3: «De 10 pm a 2 am»/)).toBeInTheDocument();
+    expect(aplicarHorariosDeNotas).not.toHaveBeenCalled();
+    await userEvent.click(within(region).getByRole('button', { name: 'APLICAR 2 HORARIOS' }));
+    expect(await within(region).findByText(/Listo: 1 horarios guardados · 1 ya tenían uno cargado/)).toBeInTheDocument();
+    expect(aplicarHorariosDeNotas).toHaveBeenCalledTimes(1);
+    const enviados = (aplicarHorariosDeNotas.mock.calls[0] as unknown as [readonly { localId: string }[]])[0];
+    expect(enviados.map((e) => e.localId)).toEqual(['l1', 'l2']);
+  });
+
+  it('sin notas con horario no ofrece aplicar; un error al revisar se avisa', async () => {
+    const exportarLocales = vi.fn()
+      .mockResolvedValueOnce(err({ kind: 'NETWORK' as const }))
+      .mockResolvedValueOnce(ok({ total: 1, filas: [fila('4', 'Portón verde')] }));
+    montar({ ruta: '/admin/importar', sesion: ADMIN, api: { exportarLocales } });
+    await userEvent.click(await screen.findByRole('button', { name: 'REVISAR LAS NOTAS CON HORARIOS' }));
+    expect(await screen.findByText(/Sin conexión/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'REVISAR LAS NOTAS CON HORARIOS' }));
+    expect(await screen.findByText(/horario entendido: 0/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /APLICAR/ })).toBeNull();
   });
 });
 

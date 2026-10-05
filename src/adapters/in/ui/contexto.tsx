@@ -8,6 +8,7 @@ import type { ExportacionStore } from '../../../application/ports/exportacion-st
 import type { ApiClient } from '../../../application/ports/api-client';
 import type { crearBuscarDireccion } from '../../../application/use-cases/buscar-direccion';
 import type { crearCompletarComunas } from '../../../application/use-cases/completar-comunas';
+import type { crearAplicarHorariosDeNotas } from '../../../application/use-cases/horarios-de-notas';
 import type { crearImportarEnlaces } from '../../../application/use-cases/importar-enlaces';
 import type { crearImportarClientesEnLotes } from '../../../application/use-cases/importar-clientes';
 import type { crearCerrarSesion, crearIniciarSesion, crearRestaurarSesion } from '../../../application/use-cases/sesion';
@@ -22,6 +23,8 @@ export type Casos = {
   readonly importarClientesEnLotes: ReturnType<typeof crearImportarClientesEnLotes>;
   /** Carga una lista de direcciones con enlace de Google Maps (crea los clientes y fija los pines de los enlaces cortos). */
   readonly importarEnlaces: ReturnType<typeof crearImportarEnlaces>;
+  /** Convierte en horario de atención lo que dicen las notas de los clientes (sin pisar horarios ya cargados). */
+  readonly aplicarHorariosDeNotas: ReturnType<typeof crearAplicarHorariosDeNotas>;
   /** Busca la comuna de un pin en OpenStreetMap (para la importación de listas de Google Maps). */
   /** Busca en el mapa gratuito una dirección nueva (una consulta por toque) y propone lugares para elegir. */
   readonly buscarDireccion: ReturnType<typeof crearBuscarDireccion>;
