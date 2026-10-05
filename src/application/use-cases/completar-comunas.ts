@@ -15,7 +15,7 @@ export type ProgresoComunas = { readonly hechos: number; readonly total: number 
  * Busca la comuna de cada pin, de a uno y con una pausa entre consultas: el servicio gratuito de OpenStreetMap acepta una por
  * segundo. Los pines repetidos (mismo punto) se consultan una sola vez.
  */
-export const crearCompletarComunas = ({ geocodificador, timer }: { geocodificador: Geocodificador; timer: Timer }) =>
+export const crearCompletarComunas = ({ geocodificador, timer }: { geocodificador: Pick<Geocodificador, 'comunaDe'>; timer: Timer }) =>
   async (pines: readonly PinSinComuna[], alAvanzar?: (p: ProgresoComunas) => void, pausaMs = 1100): Promise<ResultadoComunas> => {
     const pausa = (): Promise<void> => new Promise((resolver) => { timer.after(pausaMs, resolver); });
     const comunas: Record<number, string> = {};

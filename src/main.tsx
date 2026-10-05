@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { checkServer } from './application/use-cases/check-server';
+import { crearBuscarDireccion } from './application/use-cases/buscar-direccion';
 import { crearCompletarComunas } from './application/use-cases/completar-comunas';
 import { crearNominatim } from './adapters/out/geocodificador/nominatim';
 import { crearImportarClientesEnLotes } from './application/use-cases/importar-clientes';
@@ -42,6 +43,7 @@ const casos: Casos = {
   cerrarSesion: crearCerrarSesion({ store }),
   importarClientesEnLotes: crearImportarClientesEnLotes({ api }),
   completarComunas: crearCompletarComunas({ geocodificador: crearNominatim(), timer: browserTimer }),
+  buscarDireccion: crearBuscarDireccion({ geocodificador: crearNominatim() }),
   subirFotoLocal: crearSubirFotoLocal({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),
   ahora: () => new Date(),
   voz: crearVozWeb(),

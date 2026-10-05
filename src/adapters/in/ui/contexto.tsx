@@ -4,6 +4,7 @@ import type { TemaStore } from '../../../application/ports/tema-store';
 import type { VistaStore } from '../../../application/ports/vista-store';
 import type { Voz } from '../../../application/ports/voz';
 import type { ApiClient } from '../../../application/ports/api-client';
+import type { crearBuscarDireccion } from '../../../application/use-cases/buscar-direccion';
 import type { crearCompletarComunas } from '../../../application/use-cases/completar-comunas';
 import type { crearImportarClientesEnLotes } from '../../../application/use-cases/importar-clientes';
 import type { crearCerrarSesion, crearIniciarSesion, crearRestaurarSesion } from '../../../application/use-cases/sesion';
@@ -17,6 +18,8 @@ export type Casos = {
   readonly cerrarSesion: ReturnType<typeof crearCerrarSesion>;
   readonly importarClientesEnLotes: ReturnType<typeof crearImportarClientesEnLotes>;
   /** Busca la comuna de un pin en OpenStreetMap (para la importación de listas de Google Maps). */
+  /** Busca en el mapa gratuito una dirección nueva (una consulta por toque) y propone lugares para elegir. */
+  readonly buscarDireccion: ReturnType<typeof crearBuscarDireccion>;
   readonly completarComunas: ReturnType<typeof crearCompletarComunas>;
   readonly subirFotoLocal: ReturnType<typeof crearSubirFotoLocal>;
   /** Hora actual (inyectada para que las pantallas con fechas sean comprobables). */

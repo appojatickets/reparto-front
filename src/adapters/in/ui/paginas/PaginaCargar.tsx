@@ -112,20 +112,55 @@ const TarjetaEntrega = ({ f, alCambiar }: { readonly f: Factura; readonly alCamb
   );
 };
 
+const enlaceGoogleMapsBusqueda = (direccion: string, comuna: string): string =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${direccion.trim()}, ${comuna}, Chile`)}`;
+
+type Lugar = { readonly lat: number; readonly lng: number; readonly etiqueta: string };
+
 /**
- * «No lo encuentro»: se crea el cliente con lo mínimo (dirección y comuna; el nombre del local es opcional) y se carga la entrega.
- * Si no hay nombre, el local se llama como su dirección y cualquiera puede completarlo después. El pin se fija al llegar.
+ * «No está»: el chofer escribe solo la dirección que dice la factura. El sistema la busca en el mapa gratuito (un toque, hasta 5 lugares
+ * para elegir); si no la halla, se busca en Google Maps, se toca Compartir → Copiar enlace y se pega aquí. El nombre y el RUT son opcionales:
+ * se cruzan después. El lugar elegido queda como pin del cliente, para todos y para los días siguientes.
  */
-const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: { readonly direccionInicial: string; readonly comunaInicial: string; readonly alCrear: (c: { localId: string; razonSocial: string }) => void; readonly alCancelar: () => void }) => {
-  const { api } = useCasos();
+const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: {
+  readonly direccionInicial: string; readonly comunaInicial: string;
+  readonly alCrear: (c: { localId: string; razonSocial: string }, avisoPin?: string) => void; readonly alCancelar: () => void;
+}) => {
+  const { api, buscarDireccion } = useCasos();
   const [direccion, setDireccion] = useState(direccionInicial);
   const [comuna, setComuna] = useState(comunaInicial);
   const [nombre, setNombre] = useState('');
   const [rutEscrito, setRutEscrito] = useState('');
   const [errores, setErrores] = useState<readonly string[]>([]);
   const [ocupado, setOcupado] = useState(false);
+  const [lugares, setLugares] = useState<readonly (Lugar & { readonly precision: 'exacta' | 'calle' })[] | undefined>();
+  const [buscando, setBuscando] = useState(false);
+  const [elegido, setElegido] = useState<Lugar | undefined>();
+  const [avisoMapa, setAvisoMapa] = useState<string | undefined>();
+  const [enlace, setEnlace] = useState('');
   const dictarDireccion = useDictado(setDireccion, (m) => { setErrores([m]); });
   const dictarNombre = useDictado(setNombre, (m) => { setErrores([m]); });
+
+  const puedeBuscar = direccion.trim() !== '' && comuna !== '';
+
+  const buscarEnElMapa = async (): Promise<void> => {
+    setBuscando(true);
+    setAvisoMapa(undefined);
+    setLugares(undefined);
+    const r = await buscarDireccion(direccion, comuna);
+    setBuscando(false);
+    if (r.ok) setLugares(r.value);
+    else if (r.error === 'SIN_RESULTADO') setAvisoMapa('No encontré esa dirección en el mapa gratuito. Búscala en Google Maps (abajo).');
+    else setAvisoMapa(r.error === 'LIMITE' ? 'El mapa gratuito está ocupado. Espera un minuto o usa Google Maps (abajo).' : 'No pude consultar el mapa: revisa tu señal. También puedes usar Google Maps (abajo).');
+  };
+
+  const pegar = async (): Promise<void> => {
+    try {
+      setEnlace(await navigator.clipboard.readText());
+    } catch {
+      setAvisoMapa('No pude leer lo copiado. Mantén apretado el campo y toca Pegar.');
+    }
+  };
 
   const guardar = async (e: SyntheticEvent): Promise<void> => {
     e.preventDefault();
@@ -142,23 +177,67 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
     const razonSocial = nombre.trim() === '' ? direccion.trim() : nombre.trim();
     setOcupado(true);
     const r = await api.crearCliente({ razonSocial, direccion: direccion.trim(), comuna, ...(rut !== undefined ? { rut } : {}) });
-    setOcupado(false);
-    if (r.ok) alCrear({ localId: r.value.localId, razonSocial });
-    else {
+    if (!r.ok) {
+      setOcupado(false);
       const detalle = mensajesDeDetalle(r.error);
       setErrores(detalle.length > 0 ? detalle : [mensajeDeError(r.error)]);
+      return;
     }
+    // El lugar elegido (o el enlace de Google Maps) queda como pin. Si falla, el cliente igual queda cargado y el pin se completa después.
+    const ubicacion = elegido ? `${elegido.lat}, ${elegido.lng}` : enlace.trim() !== '' ? enlace.trim() : undefined;
+    let avisoPin: string | undefined;
+    if (ubicacion !== undefined) {
+      const p = await api.fijarPinDesdeEnlace(r.value.localId, ubicacion);
+      if (!p.ok) avisoPin = `No pude leer la ubicación (${mensajeDeError(p.error)}). El cliente quedó cargado; el pin se completa con la primera entrega o pegando el enlace después.`;
+    }
+    setOcupado(false);
+    alCrear({ localId: r.value.localId, razonSocial }, avisoPin);
   };
 
   return (
     <form className="tarjeta pagina" aria-label="Cliente nuevo" onSubmit={(e) => void guardar(e)} noValidate>
-      <h2>Cliente nuevo</h2>
-      <Campo etiqueta="Dirección" ayuda="Calle y número. Ejemplo: Av. Colón 765." value={direccion} onChange={(e) => { setDireccion(e.target.value); }} autoComplete="off" />
+      <h2>Registrar cliente nuevo</h2>
+      <Campo etiqueta="Dirección" ayuda="Como dice la factura. Ejemplo: Av. Colón Sur 765." value={direccion} onChange={(e) => { setDireccion(e.target.value); setLugares(undefined); setElegido(undefined); }} autoComplete="off" />
       <BotonHablar dictado={dictarDireccion} etiqueta="DICTAR DIRECCIÓN" />
-      <Selector etiqueta="Comuna" value={comuna} onChange={(e) => { setComuna(e.target.value); }}>
+      <Selector etiqueta="Comuna" value={comuna} onChange={(e) => { setComuna(e.target.value); setLugares(undefined); setElegido(undefined); }}>
         <option value="">Elige la comuna</option>
         {COMUNAS_RM.map((c) => <option key={c} value={c}>{c}</option>)}
       </Selector>
+
+      <section className="pagina" aria-label="Ubicación del cliente">
+        <h3>Ubicación</h3>
+        {elegido ? (
+          <div className="tarjeta" role="status">
+            <strong>Ubicación elegida</strong>
+            <span>{elegido.etiqueta}</span>
+            <Boton variante="secundario" onClick={() => { setElegido(undefined); }}>CAMBIAR</Boton>
+          </div>
+        ) : (
+          <>
+            <Boton variante="secundario" disabled={!puedeBuscar || buscando} onClick={() => void buscarEnElMapa()}>{buscando ? 'BUSCANDO…' : 'BUSCAR LA DIRECCIÓN EN EL MAPA'}</Boton>
+            {lugares ? (
+              <>
+                <p role="status">Toca el lugar correcto:</p>
+                <ul className="tarjetas">
+                  {lugares.map((l) => (
+                    <li key={`${l.lat},${l.lng}`}>
+                      <button type="button" className="tarjeta tarjeta-boton" onClick={() => { setElegido(l); setLugares(undefined); }}>
+                        <strong>{l.etiqueta}</strong>
+                        <span>{l.precision === 'exacta' ? 'Con el número' : 'Solo la calle'}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            {avisoMapa ? <Aviso>{avisoMapa}</Aviso> : null}
+            <a className="big-button big-button--secundario" href={puedeBuscar ? enlaceGoogleMapsBusqueda(direccion, comuna) : undefined} aria-disabled={!puedeBuscar} target="_blank" rel="noreferrer">BUSCAR EN GOOGLE MAPS</a>
+            <Campo etiqueta="Enlace copiado de Google Maps" ayuda="En Google Maps elige el lugar, toca Compartir → Copiar enlace, vuelve aquí y toca PEGAR." value={enlace} onChange={(e) => { setEnlace(e.target.value); }} autoComplete="off" inputMode="url" />
+            <Boton variante="secundario" onClick={() => void pegar()}>PEGAR LO QUE COPIÉ</Boton>
+          </>
+        )}
+      </section>
+
       <Campo etiqueta="Nombre del local (opcional)" ayuda="Si lo sabes. Si no, se guarda con la dirección." value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />
       <BotonHablar dictado={dictarNombre} etiqueta="DICTAR NOMBRE" />
       <Campo etiqueta="RUT (opcional)" ayuda="Solo los números. El RUT no cambia: sirve para reconocer al cliente en todas sus direcciones." inputMode="numeric" value={rutEscrito} onChange={(e) => { setRutEscrito(e.target.value); }} autoComplete="off" />
@@ -201,7 +280,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
   const buscando = puedeBuscar(escrito.consulta);
   const actual = buscando && resultados?.consulta === consulta && consulta === texto ? resultados : undefined;
 
-  const cargar = async (c: { localId: string; razonSocial: string }): Promise<void> => {
+  const cargar = async (c: { localId: string; razonSocial: string }, avisoPin?: string): Promise<void> => {
     setOcupado(true);
     setAviso(undefined);
     setRepetida(undefined);
@@ -211,7 +290,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
       setAviso({ tipo: 'error', texto: mensajeDeError(r.error) });
       return;
     }
-    setAviso({ tipo: 'exito', texto: `Cargado: ${c.razonSocial}.` });
+    setAviso({ tipo: avisoPin ? 'error' : 'exito', texto: `Cargado: ${c.razonSocial}.${avisoPin ? ` ${avisoPin}` : ''}` });
     setTexto('');
     setResultados(undefined);
     setCreando(false);
@@ -268,8 +347,8 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
           </div>
         </div>
       ) : null}
-      {texto.trim() !== '' && !creando ? <Boton variante="secundario" onClick={() => { setCreando(true); }}>NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO</Boton> : null}
-      {creando ? <ClienteNuevo direccionInicial={escrito.consulta} comunaInicial={escrito.comuna ?? ''} alCrear={(c) => void cargar(c)} alCancelar={() => { setCreando(false); }} /> : null}
+      {texto.trim() !== '' && !creando ? <Boton variante="secundario" onClick={() => { setCreando(true); }}>NO ESTÁ: BUSCAR Y REGISTRAR</Boton> : null}
+      {creando ? <ClienteNuevo direccionInicial={escrito.consulta} comunaInicial={escrito.comuna ?? ''} alCrear={(c, avisoPin) => void cargar(c, avisoPin)} alCancelar={() => { setCreando(false); }} /> : null}
       {aviso ? <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso> : null}
 
       <h2>Cargadas hoy ({facturas.length})</h2>

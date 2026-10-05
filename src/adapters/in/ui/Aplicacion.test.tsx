@@ -23,6 +23,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     restaurarSesion: vi.fn(() => Promise.resolve(estado)),
     cerrarSesion: vi.fn(),
     importarClientesEnLotes: vi.fn(),
+    buscarDireccion: vi.fn(() => Promise.resolve(err('SIN_RESULTADO' as const))),
     completarComunas: vi.fn(() => Promise.resolve({ comunas: {}, sinRespuesta: 0, detenido: false })),
     subirFotoLocal: vi.fn(),
     ahora: () => new Date('2026-10-05T15:00:00Z'),
@@ -945,7 +946,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
     expect(await screen.findByText('No encuentro ese cliente.')).toBeInTheDocument();
     expect(screen.getByText('Comuna:').parentElement).toHaveTextContent('Comuna: San Bernardo');
     expect(buscarClientes).toHaveBeenLastCalledWith('Av. Colón 765', expect.objectContaining({ comuna: 'San Bernardo', limite: 6 }));
-    await userEvent.click(screen.getByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    await userEvent.click(screen.getByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
     const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
     expect(form.getByLabelText('Dirección')).toHaveValue('Av. Colón 765');
     expect(form.getByLabelText('Comuna')).toHaveValue('San Bernardo');
@@ -955,11 +956,52 @@ describe('el chofer: camión del día y carga de entregas', () => {
     expect(await screen.findByText('Cargado: Av. Colón 765.')).toBeInTheDocument();
   });
 
+  it('«no está»: busca la dirección en el mapa, deja elegir el lugar y lo deja como pin del cliente nuevo', async () => {
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(ok({ resultado: 'fijado' as const, lat: -33.6012, lng: -70.7021 })));
+    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    const buscarDireccion = vi.fn(() => Promise.resolve(ok([
+      { lat: -33.6012, lng: -70.7021, etiqueta: 'Avenida Colón Sur 765, San Bernardo', comuna: 'San Bernardo', precision: 'exacta' as const },
+      { lat: -33.6, lng: -70.7, etiqueta: 'Avenida Colón Sur, San Bernardo', comuna: 'San Bernardo', precision: 'calle' as const },
+    ])));
+    montar({ ruta: '/cargar', sesion: CHOFER, casos: { buscarDireccion }, api: baseApi({ crearCliente, fijarPinDesdeEnlace, registrarFactura, buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Av. Colón Sur 765 San Bernardo');
+    await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    await userEvent.click(form.getByRole('button', { name: 'BUSCAR LA DIRECCIÓN EN EL MAPA' }));
+    expect(buscarDireccion).toHaveBeenCalledWith('Av. Colón Sur 765', 'San Bernardo');
+    await userEvent.click(await form.findByRole('button', { name: /Avenida Colón Sur 765, San Bernardo/ }));
+    expect(form.getByText('Ubicación elegida')).toBeInTheDocument();
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    await waitFor(() => { expect(registrarFactura).toHaveBeenCalled(); });
+    expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'Av. Colón Sur 765', direccion: 'Av. Colón Sur 765', comuna: 'San Bernardo' });
+    expect(fijarPinDesdeEnlace).toHaveBeenCalledWith('l9', '-33.6012, -70.7021');
+    expect(await screen.findByText('Cargado: Av. Colón Sur 765.')).toBeInTheDocument();
+  });
+
+  it('«no está»: si el mapa no la halla ofrece Google Maps; el enlace pegado se manda al servidor y, si no se puede leer, igual se carga con un aviso', async () => {
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
+    const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(http(400, { codigo: 'VALIDACION', mensaje: 'No pude leer la ubicación de ese enlace.' })));
+    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, fijarPinDesdeEnlace, registrarFactura, buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Camino Santa Rita Parcela 4 Pirque');
+    await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    await userEvent.click(form.getByRole('button', { name: 'BUSCAR LA DIRECCIÓN EN EL MAPA' }));
+    expect(await form.findByText(/No encontré esa dirección en el mapa gratuito/)).toBeInTheDocument();
+    expect(form.getByRole('link', { name: 'BUSCAR EN GOOGLE MAPS' }).getAttribute('href')).toBe('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Camino Santa Rita Parcela 4, Pirque, Chile'));
+    await userEvent.type(form.getByLabelText('Enlace copiado de Google Maps'), 'https://maps.app.goo.gl/AbC123');
+    await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
+    await waitFor(() => { expect(registrarFactura).toHaveBeenCalled(); });
+    expect(fijarPinDesdeEnlace).toHaveBeenCalledWith('l9', 'https://maps.app.goo.gl/AbC123');
+    expect(await screen.findByText(/Cargado: Camino Santa Rita Parcela 4\..*No pude leer la ubicación/)).toBeInTheDocument();
+  });
+
   it('sin comuna no se puede guardar el cliente nuevo; con nombre del local lo usa', async () => {
     const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura: () => Promise.resolve(ok(FACTURA)), buscarClientes: () => Promise.resolve(ok([])) }) });
     await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Calle 1 123');
-    await userEvent.click(await screen.findByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
     const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
     await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
     expect(await form.findByRole('alert')).toHaveTextContent('Falta la dirección o la comuna.');
@@ -974,7 +1016,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
     const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'k9', localId: 'l9' })));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, registrarFactura: () => Promise.resolve(ok(FACTURA)), buscarClientes: () => Promise.resolve(ok([])) }) });
     await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Av. Colón Sur 765 San Bernardo');
-    await userEvent.click(await screen.findByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
     const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
     await userEvent.type(form.getByLabelText('RUT (opcional)'), '77975918');
     expect(await form.findByText('RUT 77.975.918-0')).toBeInTheDocument();
@@ -986,7 +1028,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
     const crearCliente = vi.fn();
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, buscarClientes: () => Promise.resolve(ok([])) }) });
     await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Calle 1 123 Maipú');
-    await userEvent.click(await screen.findByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
     const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
     await userEvent.type(form.getByLabelText('RUT (opcional)'), '77.975.918-1');
     await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
@@ -998,7 +1040,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
     const crearCliente = vi.fn(() => Promise.resolve(http(422, { codigo: 'VALIDACION', mensaje: 'Hay datos inválidos.', detalle: { errores: [{ mensaje: 'La comuna no es de la Región Metropolitana.' }] } })));
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ crearCliente, buscarClientes: () => Promise.resolve(ok([])) }) });
     await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'kiosko sol');
-    await userEvent.click(await screen.findByRole('button', { name: 'NO LO ENCUENTRO: AGREGAR CLIENTE NUEVO' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
     const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
     await userEvent.selectOptions(form.getByLabelText('Comuna'), 'Maipú');
     await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
