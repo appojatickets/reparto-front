@@ -967,8 +967,9 @@ describe('acciones en la parada (chofer)', () => {
     expect(registrarEvento).toHaveBeenCalledWith('fA', expect.objectContaining({ tipo: 'cerrado' }));
     const panel = within(await screen.findByLabelText('Local cerrado: Local A'));
     const wa = panel.getByRole('link', { name: 'AVISAR AL VENDEDOR POR WHATSAPP' });
-    const mensaje = decodeURIComponent(wa.getAttribute('href') ?? '');
-    expect(mensaje).toContain('Local A (Calle A 100, San Bernardo) y está cerrado (12:00)');
+    expect(decodeURIComponent(wa.getAttribute('href') ?? '')).toContain('Hola, estoy en Calle A 100, San Bernardo y está cerrado (12:00)');
+    await userEvent.type(panel.getByLabelText('Nombre que sale en la guía'), 'Rabelo Mágica SpA');
+    expect(decodeURIComponent(panel.getByRole('link', { name: 'AVISAR AL VENDEDOR POR WHATSAPP' }).getAttribute('href') ?? '')).toContain('Calle A 100, San Bernardo (Rabelo Mágica SpA) y está cerrado (12:00)');
     expect(wa.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/);
     await userEvent.click(panel.getByRole('button', { name: 'ESPERAR 15 MIN' }));
     expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'espera', minutos: 15 });
@@ -1012,7 +1013,7 @@ describe('acciones en la parada (chofer)', () => {
     abrir({ registrarEvento });
     await userEvent.click(await screen.findByRole('button', { name: 'NO LA ENCUENTRO Local A' }));
     const panel = within(screen.getByLabelText('No encuentra la dirección: Local A'));
-    expect(decodeURIComponent(panel.getByRole('link', { name: 'ENVIAR LA DIRECCIÓN POR WHATSAPP' }).getAttribute('href') ?? '')).toContain('no encuentro la dirección de Local A: Calle A 100, San Bernardo');
+    expect(decodeURIComponent(panel.getByRole('link', { name: 'ENVIAR LA DIRECCIÓN POR WHATSAPP' }).getAttribute('href') ?? '')).toContain('no encuentro la dirección Calle A 100, San Bernardo (Local A)');
     await userEvent.click(panel.getByRole('button', { name: 'NO SE PUDO ENTREGAR (DIRECCIÓN)' }));
     expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'no_entregado', motivo: 'direccion' });
   });

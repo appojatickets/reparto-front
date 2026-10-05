@@ -39,10 +39,16 @@ export const enlaceWhatsApp = (mensaje: string, telefono?: string): string => {
 
 const ubicacionDe = (d: Destino): string => (d.lat !== undefined && d.lng !== undefined ? ` Ubicación: https://www.google.com/maps?q=${d.lat},${d.lng}` : '');
 
-/** Mensaje para el vendedor cuando el local está cerrado. */
-export const mensajeLocalCerrado = (d: Destino & { readonly cliente: string }, hora: string): string =>
-  `Hola, estoy en ${d.cliente} (${d.direccion}, ${d.comuna}) y está cerrado (${hora}). ¿Puedes llamarlo para ver si abre o si espero?${ubicacionDe(d)}`;
+/** «Calle A 100, San Bernardo» y, si hay nombre, «(nombre)»: la dirección siempre está; el nombre solo si se conoce, sin huecos. */
+const lugarDe = (d: Destino, nombre?: string): string => {
+  const n = (nombre ?? '').replace(/\s+/g, ' ').trim();
+  return `${d.direccion}, ${d.comuna}${n === '' ? '' : ` (${n})`}`;
+};
+
+/** Mensaje para el vendedor cuando el local está cerrado. `nombre` es el que sale en la guía (así los vendedores conocen al cliente). */
+export const mensajeLocalCerrado = (d: Destino & { readonly nombre?: string }, hora: string): string =>
+  `Hola, estoy en ${lugarDe(d, d.nombre)} y está cerrado (${hora}). ¿Puedes llamarlo para ver si abre o si espero?${ubicacionDe(d)}`;
 
 /** Mensaje cuando el chofer no encuentra la dirección. */
-export const mensajeDireccionNoEncontrada = (d: Destino & { readonly cliente: string }): string =>
-  `Hola, no encuentro la dirección de ${d.cliente}: ${d.direccion}, ${d.comuna}. ¿Me ayudas con la ubicación exacta?${ubicacionDe(d)}`;
+export const mensajeDireccionNoEncontrada = (d: Destino & { readonly nombre?: string }): string =>
+  `Hola, no encuentro la dirección ${lugarDe(d, d.nombre)}. ¿Me ayudas con la ubicación exacta?${ubicacionDe(d)}`;

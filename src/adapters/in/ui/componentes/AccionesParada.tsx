@@ -8,25 +8,42 @@ import type { Result } from '../../../../domain/result';
 import type { ApiError } from '../../../../application/ports/api-client';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
-import { Aviso, Boton } from './ui';
+import { Aviso, Boton, Campo } from './ui';
 
 type Panel = 'cerrado' | 'direccion' | undefined;
 
 /** Un botón de WhatsApp por cada vendedor con celular (ADR 0017); sin vendedores cargados, uno solo para elegir el contacto. */
-const AvisoAlVendedor = ({ mensaje }: { readonly mensaje: string }) => {
+const AvisoAlVendedor = ({ mensaje }: { readonly mensaje: (nombre: string) => string }) => {
   const { api } = useCasos();
   const cargar = useCallback(() => api.listarVendedores(), [api]);
   const { estado } = useCarga(cargar);
+  const [nombre, setNombre] = useState('');
+  const texto = mensaje(nombre);
   const conCelular = estado.tipo === 'ok' ? estado.datos.filter((v) => v.celular !== undefined) : [];
+  const campo = (
+    <Campo
+      etiqueta="Nombre que sale en la guía"
+      ayuda="Escríbelo o dictalo como está en la guía: así el vendedor sabe de qué cliente hablas. Si lo dejas vacío, el mensaje lleva solo la dirección."
+      value={nombre}
+      onChange={(e) => { setNombre(e.target.value); }}
+      autoComplete="off"
+    />
+  );
   if (conCelular.length === 0) {
-    return <a className="big-button big-button--primario" href={enlaceWhatsApp(mensaje)} target="_blank" rel="noreferrer">AVISAR AL VENDEDOR POR WHATSAPP</a>;
+    return (
+      <>
+        {campo}
+        <a className="big-button big-button--primario" href={enlaceWhatsApp(texto)} target="_blank" rel="noreferrer">AVISAR AL VENDEDOR POR WHATSAPP</a>
+      </>
+    );
   }
   return (
     <>
+      {campo}
       {conCelular.map((v) => (
-        <a key={v.id} className="big-button big-button--primario" href={enlaceWhatsApp(mensaje, v.celular)} target="_blank" rel="noreferrer">{`AVISAR A ${v.codigo} ${v.nombre.toUpperCase()} POR WHATSAPP`}</a>
+        <a key={v.id} className="big-button big-button--primario" href={enlaceWhatsApp(texto, v.celular)} target="_blank" rel="noreferrer">{`AVISAR A ${v.codigo} ${v.nombre.toUpperCase()} POR WHATSAPP`}</a>
       ))}
-      <a className="big-button big-button--secundario" href={enlaceWhatsApp(mensaje)} target="_blank" rel="noreferrer">AVISAR A OTRO CONTACTO</a>
+      <a className="big-button big-button--secundario" href={enlaceWhatsApp(texto)} target="_blank" rel="noreferrer">AVISAR A OTRO CONTACTO</a>
     </>
   );
 };
@@ -111,7 +128,7 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
       {panel === 'cerrado' ? (
         <div className="tarjeta" aria-label={`Local cerrado: ${p.cliente}`}>
           <strong>Local cerrado. ¿Qué hacemos?</strong>
-          <AvisoAlVendedor mensaje={mensajeLocalCerrado({ ...destino, cliente: p.cliente }, horaAhora())} />
+          <AvisoAlVendedor mensaje={(nombre) => mensajeLocalCerrado({ ...destino, nombre }, horaAhora())} />
           <span>Cuando el vendedor te responda:</span>
           <div className="fila-botones">
             {[10, 15, 20].map((m) => <Boton key={m} variante="secundario" disabled={ocupado} onClick={() => void esperar(m)}>{`ESPERAR ${m} MIN`}</Boton>)}
@@ -124,7 +141,7 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
       {panel === 'direccion' ? (
         <div className="tarjeta" aria-label={`No encuentra la dirección: ${p.cliente}`}>
           <strong>¿No encuentras la dirección?</strong>
-          <a className="big-button big-button--primario" href={enlaceWhatsApp(mensajeDireccionNoEncontrada({ ...destino, cliente: p.cliente }))} target="_blank" rel="noreferrer">ENVIAR LA DIRECCIÓN POR WHATSAPP</a>
+          <a className="big-button big-button--primario" href={enlaceWhatsApp(mensajeDireccionNoEncontrada({ ...destino, nombre: p.cliente }))} target="_blank" rel="noreferrer">ENVIAR LA DIRECCIÓN POR WHATSAPP</a>
           <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('direccion')}>NO SE PUDO ENTREGAR (DIRECCIÓN)</Boton>
         </div>
       ) : null}

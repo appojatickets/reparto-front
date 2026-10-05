@@ -60,10 +60,22 @@ describe('WhatsApp', () => {
   });
 
   it('los mensajes dicen quién, dónde y la hora, e incluyen la ubicación si hay pin', () => {
-    const cerrado = mensajeLocalCerrado({ ...conPin, cliente: 'Rabelo' }, '11:40');
-    expect(cerrado).toContain('Rabelo (Av. Colón Sur 765, San Bernardo) y está cerrado (11:40)');
+    const cerrado = mensajeLocalCerrado({ ...conPin, nombre: 'Rabelo' }, '11:40');
+    expect(cerrado).toContain('Av. Colón Sur 765, San Bernardo (Rabelo) y está cerrado (11:40)');
     expect(cerrado).toContain('https://www.google.com/maps?q=-33.59,-70.7');
-    expect(mensajeLocalCerrado({ ...sinPin, cliente: 'Rabelo' }, '11:40')).not.toContain('maps?q=');
-    expect(mensajeDireccionNoEncontrada({ ...sinPin, cliente: 'Rabelo' })).toContain('no encuentro la dirección de Rabelo: Av. Colón Sur 765, San Bernardo');
+    expect(mensajeLocalCerrado({ ...sinPin, nombre: 'Rabelo' }, '11:40')).not.toContain('maps?q=');
+    expect(mensajeDireccionNoEncontrada({ ...sinPin, nombre: 'Rabelo' })).toContain('no encuentro la dirección Av. Colón Sur 765, San Bernardo (Rabelo).');
+  });
+
+  it('sin nombre el mensaje se arma solo con la dirección, sin huecos ni paréntesis vacíos', () => {
+    for (const nombre of [undefined, '', '   ']) {
+      const m = mensajeLocalCerrado({ ...sinPin, ...(nombre !== undefined ? { nombre } : {}) }, '11:40');
+      expect(m).toBe('Hola, estoy en Av. Colón Sur 765, San Bernardo y está cerrado (11:40). ¿Puedes llamarlo para ver si abre o si espero?');
+    }
+    expect(mensajeDireccionNoEncontrada(sinPin)).toBe('Hola, no encuentro la dirección Av. Colón Sur 765, San Bernardo. ¿Me ayudas con la ubicación exacta?');
+  });
+
+  it('el nombre se limpia de espacios repetidos', () => {
+    expect(mensajeLocalCerrado({ ...sinPin, nombre: '  Minimarket   Rabelo ' }, '11:40')).toContain('(Minimarket Rabelo)');
   });
 });
