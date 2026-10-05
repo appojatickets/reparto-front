@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { enlaceNavegar, enlaceWhatsApp, mensajeDireccionNoEncontrada, mensajeLocalCerrado } from '../../../../domain/enlaces';
 import { minutosEnChile } from '../../../../domain/fechas';
 import { horaDelDia } from '../../../../domain/hora';
@@ -7,9 +7,29 @@ import type { EventoEntrega, ParadaDeRuta, ResultadoEvento } from '../../../../a
 import type { Result } from '../../../../domain/result';
 import type { ApiError } from '../../../../application/ports/api-client';
 import { useCasos } from '../contexto';
+import { useCarga } from '../hooks';
 import { Aviso, Boton } from './ui';
 
 type Panel = 'cerrado' | 'direccion' | undefined;
+
+/** Un botón de WhatsApp por cada vendedor con celular (ADR 0017); sin vendedores cargados, uno solo para elegir el contacto. */
+const AvisoAlVendedor = ({ mensaje }: { readonly mensaje: string }) => {
+  const { api } = useCasos();
+  const cargar = useCallback(() => api.listarVendedores(), [api]);
+  const { estado } = useCarga(cargar);
+  const conCelular = estado.tipo === 'ok' ? estado.datos.filter((v) => v.celular !== undefined) : [];
+  if (conCelular.length === 0) {
+    return <a className="big-button big-button--primario" href={enlaceWhatsApp(mensaje)} target="_blank" rel="noreferrer">AVISAR AL VENDEDOR POR WHATSAPP</a>;
+  }
+  return (
+    <>
+      {conCelular.map((v) => (
+        <a key={v.id} className="big-button big-button--primario" href={enlaceWhatsApp(mensaje, v.celular)} target="_blank" rel="noreferrer">{`AVISAR A ${v.codigo} ${v.nombre.toUpperCase()} POR WHATSAPP`}</a>
+      ))}
+      <a className="big-button big-button--secundario" href={enlaceWhatsApp(mensaje)} target="_blank" rel="noreferrer">AVISAR A OTRO CONTACTO</a>
+    </>
+  );
+};
 
 /**
  * Lo que el chofer hace en cada parada: navegar (Waze / Google Maps), avisar que llegó (y así fijar el pin del local si no lo
@@ -91,7 +111,7 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
       {panel === 'cerrado' ? (
         <div className="tarjeta" aria-label={`Local cerrado: ${p.cliente}`}>
           <strong>Local cerrado. ¿Qué hacemos?</strong>
-          <a className="big-button big-button--primario" href={enlaceWhatsApp(mensajeLocalCerrado({ ...destino, cliente: p.cliente }, horaAhora()))} target="_blank" rel="noreferrer">AVISAR AL VENDEDOR POR WHATSAPP</a>
+          <AvisoAlVendedor mensaje={mensajeLocalCerrado({ ...destino, cliente: p.cliente }, horaAhora())} />
           <span>Cuando el vendedor te responda:</span>
           <div className="fila-botones">
             {[10, 15, 20].map((m) => <Boton key={m} variante="secundario" disabled={ocupado} onClick={() => void esperar(m)}>{`ESPERAR ${m} MIN`}</Boton>)}

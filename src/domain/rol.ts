@@ -11,6 +11,7 @@ export type Accion =
   | 'facturas'
   | 'rutas'
   | 'camiones'
+  | 'vendedores'
   | 'configuracion';
 
 /**
@@ -21,7 +22,7 @@ const ACCIONES: Readonly<Record<Rol, readonly Accion[]>> = {
   chofer: ['mi-ruta', 'cargar-facturas'],
   ayudante: ['mi-ruta', 'cargar-facturas'],
   despachador: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines'],
-  admin: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines', 'importar-clientes', 'camiones', 'configuracion', 'usuarios'],
+  admin: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines', 'importar-clientes', 'camiones', 'vendedores', 'configuracion', 'usuarios'],
 };
 
 export const accionesDe = (rol: Rol): readonly Accion[] => ACCIONES[rol];

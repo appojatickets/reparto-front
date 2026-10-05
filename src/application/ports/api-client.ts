@@ -1,7 +1,7 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, Camion, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
+  CambiosFactura, Camion, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
@@ -53,6 +53,10 @@ export interface ApiClient extends SaludApi {
   listarCamiones(opciones?: { incluirInactivos?: boolean }): R<readonly Camion[]>;
   crearCamion(datos: { patente: string; alias?: string }): R<Camion>;
   actualizarCamion(id: string, cambios: { alias?: string | null; activo?: boolean }): R<Camion>;
+
+  listarVendedores(opciones?: { incluirInactivos?: boolean }): R<readonly Vendedor[]>;
+  crearVendedor(datos: { codigo: string; nombre: string; celular?: string }): R<Vendedor>;
+  actualizarVendedor(id: string, cambios: { nombre?: string; celular?: string | null; activo?: boolean }): R<Vendedor>;
 
   listarFacturas(filtro?: FiltroFacturas): R<readonly Factura[]>;
   registrarFactura(datos: NuevaFactura): R<Factura>;

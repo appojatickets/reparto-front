@@ -48,6 +48,7 @@ export type TipoFoto = 'webp' | 'jpeg';
 export type FilaCliente = FilaClienteCruda;
 
 export type Camion = { readonly id: string; readonly patente: string; readonly alias?: string; readonly activo: boolean };
+export type Vendedor = { readonly id: string; readonly codigo: string; readonly nombre: string; readonly celular?: string; readonly activo: boolean };
 export type CamionResumen = { readonly id: string; readonly patente: string; readonly alias?: string };
 
 export type EstadoEntrega = 'pendiente' | 'entregada' | 'no_entregada' | 'anulada';

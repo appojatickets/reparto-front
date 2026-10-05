@@ -82,7 +82,7 @@ describe('entrada y protección por rol', () => {
 
   it('el admin ve todo el menú', async () => {
     montar({ sesion: ADMIN });
-    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'CONFIGURACIÓN', 'USUARIOS']) {
+    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'VENDEDORES', 'CONFIGURACIÓN', 'USUARIOS']) {
       expect(await screen.findByRole('link', { name: nombre })).toBeInTheDocument();
     }
   });
@@ -538,6 +538,37 @@ describe('camiones', () => {
   });
 });
 
+describe('vendedores', () => {
+  it('agrega un vendedor con su celular y lo lista con el celular formateado', async () => {
+    const crearVendedor = vi.fn(() => Promise.resolve(ok({ id: 'v1', codigo: 'V01', nombre: 'Ana', celular: '56912345678', activo: true })));
+    const listarVendedores = vi.fn(() => Promise.resolve(ok([{ id: 'v1', codigo: 'V01', nombre: 'Ana', celular: '56912345678', activo: true }])));
+    montar({ ruta: '/admin/vendedores', sesion: ADMIN, api: { listarVendedores, crearVendedor } });
+    expect(await screen.findByText('+56 9 1234 5678')).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Código'), 'v01');
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Ana');
+    await userEvent.type(screen.getByLabelText('Celular (opcional)'), '9 1234 5678');
+    await userEvent.click(screen.getByRole('button', { name: 'AGREGAR VENDEDOR' }));
+    expect(await screen.findByText('Vendedor V01 Ana agregado.')).toBeInTheDocument();
+    expect(crearVendedor).toHaveBeenCalledWith({ codigo: 'v01', nombre: 'Ana', celular: '9 1234 5678' });
+  });
+
+  it('cambia o borra el celular y desactiva', async () => {
+    const actualizarVendedor = vi.fn(() => Promise.resolve(ok({ id: 'v1', codigo: 'V01', nombre: 'Ana', activo: true })));
+    montar({ ruta: '/admin/vendedores', sesion: ADMIN, api: { listarVendedores: () => Promise.resolve(ok([{ id: 'v1', codigo: 'V01', nombre: 'Ana', celular: '56912345678', activo: true }])), actualizarVendedor } });
+    await userEvent.click(await screen.findByRole('button', { name: 'CAMBIAR CELULAR V01' }));
+    await userEvent.clear(screen.getByLabelText('Celular de V01'));
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR CELULAR' }));
+    await waitFor(() => { expect(actualizarVendedor).toHaveBeenCalledWith('v1', { celular: null }); });
+    await userEvent.click(screen.getByRole('button', { name: 'DESACTIVAR V01' }));
+    expect(actualizarVendedor).toHaveBeenLastCalledWith('v1', { activo: false });
+  });
+
+  it('el despachador no entra a la administración de vendedores', async () => {
+    montar({ ruta: '/admin/vendedores', sesion: DESPACHADOR });
+    expect(await screen.findByRole('heading', { name: 'Hola, Ana' })).toBeInTheDocument();
+  });
+});
+
 describe('configuración del reparto', () => {
   it('muestra el aviso si falta el depósito y guarda las coordenadas pegadas desde Google Maps', async () => {
     const guardarConfig = vi.fn((c: unknown) => Promise.resolve(ok(c as never)));
@@ -942,6 +973,20 @@ describe('acciones en la parada (chofer)', () => {
     await userEvent.click(panel.getByRole('button', { name: 'ESPERAR 15 MIN' }));
     expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'espera', minutos: 15 });
     expect(await screen.findByText(/Esperando 15 minutos \(hasta las 12:15\)/)).toBeInTheDocument();
+  });
+
+  it('ESTÁ CERRADO con vendedores cargados: un botón de WhatsApp por cada uno con celular, al chat de ese vendedor', async () => {
+    const listarVendedores = () => Promise.resolve(ok([
+      { id: 'v1', codigo: 'V01', nombre: 'Ana', celular: '56912345678', activo: true },
+      { id: 'v2', codigo: 'V02', nombre: 'Luis', activo: true },
+    ]));
+    abrir({ listarVendedores, registrarEvento: () => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })) }, { ubicacion: gps() });
+    await userEvent.click(await screen.findByRole('button', { name: 'ESTÁ CERRADO Local A' }));
+    const panel = within(await screen.findByLabelText('Local cerrado: Local A'));
+    const ana = await panel.findByRole('link', { name: 'AVISAR A V01 ANA POR WHATSAPP' });
+    expect(ana.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/56912345678\?text=/);
+    expect(panel.queryByText(/V02/)).toBeNull();
+    expect(panel.getByRole('link', { name: 'AVISAR A OTRO CONTACTO' }).getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/);
   });
 
   it('cerrado → SEGUIR Y VOLVER MÁS TARDE reordena la ruta (la deja para después)', async () => {

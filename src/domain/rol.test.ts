@@ -18,6 +18,8 @@ describe('acciones por rol (solo para mostrar el menú; la API es quien manda)',
     expect(puedeHacer('admin', 'usuarios')).toBe(true);
     expect(puedeHacer('admin', 'importar-clientes')).toBe(true);
     expect(puedeHacer('admin', 'camiones')).toBe(true);
+    expect(puedeHacer('admin', 'vendedores')).toBe(true);
+    expect(puedeHacer('despachador', 'vendedores')).toBe(false);
     expect(puedeHacer('admin', 'configuracion')).toBe(true);
     expect(puedeHacer('admin', 'rutas')).toBe(true);
     expect(puedeHacer('admin', 'facturas')).toBe(true);
