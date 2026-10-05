@@ -388,6 +388,28 @@ describe('importar clientes', () => {
     ]);
   });
 
+  it('lista de Google Maps: la ordena, deja completar lo que falta y importa solo lo listo', async () => {
+    const importarClientesEnLotes = vi.fn((filas: readonly unknown[]) => Promise.resolve(ok({ totalFilas: filas.length, validas: filas.length, errores: [], resumen: { clientesCreados: filas.length, clientesActualizados: 0, localesCreados: filas.length, localesActualizados: 0 } })));
+    montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes } });
+    await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
+    await userEvent.paste([
+      'Pin colocado', '-33.606873,-70.917985', 'rosa gonzalez osses', 'camino mallarauco 16', '', '',
+      'Pin colocado', 'Cerca de Av. Hernán Prieto, Pirque, Región Metropolitana', 'olga aguilera toledo', 'avenida concha y toro 4089', '', '',
+      'Pin colocado', 'Cerca de Paine, Región Metropolitana', 'Gisela Carrasco',
+    ].join('\n'));
+    const panel = await screen.findByRole('region', { name: 'Lista de Google Maps' });
+    expect(within(panel).getByText(/3 lugares leídos. Listos: 1 · solo con una referencia «Cerca de…»: 0 · para revisar: 2/)).toBeInTheDocument();
+    expect(within(panel).getByText(/no trae las coordenadas de 2 lugares/)).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('Comuna #1'), 'Melipilla');
+    await waitFor(() => { expect(within(screen.getByRole('region', { name: 'Lista de Google Maps' })).getByText(/Listos: 2/)).toBeInTheDocument(); });
+    await userEvent.click(screen.getByRole('button', { name: 'IMPORTAR 2 CLIENTES' }));
+    await screen.findByRole('region', { name: 'Resultado de la importación' });
+    expect(importarClientesEnLotes.mock.calls[0]?.[0]).toEqual([
+      { razonSocial: 'Rosa Gonzalez Osses', direccion: 'Camino Mallarauco 16', comuna: 'Melipilla', lat: '-33.606873', lng: '-70.917985' },
+      { razonSocial: 'Olga Aguilera Toledo', direccion: 'Avenida Concha y Toro 4089', comuna: 'Pirque', nota: 'Cerca de Av. Hernán Prieto' },
+    ]);
+  });
+
   it('si la importación se corta avisa cuánto alcanzó y que reimportar es seguro', async () => {
     const parcial = { totalFilas: 2, validas: 1, errores: [], resumen: { clientesCreados: 1, clientesActualizados: 0, localesCreados: 1, localesActualizados: 0 } };
     const importarClientesEnLotes = vi.fn(() => Promise.resolve(err({ error: { kind: 'NETWORK' as const }, procesadas: 1, parcial })));
