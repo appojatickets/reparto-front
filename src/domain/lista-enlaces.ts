@@ -1,5 +1,6 @@
 import { separarComuna } from './comunas';
 import { esListaDeMaps } from './lista-maps';
+import type { FilaClienteCruda } from './tabla';
 import { normalizar } from './texto';
 
 /**
@@ -22,6 +23,11 @@ export type EntradaEnlace = {
   readonly comuna?: string;
   readonly enlace?: string;
   readonly tipoEnlace?: TipoEnlace;
+  /** Cuando la entrada viene de una planilla: los demás datos del cliente (si faltan, la razón social es la dirección). */
+  readonly razonSocial?: string;
+  readonly rut?: string;
+  readonly giro?: string;
+  readonly nota?: string;
 };
 export type ResumenEnlaces = { readonly total: number; readonly listas: number; readonly revisar: number; readonly repetidas: number; readonly conLugarExacto: number; readonly porBusqueda: number };
 
@@ -121,3 +127,28 @@ export const analizarListaEnlaces = (texto: string): { readonly entradas: readon
   };
 };
 
+/**
+ * Las filas de una planilla que traen un enlace de Google Maps con el lugar (corto o largo) y no traen latitud y longitud: la app lee
+ * el enlace y fija el pin. Las que ya traen coordenadas, o cuyo enlace es de búsqueda (sin lugar), siguen su camino normal.
+ */
+export const entradasDeFilasConEnlace = (filas: readonly FilaClienteCruda[]): EntradaEnlace[] =>
+  filas.flatMap((f, i) => {
+    const tipoEnlace = f.enlace !== undefined ? tipoDeEnlace(f.enlace.match(ENLACE)?.[0] ?? f.enlace) : undefined;
+    if (f.enlace === undefined || tipoEnlace === undefined || tipoEnlace === 'busqueda') return [];
+    if (f.lat !== undefined && f.lng !== undefined) return [];
+    if (f.direccion === undefined || f.comuna === undefined || f.razonSocial === undefined) return [];
+    return [{
+      numero: i + 1,
+      crudo: f.razonSocial,
+      estado: 'lista' as const,
+      motivos: [],
+      direccion: f.direccion,
+      comuna: f.comuna,
+      enlace: f.enlace.match(ENLACE)?.[0] ?? f.enlace,
+      tipoEnlace,
+      razonSocial: f.razonSocial,
+      ...(f.rut !== undefined ? { rut: f.rut } : {}),
+      ...(f.giro !== undefined ? { giro: f.giro } : {}),
+      ...(f.nota !== undefined ? { nota: f.nota } : {}),
+    }];
+  });

@@ -430,6 +430,22 @@ describe('importar una lista de direcciones con enlace de Google Maps', () => {
 describe('importar clientes', () => {
   const planilla = 'Rut\tRazón Social\tDirección\tComuna\n12.345.678-5\tRabelo SpA\tAv. X 1\tMaipú\n\tKiosko Sol\tCalle 2\tÑuñoa';
 
+  it('una planilla con columna «enlace»: se importa sin esa columna y después la app lee cada enlace y fija el pin', async () => {
+    const importarClientesEnLotes = vi.fn(() => Promise.resolve(ok({ totalFilas: 2, validas: 2, errores: [], resumen: { clientesCreados: 2, clientesActualizados: 0, localesCreados: 2, localesActualizados: 0 } })));
+    const importarEnlaces = vi.fn(() => Promise.resolve({ total: 1, creados: 0, yaExistian: 1, pinesFijados: 1, pinesPropuestos: 0, porBuscar: 0, pinesNoLeidos: [], fallos: [] }));
+    montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes, importarEnlaces } });
+    await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
+    await userEvent.paste('razón social,dirección,comuna,enlace\nKiosko Sol,Calle 1 100,Maipú,https://maps.app.goo.gl/abc\nSin enlace,Calle 2 200,Ñuñoa,');
+    await userEvent.click(await screen.findByRole('button', { name: 'IMPORTAR' }));
+    await waitFor(() => { expect(importarEnlaces).toHaveBeenCalledTimes(1); });
+    const enviadas = (importarClientesEnLotes.mock.calls[0] as unknown as [readonly Record<string, string>[]])[0];
+    expect(enviadas.every((f) => !('enlace' in f))).toBe(true);
+    const entradas = (importarEnlaces.mock.calls[0] as unknown as [readonly { razonSocial?: string; enlace?: string }[]])[0];
+    expect(entradas).toHaveLength(1);
+    expect(entradas[0]).toMatchObject({ razonSocial: 'Kiosko Sol', enlace: 'https://maps.app.goo.gl/abc' });
+    expect(await screen.findByText(/pines fijados con el enlace: 1/)).toBeInTheDocument();
+  });
+
   it('las filas que solo traen el pin entran como «Ubicación en el mapa» con la comuna calculada, y se avisa', async () => {
     const importarClientesEnLotes = vi.fn(() => Promise.resolve(ok({ totalFilas: 2, validas: 2, errores: [], resumen: { clientesCreados: 2, clientesActualizados: 0, localesCreados: 2, localesActualizados: 0 } })));
     montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes } });

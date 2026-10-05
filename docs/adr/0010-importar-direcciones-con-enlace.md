@@ -22,3 +22,9 @@ La comuna va al final de la dirección (con o sin coma). La línea en blanco es 
 - La misma dirección repetida entra una vez, con el mejor enlace (el que trae el lugar exacto).
 - Las líneas sin comuna reconocible quedan «para revisar» y no se importan hasta corregirlas en el texto.
 - No se envía nada fuera de la app y del servidor propio: los enlaces los lee el servidor con la lista de hosts permitidos.
+
+## Actualización: columna «enlace» en la planilla
+La planilla de Importar clientes acepta una columna opcional **enlace** (también «enlace google», «url», «link»…). Si la fila trae un enlace de Google Maps **con el lugar** (corto `maps.app.goo.gl` o largo) y **no** trae latitud y longitud, se importa la fila normal (sin esa columna) y después la app lee el enlace y fija el pin, con el mismo camino que usa el chofer al pegar un enlace. Un enlace de búsqueda (`/maps/search/?api=1&query=…`) no trae lugar y no sirve para esto. Una planilla con sus columnas manda sobre la lista de «dirección + enlace», aunque contenga URLs.
+
+Formatos de enlace que el servidor sabe leer: corto (`maps.app.goo.gl`, se abre y se sigue la redirección), largo con `!3d…!4d…` (lugar exacto) o `@lat,lng`, y `?q=`/`ll=`/`query=`/`destination=` con coordenadas. También se acepta pegar solo las coordenadas («-33.5973, -70.7033»). El pin debe caer dentro de la caja de la Región Metropolitana.
+

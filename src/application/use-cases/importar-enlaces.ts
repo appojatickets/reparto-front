@@ -43,7 +43,14 @@ export const crearImportarEnlaces = ({ api }: { api: ApiClient }) =>
 
     const procesar = async (e: EntradaEnlace): Promise<void> => {
       const direccion = e.direccion ?? '';
-      const c = await api.crearCliente({ razonSocial: direccion, direccion, comuna: e.comuna ?? '' });
+      const c = await api.crearCliente({
+        razonSocial: e.razonSocial ?? direccion,
+        direccion,
+        comuna: e.comuna ?? '',
+        ...(e.rut !== undefined ? { rut: e.rut } : {}),
+        ...(e.giro !== undefined ? { giro: e.giro } : {}),
+        ...(e.nota !== undefined ? { nota: e.nota } : {}),
+      });
       if (!c.ok) {
         fallos.push({ numero: e.numero, direccion, mensaje: mensajeDeError(c.error) });
         return;

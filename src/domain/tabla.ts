@@ -56,7 +56,7 @@ export const parsearTabla = (texto: string): Tabla => {
   return { encabezados, filas: datos.map((f) => Array.from({ length: encabezados.length }, (_, i) => f[i] ?? '')) };
 };
 
-export type CampoCliente = 'rut' | 'razonSocial' | 'giro' | 'direccion' | 'comuna' | 'lat' | 'lng' | 'nota';
+export type CampoCliente = 'rut' | 'razonSocial' | 'giro' | 'direccion' | 'comuna' | 'lat' | 'lng' | 'nota' | 'enlace';
 export type FilaClienteCruda = Partial<Record<CampoCliente, string>>;
 
 const SINONIMOS: Readonly<Record<CampoCliente, readonly string[]>> = {
@@ -68,6 +68,7 @@ const SINONIMOS: Readonly<Record<CampoCliente, readonly string[]>> = {
   lat: ['lat', 'latitud', 'latitude'],
   lng: ['lng', 'lon', 'long', 'longitud', 'longitude'],
   nota: ['nota', 'notas', 'observacion', 'observaciones', 'comentario', 'comentarios'],
+  enlace: ['enlace', 'enlacegoogle', 'enlacegooglemaps', 'enlacemapa', 'url', 'urlgoogle', 'link', 'linkgoogle', 'googlemaps'],
 };
 const OBLIGATORIOS: readonly CampoCliente[] = ['razonSocial', 'direccion', 'comuna'];
 
@@ -165,3 +166,6 @@ export const completarConPin = (filas: readonly FilaClienteCruda[]): { readonly 
   });
   return { filas: salida, completadas };
 };
+
+/** La fila tal como la recibe la API: el enlace de Google Maps no es un dato del cliente, lo lee la app para fijar el pin. */
+export const sinEnlace = (f: FilaClienteCruda): FilaClienteCruda => Object.fromEntries(Object.entries(f).filter(([k]) => k !== 'enlace'));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analizarListaEnlaces, esListaDeEnlaces, tipoDeEnlace } from './lista-enlaces';
+import { analizarListaEnlaces, entradasDeFilasConEnlace, esListaDeEnlaces, tipoDeEnlace } from './lista-enlaces';
 
 const CORTO = 'https://maps.app.goo.gl/Unz8sebYG5ooFVh66';
 const BUSQUEDA = 'https://www.google.com/maps/search/?api=1&query=Los+Suspiros+16463+San+Bernardo%2C+Chile';
@@ -66,5 +66,27 @@ describe('lista de direcciones con enlace de Google Maps', () => {
     expect(entradas[0]).toMatchObject({ estado: 'lista', direccion: 'Freire 917' });
     expect(entradas[0]?.motivos[0]).toContain('no es de Google Maps');
     expect(entradas[0]?.enlace).toBeUndefined();
+  });
+});
+
+describe('filas de planilla con enlace', () => {
+  const fila = { rut: '12.345.678-5', razonSocial: 'Kiosko Sol', giro: 'Almacén', direccion: 'Calle 1 100', comuna: 'Maipú', nota: 'Cierra a las 14' };
+
+  it('las que traen enlace con lugar y no traen coordenadas pasan a leerse (con todos sus datos); las demás no', () => {
+    const entradas = entradasDeFilasConEnlace([
+      { ...fila, enlace: CORTO },
+      { ...fila, razonSocial: 'Con pin', lat: '-33.5', lng: '-70.7', enlace: CORTO },
+      { ...fila, razonSocial: 'De búsqueda', enlace: BUSQUEDA },
+      { ...fila, razonSocial: 'Sin enlace' },
+      { ...fila, razonSocial: 'Enlace ajeno', enlace: 'https://ejemplo.cl/x' },
+      { razonSocial: 'Sin dirección', enlace: CORTO },
+    ]);
+    expect(entradas).toHaveLength(1);
+    expect(entradas[0]).toMatchObject({ numero: 1, estado: 'lista', razonSocial: 'Kiosko Sol', rut: '12.345.678-5', giro: 'Almacén', nota: 'Cierra a las 14', direccion: 'Calle 1 100', comuna: 'Maipú', enlace: CORTO, tipoEnlace: 'corto' });
+  });
+
+  it('el enlace puede venir con texto alrededor (como se copia de WhatsApp)', () => {
+    const [e] = entradasDeFilasConEnlace([{ ...fila, enlace: `Ubicación: ${CORTO} gracias` }]);
+    expect(e?.enlace).toBe(CORTO);
   });
 });

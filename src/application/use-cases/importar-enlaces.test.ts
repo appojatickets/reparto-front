@@ -16,6 +16,14 @@ describe('importar una lista de direcciones con enlace', () => {
     expect(r).toMatchObject({ total: 2, creados: 2, yaExistian: 0, pinesFijados: 2, porBuscar: 0, pinesNoLeidos: [], fallos: [] });
   });
 
+  it('si la fila viene de una planilla, crea el cliente con su razón social, RUT, giro y nota (no con la dirección como nombre)', async () => {
+    const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'c', localId: 'l', existente: true })));
+    const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(ok({ resultado: 'fijado' as const, lat: -33.6, lng: -70.7 })));
+    const entrada = { numero: 1, crudo: 'x', estado: 'lista' as const, motivos: [], direccion: 'Calle 1 100', comuna: 'Maipú', enlace: CORTO(0), tipoEnlace: 'corto' as const, razonSocial: 'Kiosko Sol', rut: '12.345.678-5', giro: 'Almacén', nota: 'Cierra a las 14' };
+    await crearImportarEnlaces({ api: fakeApi({ crearCliente, fijarPinDesdeEnlace }) })([entrada]);
+    expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'Kiosko Sol', direccion: 'Calle 1 100', comuna: 'Maipú', rut: '12.345.678-5', giro: 'Almacén', nota: 'Cierra a las 14' });
+  });
+
   it('los enlaces de búsqueda y las direcciones sin enlace no leen pin: quedan para que el sistema las busque', async () => {
     const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'c', localId: 'l', existente: false })));
     const fijarPinDesdeEnlace = vi.fn();

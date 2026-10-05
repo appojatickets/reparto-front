@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completarConPin, mapearClientes, mapearPines, parsearTabla } from './tabla';
+import { completarConPin, mapearClientes, mapearPines, parsearTabla, sinEnlace } from './tabla';
 
 describe('parsearTabla', () => {
   it('lee TSV pegado desde Excel', () => {
@@ -90,5 +90,14 @@ describe('filas que solo traen el pin', () => {
     expect(filas[1]).toEqual({ razonSocial: 'Kiosko Sol', direccion: 'Calle 1 100', comuna: 'Maipú' });
     expect(filas[2]).toEqual({ razonSocial: 'Sin nada' });
     expect(filas[3]).toMatchObject({ direccion: 'Avenida Irarrazabal S/N', comuna: 'Peñaflor' });
+  });
+});
+
+describe('columna de enlace de Google Maps', () => {
+  it('se reconoce con varios nombres y no es un dato del cliente: sinEnlace la quita antes de mandar a la API', () => {
+    const m = mapearClientes(parsearTabla('razón social,dirección,comuna,Enlace Google Maps\nKiosko Sol,Calle 1 100,Maipú,https://maps.app.goo.gl/abc'));
+    expect(m.ignoradas).toEqual([]);
+    expect(m.filas[0]).toEqual({ razonSocial: 'Kiosko Sol', direccion: 'Calle 1 100', comuna: 'Maipú', enlace: 'https://maps.app.goo.gl/abc' });
+    expect(sinEnlace(m.filas[0] ?? {})).toEqual({ razonSocial: 'Kiosko Sol', direccion: 'Calle 1 100', comuna: 'Maipú' });
   });
 });
