@@ -6,6 +6,23 @@
   --accent-fg: #ffeb00;
   color-scheme: light;
 }
+/* Modo oscuro: mismos contrastes, colores invertidos. Lo elegido en la cabecera (data-tema) manda; sin elección, el modo del teléfono. */
+:root[data-tema='oscuro'] {
+  --fg: #fff;
+  --bg: #000;
+  --accent-bg: #ffeb00;
+  --accent-fg: #000;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema]) {
+    --fg: #fff;
+    --bg: #000;
+    --accent-bg: #ffeb00;
+    --accent-fg: #000;
+    color-scheme: dark;
+  }
+}
 html {
   font-size: 100%;
 }

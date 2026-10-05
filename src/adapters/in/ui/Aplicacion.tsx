@@ -17,10 +17,12 @@ import { PaginaRutas } from './paginas/PaginaRutas';
 import { PaginaUsuarios } from './paginas/PaginaUsuarios';
 import { AvisoServidorDespertando } from './despertando';
 import { ProveedorSesion } from './sesion';
+import { ProveedorTema } from './tema';
 import { ProveedorVista } from './vista';
 
 /** Rutas de la aplicación. Cada una declara la acción que exige; la API vuelve a comprobar el permiso. */
 export const Aplicacion = () => (
+  <ProveedorTema>
   <ProveedorVista>
     <BrowserRouter>
       <ProveedorSesion>
@@ -48,4 +50,5 @@ export const Aplicacion = () => (
       </ProveedorSesion>
     </BrowserRouter>
   </ProveedorVista>
+  </ProveedorTema>
 );

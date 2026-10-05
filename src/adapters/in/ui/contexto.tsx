@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { Ubicacion } from '../../../application/ports/ubicacion';
+import type { TemaStore } from '../../../application/ports/tema-store';
 import type { VistaStore } from '../../../application/ports/vista-store';
 import type { Voz } from '../../../application/ports/voz';
 import type { ApiClient } from '../../../application/ports/api-client';
@@ -23,6 +24,8 @@ export type Casos = {
   readonly ubicacion: Ubicacion;
   /** Vista elegida (grande o normal), recordada en el teléfono. */
   readonly vista: VistaStore;
+  /** Colores elegidos (claro u oscuro), recordados en el teléfono. */
+  readonly tema: TemaStore;
 };
 
 const Contexto = createContext<Casos | undefined>(undefined);

@@ -12,6 +12,7 @@ import { browserTimer } from './adapters/out/timer/browser-timer';
 import { App } from './adapters/in/ui/App';
 import { Aplicacion } from './adapters/in/ui/Aplicacion';
 import { crearUbicacionWeb } from './adapters/out/ubicacion/geolocalizacion';
+import { crearTemaStore } from './adapters/out/tema/local-storage-tema';
 import { crearVistaStore } from './adapters/out/vista/local-storage-vista';
 import { crearVozWeb } from './adapters/out/voz/voz-web';
 import { ProveedorCasos, type Casos } from './adapters/in/ui/contexto';
@@ -43,6 +44,7 @@ const casos: Casos = {
   voz: crearVozWeb(),
   ubicacion: crearUbicacionWeb(),
   vista: crearVistaStore(),
+  tema: crearTemaStore(),
 };
 const deps = { api, timer: browserTimer, wakingAfterMs: 3000 };
 

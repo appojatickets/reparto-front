@@ -2,6 +2,7 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import type { ReactNode } from 'react';
 import { puedeHacer, type Accion } from '../../../../domain/rol';
 import { useSesion } from '../sesion';
+import { CambiarTema } from '../tema';
 import { CambiarVista } from '../vista';
 import { Boton, Cargando, Pagina, Aviso } from './ui';
 
@@ -21,6 +22,7 @@ export const Marco = () => {
         </div>
         <div className="fila-botones">
           <CambiarVista />
+          <CambiarTema />
           <Boton variante="secundario" onClick={salir}>SALIR</Boton>
         </div>
       </header>

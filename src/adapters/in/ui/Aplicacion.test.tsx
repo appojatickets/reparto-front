@@ -27,6 +27,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     ahora: () => new Date('2026-10-05T15:00:00Z'),
     voz: { disponible: false, escuchar: () => ({ detener: () => undefined }) },
     vista: { cargar: () => 'grande' as const, guardar: () => undefined },
+    tema: { cargar: () => 'claro' as const, guardar: () => undefined },
     ubicacion: { disponible: false, actual: () => Promise.resolve(err('NO_DISPONIBLE' as const)) },
     ...opciones.casos,
   };
@@ -106,6 +107,31 @@ describe('entrada y protección por rol', () => {
     expect(await screen.findByRole('heading', { name: 'Sin conexión' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'REINTENTAR' }));
     await waitFor(() => { expect(restaurarSesion).toHaveBeenCalledTimes(2); });
+  });
+});
+
+describe('modo oscuro', () => {
+  it('aplica el tema guardado y el botón de la cabecera lo cambia y lo recuerda', async () => {
+    const guardar = vi.fn();
+    montar({ sesion: ADMIN, casos: { tema: { cargar: () => 'claro', guardar } } });
+    await screen.findByRole('heading', { name: 'Hola, Matías' });
+    expect(document.documentElement.dataset['tema']).toBe('claro');
+    await userEvent.click(screen.getByRole('button', { name: /Cambiar a oscuro/ }));
+    expect(guardar).toHaveBeenCalledWith('oscuro');
+    expect(document.documentElement.dataset['tema']).toBe('oscuro');
+    expect(screen.getByRole('button', { name: /Cambiar a claro/ })).toHaveTextContent('MODO CLARO');
+  });
+
+  it('sin elección previa sigue el modo del teléfono', async () => {
+    const original = globalThis.matchMedia;
+    globalThis.matchMedia = ((q: string) => ({ matches: q.includes('dark') })) as typeof globalThis.matchMedia;
+    try {
+      montar({ sesion: ADMIN, casos: { tema: { cargar: () => undefined, guardar: () => undefined } } });
+      await screen.findByRole('heading', { name: 'Hola, Matías' });
+      expect(document.documentElement.dataset['tema']).toBe('oscuro');
+    } finally {
+      globalThis.matchMedia = original;
+    }
   });
 });
 
