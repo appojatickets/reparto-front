@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
-import { horaDeMinutos, horaDelDia, minutosDeHora } from '../../../../domain/hora';
+import { horaDeMinutos } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
-import { minutosEnChile } from '../../../../domain/fechas';
 import { esDeCamion } from '../../../../domain/rol';
+import { mismoTexto } from '../../../../domain/texto';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ItemRuta, OperacionRuta, ParadaDeRuta, VistaRuta } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
@@ -14,7 +14,7 @@ import { AccionesParada } from '../componentes/AccionesParada';
 import { FotoFachada } from '../componentes/FotoFachada';
 import { useDiaDeReparto } from '../componentes/dia';
 import { useUsuario } from '../sesion';
-import { Aviso, Boton, Campo, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
+import { Aviso, Boton, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
 const REFRESCO_MS = 3 * 60 * 1000;
 
@@ -45,16 +45,14 @@ const FilaParada = ({ p, total, ocupado, operar, enCamion, alCambiar, abierta, a
           <strong>{p.cliente}</strong>
           <span className="comuna">{p.comuna}</span>
           {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
-          {p.atraso > 0.5 ? <span className="parada-marca">LLEGA {Math.round(p.atraso)} MIN TARDE</span> : null}
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
         </span>
-        <span className="parada-hora">{horaDelDia(p.llegada)}</span>
       </button>
       {abierta ? (
         <div className="parada-detalle" id={idDetalle}>
-          {p.cliente !== p.direccion ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
+          {!mismoTexto(p.cliente, p.direccion) ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
           <FotoFachada localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} />
-          <span>Llega a las <strong>{horaDelDia(p.llegada)}</strong>{p.espera > 0.5 ? ` (espera ${Math.round(p.espera)} min a que abra)` : ''}{p.folio ? ` · Factura ${p.folio}` : ''}</span>
+          {p.folio ? <span>Factura {p.folio}</span> : null}
           <Etiquetas i={p} />
           {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
           {p.ubicacionAproximada ? (
@@ -92,14 +90,14 @@ const FilaHecha = ({ h, enCamion, alCambiar, abierta, alAbrir }: { readonly h: H
       <button type="button" className="parada-fila" aria-expanded={abierta} aria-controls={idDetalle} onClick={alAbrir}>
         <span className="parada-num" aria-hidden="true">{entregada ? '✓' : '✗'}</span>
         <span className="parada-nombre">
-          <strong className="tachado">{h.cliente !== h.direccion ? h.cliente : h.direccion}</strong>
+          <strong className="tachado">{h.cliente}</strong>
           <span className="comuna">{h.comuna}</span>
         </span>
         <span className="parada-hora">{entregada ? 'ENTREGADA' : 'NO ENTREGADA'}</span>
       </button>
       {abierta ? (
         <div className="parada-detalle" id={idDetalle}>
-          <Direccion direccion={h.direccion} comuna={h.comuna} />
+          {!mismoTexto(h.cliente, h.direccion) ? <Direccion direccion={h.direccion} comuna={h.comuna} /> : null}
           <Insignia>{entregada ? 'ENTREGADA' : 'NO ENTREGADA'}</Insignia>
           {enCamion ? <DeshacerHecha h={h} alCambiar={alCambiar} /> : null}
         </div>
@@ -127,33 +125,49 @@ const DeshacerHecha = ({ h, alCambiar }: { readonly h: { readonly facturaId: str
 
 const Resumen = ({ v }: { readonly v: VistaRuta }) => (
   <div className="tarjeta" aria-label="Resumen de la ruta">
-    <span>Salida: <strong>{horaDelDia(v.salidaMin)}</strong> · Paradas: <strong>{v.paradas.length}</strong></span>
-    {v.regreso !== undefined ? <span>Regreso estimado: <strong>{horaDelDia(v.regreso)}</strong></span> : null}
-    {v.regresoTardio ? <Aviso tipo="error">El regreso pasa de las {horaDelDia(v.horaLimiteRegresoMin)}. Prueba salir antes, pasar paradas a otro camión o quitar alguna.</Aviso> : null}
+    <span>Paradas: <strong>{v.paradas.length}</strong></span>
     <Insignia>{v.modo === 'manual' ? 'ACOMODADA A MANO' : 'ORDEN SUGERIDO'}</Insignia>
   </div>
 );
+
+/** Una entrega que aún no está en la ruta (nueva, sin pin o que no se puede atender): fila compacta que se despliega al tocarla. */
+const FilaItem = ({ i, children }: { readonly i: ItemRuta; readonly children?: React.ReactNode }) => {
+  const [abierta, setAbierta] = useState(false);
+  const idDetalle = `item-${i.facturaId}`;
+  return (
+    <li className="parada">
+      <button type="button" className="parada-fila" aria-expanded={abierta} aria-controls={idDetalle} onClick={() => { setAbierta(!abierta); }}>
+        <span className="parada-num" aria-hidden="true">•</span>
+        <span className="parada-nombre">
+          <strong>{i.cliente}</strong>
+          <span className="comuna">{i.comuna}</span>
+          {i.urgente ? <span className="parada-marca">URGENTE</span> : null}
+        </span>
+      </button>
+      {abierta ? (
+        <div className="parada-detalle" id={idDetalle}>
+          {!mismoTexto(i.cliente, i.direccion) ? <Direccion direccion={i.direccion} comuna={i.comuna} /> : null}
+          <Etiquetas i={i} />
+          {children}
+        </div>
+      ) : null}
+    </li>
+  );
+};
 
 const ListaItems = ({ titulo, items, children }: { readonly titulo: string; readonly items: readonly ItemRuta[]; readonly children?: (i: ItemRuta) => React.ReactNode }) =>
   items.length === 0 ? null : (
     <section className="pagina" aria-label={titulo}>
       <h2>{titulo} ({items.length})</h2>
-      <ul className="tarjetas">
-        {items.map((i) => (
-          <li key={i.facturaId} className="tarjeta">
-            <strong>{i.cliente}</strong>
-            <Direccion direccion={i.direccion} comuna={i.comuna} />
-            <Etiquetas i={i} />
-            {children?.(i)}
-          </li>
-        ))}
+      <ul className="paradas">
+        {items.map((i) => <FilaItem key={i.facturaId} i={i}>{children?.(i)}</FilaItem>)}
       </ul>
     </section>
   );
 
 /** Todo el estado de UN camión y día vive aquí: al cambiar de camión o de día se vuelve a montar y parte limpio. */
 export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; readonly fecha: string }) => {
-  const { api, ahora } = useCasos();
+  const { api } = useCasos();
   const cargar = useCallback(() => api.verRuta(camionId, fecha), [api, camionId, fecha]);
   const { estado, recargar, refrescar } = useCarga(cargar);
   const [actualizada, setActualizada] = useState<VistaRuta | undefined>();
@@ -162,7 +176,6 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   const [confirmar, setConfirmar] = useState(false);
   /** Parada desplegada: sin elegir, la siguiente; `null` = todas cerradas. */
   const [abierta, setAbierta] = useState<string | null | undefined>(undefined);
-  const [salidaEscrita, setSalidaEscrita] = useState<string | undefined>();
   const { rol } = useUsuario();
   const enCamion = esDeCamion(rol);
   /** Después de entregar o avisar: se vuelve a pedir la ruta (la parada hecha sale de la lista y las horas se corren). */
@@ -172,7 +185,6 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   };
 
   const vista = actualizada ?? (estado.tipo === 'ok' ? estado.datos : undefined);
-  const salida = salidaEscrita ?? (vista ? horaDeMinutos(vista.salidaMin) : '');
 
   const aplicar = async (llamada: () => ReturnType<typeof api.planificarRuta>): Promise<void> => {
     setOcupado(true);
@@ -182,7 +194,6 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     setOcupado(false);
     if (r.ok) {
       setActualizada(r.value);
-      setSalidaEscrita(undefined);
       return;
     }
     setAviso(mensajeDeError(r.error));
@@ -198,13 +209,15 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     if (version === undefined) return;
     void aplicar(() => api.operarRuta(camionId, fecha, version, operacion));
   };
-  const cambiarSalida = (): void => {
-    const m = minutosDeHora(salida);
-    if (m === undefined) {
-      setAviso('La hora de salida no es válida.');
-      return;
-    }
-    operar({ tipo: 'salida', salidaMin: m });
+  /** Elegir por cuál se empieza: esa parada queda primera y el resto se vuelve a ordenar desde ahí (también si la ruta estaba acomodada a mano). */
+  const elegirPrimera = (facturaId: string): void => {
+    const version = vista?.version;
+    if (version === undefined || facturaId === '') return;
+    void aplicar(async () => {
+      const r = await api.operarRuta(camionId, fecha, version, { tipo: 'primero', facturaId });
+      const siguiente = r.ok ? r.value.version : undefined;
+      return r.ok && r.value.modo === 'manual' && siguiente !== undefined ? api.operarRuta(camionId, fecha, siguiente, { tipo: 'ordenar' }) : r;
+    });
   };
 
   /** La lista se mantiene al día sola: cada pocos minutos y al volver a la app (por ejemplo desde Waze) se recalculan las horas. */
@@ -230,6 +243,19 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     void planificar();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- se calcula una sola vez cuando aparecen facturas por ordenar
   }, [hayQueOrdenar]);
+
+  /**
+   * Si el chofer sigue cargando facturas con la ruta ya calculada, el sistema las integra solo: reordena lo que queda (ruta sugerida) o,
+   * si el chofer acomodó la ruta a mano, las inserta en el mejor lugar sin mover lo demás. Una vez por cada grupo de entregas nuevas.
+   */
+  const integrada = useRef('');
+  const nuevasSinIntegrar = enCamion && vista?.planificada === true ? vista.nuevas.map((n) => n.facturaId).join(',') : '';
+  useEffect(() => {
+    if (nuevasSinIntegrar === '' || nuevasSinIntegrar === integrada.current || ocupado) return;
+    integrada.current = nuevasSinIntegrar;
+    operar({ tipo: vista?.modo === 'manual' ? 'insertar' : 'ordenar' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- se integra una vez por cada grupo de entregas nuevas
+  }, [nuevasSinIntegrar, ocupado]);
 
   if (estado.tipo === 'cargando' && !vista) return <Cargando />;
   if (estado.tipo === 'error') {
@@ -264,12 +290,13 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       ) : (
         <>
           <Resumen v={vista} />
-          {vista.calculadaDesdeMin !== undefined ? <Aviso>Las horas se calculan desde las {horaDelDia(vista.calculadaDesdeMin)} (ahora){vista.paradas.length > 0 && vista.hechas.length > 0 ? ' y desde donde quedó el camión' : ''}.</Aviso> : null}
           {enCamion && vista.paradas.length > 0 ? <a className="big-button big-button--secundario" href={enlaceRutaGoogleMaps(vista.paradas.map((x) => ({ direccion: x.direccion, comuna: x.comuna, lat: x.lat, lng: x.lng }))) ?? '#'} target="_blank" rel="noreferrer">LAS PRÓXIMAS {Math.min(vista.paradas.length, 9)} EN GOOGLE MAPS</a> : null}
-          <div className="pagina">
-            <Campo etiqueta="Hora de salida de esta ruta" type="time" value={salida} onChange={(e) => { setSalidaEscrita(e.target.value); }} />
-            <Boton variante="secundario" disabled={ocupado} onClick={cambiarSalida}>CAMBIAR SALIDA</Boton>
-          </div>
+          {vista.paradas.length >= 2 ? (
+            <Selector etiqueta="Primera entrega (el resto se ordena desde ahí)" value="" disabled={ocupado} onChange={(e) => { elegirPrimera(e.target.value); }}>
+              <option value="">Elige por cuál empiezas…</option>
+              {vista.paradas.map((p) => <option key={p.facturaId} value={p.facturaId}>{`${p.posicion + 1}. ${p.cliente} · ${p.comuna}`}</option>)}
+            </Selector>
+          ) : null}
           <Boton variante="secundario" disabled={ocupado || vista.paradas.length < 2} onClick={() => { operar({ tipo: 'ordenar' }); }}>ORDENAR LO QUE QUEDA</Boton>
           {!confirmar ? (
             <Boton variante="secundario" disabled={ocupado} onClick={() => { setConfirmar(true); }}>VOLVER A CALCULAR DESDE CERO</Boton>
@@ -284,7 +311,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           )}
 
           {vista.paradas.length === 0 ? <Aviso>Ninguna parada se pudo ubicar en la ruta.</Aviso> : null}
-          <p role="status" className="ayuda">Actualizada a las {horaDelDia(minutosEnChile(ahora()))}. Toca una parada para ver sus datos y acciones.</p>
+          <p role="status" className="ayuda">Toca una parada para ver sus datos y acciones.</p>
           <ol className="paradas" aria-label="Paradas en orden">
             {vista.paradas.map((p, i) => (
               <FilaParada
@@ -304,22 +331,6 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
         </>
       )}
 
-      {vista.enRiesgo.length > 0 ? (
-        <section className="pagina" aria-label="Paradas en riesgo">
-          <h2>En riesgo de llegar tarde ({vista.enRiesgo.length})</h2>
-          <ul className="tarjetas">
-            {vista.enRiesgo.map((r) => (
-              <li key={r.facturaId} className="tarjeta">
-                <strong>{r.cliente}</strong>
-                <span>Cierra a las {horaDelDia(r.cierre)}</span>
-                {r.conflictos.map((c) => <span key={c}>{c}</span>)}
-                {r.sugerencias.map((s) => <Insignia key={s.texto}>{s.texto}</Insignia>)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
       {vista.hechas.length > 0 ? (
         <section className="pagina" aria-label="Hechas hoy">
           <h2>Hechas hoy ({vista.hechas.length})</h2>
@@ -332,7 +343,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       ) : null}
 
       {vista.planificada ? <ListaItems titulo="Entregas nuevas sin ordenar" items={vista.nuevas} /> : null}
-      {vista.planificada && vista.nuevas.length > 0 ? (
+      {vista.planificada && vista.nuevas.length > 0 && !enCamion ? (
         <Boton disabled={ocupado} onClick={() => { operar({ tipo: 'insertar' }); }}>INSERTAR NUEVAS SIN MOVER LO DEMÁS</Boton>
       ) : null}
 

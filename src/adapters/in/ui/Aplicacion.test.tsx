@@ -839,18 +839,19 @@ describe('rutas del día', () => {
     await userEvent.click(within(fila).getByRole('button', { expanded: false }));
   };
 
-  it('muestra la ruta con horas de llegada, resumen y motivos', async () => {
+  it('muestra la ruta en orden, con resumen y motivos, pero sin horas calculadas', async () => {
     const verRuta = vi.fn(() => Promise.resolve(ok(vista({ paradas: [parada('A', 0, { motivos: ['VENTANA_DURA', 'CERCANIA_COMUNA'], antesDeMin: 720, urgente: true }), parada('B', 1)] }))));
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta }) });
     await elegirCamion();
     const primera = await screen.findByRole('listitem', { name: 'Parada 1' });
     expect(within(primera).getByText('Local A')).toBeInTheDocument();
-    expect(within(primera).getAllByText('09:00').length).toBeGreaterThan(0);
+    expect(within(primera).queryByText('09:00')).toBeNull();
     expect(within(primera).getAllByText('URGENTE').length).toBeGreaterThan(0);
     expect(within(primera).getByText('SIGUIENTE')).toBeInTheDocument();
     expect(within(primera).getByText('ANTES DE 12:00')).toBeInTheDocument();
     expect(within(primera).getByText('Cierra pronto · Queda cerca de la anterior')).toBeInTheDocument();
-    expect(screen.getByLabelText('Resumen de la ruta')).toHaveTextContent('Regreso estimado: 11:40');
+    expect(screen.getByLabelText('Resumen de la ruta')).toHaveTextContent('Paradas: 2');
+    expect(screen.getByLabelText('Resumen de la ruta')).not.toHaveTextContent(/Regreso|Salida/);
     expect(verRuta).toHaveBeenCalledWith('c1', '2026-10-05');
   });
 
@@ -864,10 +865,16 @@ describe('rutas del día', () => {
     expect(within(tarjeta).getAllByText(/Av\. Colón 765/)).toHaveLength(1);
   });
 
-  it('un regreso tardío se marca con un aviso', async () => {
-    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ regreso: 1300, regresoTardio: true }))) }) });
+  it('no se muestran tiempos estimados: ni regreso tardío, ni atraso, ni espera, ni hora de salida', async () => {
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ regreso: 1300, regresoTardio: true, calculadaDesdeMin: 630, paradas: [parada('A', 0, { atraso: 12, espera: 9 }), parada('B', 1)] }))) }) });
     await elegirCamion();
-    expect(await screen.findByText(/El regreso pasa de las 21:00/)).toBeInTheDocument();
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(screen.queryByText(/El regreso pasa/)).toBeNull();
+    expect(screen.queryByText(/MIN TARDE/)).toBeNull();
+    expect(screen.queryByText(/Las horas se calculan/)).toBeNull();
+    expect(screen.queryByLabelText('Hora de salida de esta ruta')).toBeNull();
+    await desplegar(1);
+    expect(screen.queryByText(/Llega a las|espera 9 min/)).toBeNull();
   });
 
   it('sin ruta calculada ofrece calcularla y muestra el resultado', async () => {
@@ -939,7 +946,6 @@ describe('rutas del día', () => {
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta }) });
     await elegirCamion();
     await screen.findByRole('listitem', { name: 'Parada 1' });
-    expect(screen.getByText(/Actualizada a las/)).toBeInTheDocument();
     const llamadas = verRuta.mock.calls.length;
     document.dispatchEvent(new Event('visibilitychange'));
     await waitFor(() => { expect(verRuta.mock.calls.length).toBeGreaterThan(llamadas); });
@@ -951,9 +957,22 @@ describe('rutas del día', () => {
     await elegirCamion();
     const nuevas = await screen.findByRole('region', { name: 'Entregas nuevas sin ordenar' });
     expect(within(nuevas).getByText('Local N')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Local P/ }));
     expect(screen.getByRole('link', { name: 'FIJAR EL PIN DE Local P' })).toHaveAttribute('href', '/clientes/lP');
     await userEvent.click(screen.getByRole('button', { name: 'INSERTAR NUEVAS SIN MOVER LO DEMÁS' }));
     expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'insertar' });
+  });
+
+  it('las entregas nuevas sin ordenar son filas que se despliegan y no repiten el nombre si es la misma dirección', async () => {
+    const solo = { ...item('N'), cliente: 'jupiter 1750', direccion: 'Jupiter 1750', comuna: 'San Bernardo' };
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ nuevas: [solo] }))) }) });
+    await elegirCamion();
+    const nuevas = await screen.findByRole('region', { name: 'Entregas nuevas sin ordenar' });
+    const fila = within(nuevas).getByRole('button', { name: /jupiter 1750/i });
+    expect(fila).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(fila);
+    expect(fila).toHaveAttribute('aria-expanded', 'true');
+    expect(within(nuevas).getAllByText(/jupiter 1750/i)).toHaveLength(1);
   });
 
   it('volver a calcular desde cero pide confirmar antes de descartar el orden', async () => {
@@ -1440,10 +1459,47 @@ describe('acciones en la parada (chofer)', () => {
     expect(await screen.findByRole('button', { name: 'ENTREGADO Local A' })).toBeInTheDocument();
   });
 
-  it('las horas «desde ahora» se avisan en la ruta de hoy', async () => {
-    abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ calculadaDesdeMin: 630 }))) });
-    expect(await screen.findByText(/Las horas se calculan desde las 10:30 \(ahora\)/)).toBeInTheDocument();
+  it('las entregas nuevas del chofer se ordenan solas: la ruta sugerida se reordena entera', async () => {
+    const nueva = { facturaId: 'fN', localId: 'lN', cliente: 'Local N', direccion: 'Calle N 1', comuna: 'San Bernardo', urgente: false };
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ version: 2 }))));
+    abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ nuevas: [nueva] }))), operarRuta });
+    await waitFor(() => { expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'ordenar' }); });
+    expect(operarRuta).toHaveBeenCalledTimes(1);
   });
+
+  it('si el chofer acomodó la ruta a mano, las nuevas se insertan sin mover lo demás', async () => {
+    const nueva = { facturaId: 'fN', localId: 'lN', cliente: 'Local N', direccion: 'Calle N 1', comuna: 'San Bernardo', urgente: false };
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ version: 2, modo: 'manual' as const }))));
+    abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'manual' as const, nuevas: [nueva] }))), operarRuta });
+    await waitFor(() => { expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'insertar' }); });
+  });
+
+  it('el chofer no ve el botón manual de insertar: lo hace el sistema', async () => {
+    const nueva = { facturaId: 'fN', localId: 'lN', cliente: 'Local N', direccion: 'Calle N 1', comuna: 'San Bernardo', urgente: false };
+    abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ nuevas: [nueva] }))), operarRuta: () => Promise.resolve(ok(vistaBase({ nuevas: [nueva], version: 2 }))) });
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(screen.queryByRole('button', { name: 'INSERTAR NUEVAS SIN MOVER LO DEMÁS' })).toBeNull();
+  });
+
+  it('elegir la primera entrega la deja primera y recalcula el resto desde ahí', async () => {
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ version: 2 }))));
+    abrir({ operarRuta });
+    await userEvent.selectOptions(await screen.findByLabelText('Primera entrega (el resto se ordena desde ahí)'), 'fB');
+    expect(operarRuta).toHaveBeenCalledTimes(1);
+    expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'primero', facturaId: 'fB' });
+  });
+
+  it('si la ruta estaba acomodada a mano, tras fijar la primera también se reordena lo que queda', async () => {
+    const operarRuta = vi.fn()
+      .mockResolvedValueOnce(ok(vistaBase({ version: 2, modo: 'manual' as const })))
+      .mockResolvedValueOnce(ok(vistaBase({ version: 3 })));
+    abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'manual' as const }))), operarRuta });
+    await userEvent.selectOptions(await screen.findByLabelText('Primera entrega (el resto se ordena desde ahí)'), 'fB');
+    await waitFor(() => { expect(operarRuta).toHaveBeenCalledTimes(2); });
+    expect(operarRuta).toHaveBeenNthCalledWith(1, 'c1', '2026-10-05', 1, { tipo: 'primero', facturaId: 'fB' });
+    expect(operarRuta).toHaveBeenNthCalledWith(2, 'c1', '2026-10-05', 2, { tipo: 'ordenar' });
+  });
+
 });
 
 describe('ayudante', () => {

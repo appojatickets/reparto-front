@@ -1,3 +1,4 @@
+import { mismoTexto } from '../../../../domain/texto';
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { horaDeMinutos, minutosDeHora } from '../../../../domain/hora';
 import { formatearPatente } from '../../../../domain/patente';
@@ -30,7 +31,7 @@ const BuscadorCliente = ({ elegido, alElegir }: { readonly elegido: ResultadoBus
   if (elegido) {
     return (
       <div className="tarjeta" aria-label="Cliente elegido">
-        <strong>{elegido.razonSocial}</strong>
+        {!mismoTexto(elegido.razonSocial, elegido.direccion) ? <strong>{elegido.razonSocial}</strong> : null}
         <Direccion direccion={elegido.direccion} comuna={elegido.comuna} />
         <div className="fila-botones"><Boton variante="secundario" onClick={() => { alElegir(undefined); setTexto(''); }}>CAMBIAR CLIENTE</Boton></div>
       </div>
@@ -48,7 +49,7 @@ const BuscadorCliente = ({ elegido, alElegir }: { readonly elegido: ResultadoBus
           {actual.lista.map((r) => (
             <li key={r.localId}>
               <button type="button" className="tarjeta tarjeta-boton" onClick={() => { alElegir(r); }}>
-                <strong>{r.razonSocial}</strong>
+                {!mismoTexto(r.razonSocial, r.direccion) ? <strong>{r.razonSocial}</strong> : null}
                 <Direccion direccion={r.direccion} comuna={r.comuna} />
               </button>
             </li>
@@ -70,7 +71,7 @@ const FilaFactura = ({ f, camiones, alCambiar }: { readonly f: Factura; readonly
   };
   return (
     <li className="tarjeta">
-      <strong>{f.local.razonSocial}{f.folio ? ` · factura ${f.folio}` : ''}</strong>
+      <strong>{mismoTexto(f.local.razonSocial, f.local.direccion) ? '' : f.local.razonSocial}{f.folio ? `${mismoTexto(f.local.razonSocial, f.local.direccion) ? '' : ' · '}factura ${f.folio}` : ''}</strong>
       <Direccion direccion={f.local.direccion} comuna={f.local.comuna} />
       <span className="insignias">
         {f.urgente ? <Insignia>URGENTE</Insignia> : null}

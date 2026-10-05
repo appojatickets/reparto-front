@@ -1,3 +1,4 @@
+import { mismoTexto } from '../../../../domain/texto';
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { Link } from 'react-router';
 import { COMUNAS_RM, separarComuna } from '../../../../domain/comunas';
@@ -94,7 +95,7 @@ const TarjetaEntrega = ({ f, alCambiar }: { readonly f: Factura; readonly alCamb
   };
   return (
     <li className="tarjeta">
-      {f.local.razonSocial !== f.local.direccion ? <strong>{f.local.razonSocial}</strong> : null}
+      {!mismoTexto(f.local.razonSocial, f.local.direccion) ? <strong>{f.local.razonSocial}</strong> : null}
       <Direccion direccion={f.local.direccion} comuna={f.local.comuna} />
       <span className="insignias">
         {f.urgente ? <Insignia>URGENTE</Insignia> : null}
@@ -333,7 +334,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
             {actual.lista.map((c) => (
               <li key={c.localId}>
                 <button type="button" className="tarjeta tarjeta-boton" disabled={ocupado} onClick={() => { elegir(c); }}>
-                  {c.razonSocial !== c.direccion ? <strong>{c.razonSocial}</strong> : null}
+                  {!mismoTexto(c.razonSocial, c.direccion) ? <strong>{c.razonSocial}</strong> : null}
                   <Direccion direccion={c.direccion} comuna={c.comuna} />
                 </button>
               </li>
