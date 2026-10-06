@@ -216,7 +216,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     if (version === undefined) return;
     void aplicar(() => api.operarRuta(camionId, fecha, version, operacion));
   };
-  // Terminar la ruta: con el botón de abajo o al llegar al depósito. Las entregas pendientes no se tocan: quedan en su día.
+  // Terminar la ruta: con el botón de abajo o al llegar al depósito. El servidor limpia la lista al instante (borra la ruta y suelta lo pendiente del camión).
   const [terminada, setTerminada] = useState<{ readonly resumen: ResumenJornada | null } | undefined>();
   const [confirmandoFin, setConfirmandoFin] = useState(false);
   const [terminando, setTerminando] = useState(false);
@@ -330,7 +330,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
             <span>Sin hacer: <strong>{r.pendientes}</strong></span>
           </div>
         ) : null}
-        {(r?.pendientes ?? 0) > 0 ? <Aviso>Lo que no se alcanzó a entregar queda registrado en su día. Mañana empiezas con la lista limpia.</Aviso> : null}
+        {(r?.pendientes ?? 0) > 0 ? <Aviso>La lista quedó limpia. Lo que no se alcanzó a entregar volvió a «Facturas del día» sin camión; mañana la ruta se arma de cero.</Aviso> : null}
         <Link className="big-button big-button--primario" to="/">VOLVER AL INICIO</Link>
       </section>
     );
@@ -341,7 +341,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       {enCamion && llegoAlDep && pendientes > 0 && !avisoDescartado ? (
         <div className="tarjeta" role="status" aria-label="Llegaste al depósito">
           <strong>Llegaste al depósito. ¿Terminaste la ruta?</strong>
-          <span>Quedan {pendientes} entregas sin hacer: si terminas, quedan registradas en su día.</span>
+          <span>Quedan {pendientes} entregas sin hacer: si terminas, la lista se limpia y esas entregas vuelven a «Facturas del día» sin camión.</span>
           <div className="fila-botones">
             <Boton disabled={terminando} onClick={() => void terminarRuta()}>SÍ, TERMINAR LA RUTA</Boton>
             <Boton variante="secundario" onClick={() => { setAvisoDescartado(true); }}>NO, SIGO</Boton>
@@ -441,7 +441,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
             <Boton variante="secundario" disabled={terminando} onClick={() => { if (pendientes > 0) setConfirmandoFin(true); else void terminarRuta(); }}>{terminando ? 'TERMINANDO…' : 'TERMINAR RUTA'}</Boton>
           ) : (
             <div className="tarjeta">
-              <Aviso tipo="error">Quedan {pendientes} entregas sin hacer. Si terminas, quedan registradas en su día y mañana empiezas con la lista limpia.</Aviso>
+              <Aviso tipo="error">Quedan {pendientes} entregas sin hacer. Si terminas, la lista se limpia y esas entregas vuelven a «Facturas del día» sin camión.</Aviso>
               <div className="fila-botones">
                 <Boton variante="peligro" disabled={terminando} onClick={() => void terminarRuta()}>SÍ, TERMINAR</Boton>
                 <Boton variante="secundario" onClick={() => { setConfirmandoFin(false); }}>NO, SEGUIR</Boton>

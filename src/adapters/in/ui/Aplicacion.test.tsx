@@ -1743,7 +1743,7 @@ describe('acciones en la parada (chofer)', () => {
     expect(terminarRuta).toHaveBeenCalledTimes(1);
     expect(fin).toHaveTextContent('Entregadas: 1');
     expect(fin).toHaveTextContent('Sin hacer: 2');
-    expect(within(fin).getByText(/Mañana empiezas con la lista limpia/)).toBeInTheDocument();
+    expect(within(fin).getByText(/La lista quedó limpia/)).toBeInTheDocument();
     expect(within(fin).getByRole('link', { name: 'VOLVER AL INICIO' })).toHaveAttribute('href', '/');
   });
 
