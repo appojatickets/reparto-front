@@ -1704,8 +1704,8 @@ describe('acciones en la parada (chofer)', () => {
       .mockResolvedValue(ok(vistaBase({ paradas: [paradaDe('B', 0)], hechas: [{ facturaId: 'fA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', estado: 'entregada' as const }] })));
     abrir({ registrarEvento, verRuta }, { ubicacion: gps() });
     const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
-    expect(within(fila).getByRole('link', { name: 'IR A Local A CON WAZE' })).toHaveAttribute('href', expect.stringContaining('waze.com/ul'));
-    expect(within(fila).getByRole('link', { name: 'IR A Local A CON WAZE' })).toHaveTextContent(/^IR$/);
+    expect(within(fila).getByRole('link', { name: 'IR A Local A CON GOOGLE MAPS' })).toHaveAttribute('href', expect.stringContaining('google.com/maps/dir'));
+    expect(within(fila).getByRole('link', { name: 'IR A Local A CON GOOGLE MAPS' })).toHaveTextContent(/^IR$/);
     expect(within(fila).getByRole('button', { name: 'MARCAR ENTREGADA Local A' })).toHaveTextContent(/^ENTREGADO$/);
     await userEvent.click(within(fila).getByRole('button', { name: 'MARCAR ENTREGADA Local A' }));
     expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'entregado', lat: -33.5901, lng: -70.7002, precisionM: 10 });

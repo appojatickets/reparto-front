@@ -95,9 +95,9 @@ export const AtajoEntregado = ({ p, alCambiar }: { readonly p: ParadaDeRuta; rea
   );
 };
 
-/** Atajo de la fila de la ruta: IR abre Waze con el destino (Google Maps está en el detalle de la parada). */
+/** Atajo de la fila de la ruta: IR abre Google Maps con el destino (Waze sigue en el detalle de la parada). */
 export const AtajoIr = ({ p }: { readonly p: ParadaDeRuta }) => (
-  <a className="big-button big-button--primario atajo" href={enlaceNavegar({ direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng }, 'waze')} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON WAZE`}>IR</a>
+  <a className="big-button big-button--primario atajo" href={enlaceNavegar({ direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng }, 'google')} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON GOOGLE MAPS`}>IR</a>
 );
 
 export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void }) => {
