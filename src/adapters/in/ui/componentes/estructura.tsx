@@ -4,6 +4,8 @@ import { puedeHacer, type Accion } from '../../../../domain/rol';
 import { useSesion } from '../sesion';
 import { CambiarTema } from '../tema';
 import { CambiarVista } from '../vista';
+import { PermisosAlAbrir } from './PermisosAlAbrir';
+import { SeguimientoDelCamion } from './SeguimientoDelCamion';
 import { Boton, Cargando, Pagina, Aviso } from './ui';
 
 const ETIQUETA_ROL = { admin: 'Administración', despachador: 'Despacho', chofer: 'Chofer', ayudante: 'Ayudante' } as const;
@@ -27,6 +29,8 @@ export const Marco = () => {
         </div>
       </header>
       <main className="screen">
+        <PermisosAlAbrir />
+        {estado.usuario.rol === 'chofer' || estado.usuario.rol === 'ayudante' ? <SeguimientoDelCamion /> : null}
         {pathname !== '/' ? <Link className="volver" to="/">← INICIO</Link> : null}
         <Outlet />
       </main>

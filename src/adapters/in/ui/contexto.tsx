@@ -2,6 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { Ubicacion } from '../../../application/ports/ubicacion';
 import type { TemaStore } from '../../../application/ports/tema-store';
 import type { VistaStore } from '../../../application/ports/vista-store';
+import type { Permisos } from '../../../application/ports/permisos';
 import type { Voz } from '../../../application/ports/voz';
 import type { Descarga } from '../../../application/ports/descarga';
 import type { ExportacionStore } from '../../../application/ports/exportacion-store';
@@ -38,8 +39,10 @@ export type Casos = {
   readonly ahora: () => Date;
   /** Dictado propio de la app (si el navegador lo tiene). */
   readonly voz: Voz;
-  /** GPS del teléfono (una lectura al llegar o entregar). */
+  /** GPS del teléfono (una lectura al llegar o entregar, y una por minuto mientras la app está abierta). */
   readonly ubicacion: Ubicacion;
+  /** Permisos de ubicación y micrófono, que se piden al abrir la app. */
+  readonly permisos: Permisos;
   /** Vista elegida (grande o normal), recordada en el teléfono. */
   readonly vista: VistaStore;
   /** Colores elegidos (claro u oscuro), recordados en el teléfono. */

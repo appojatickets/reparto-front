@@ -21,7 +21,7 @@ export const crearUbicacionWeb = (geo: Geo | undefined = geoDelNavegador(), tiem
         return;
       }
       geo.getCurrentPosition(
-        (p) => { resolver(ok({ lat: p.coords.latitude, lng: p.coords.longitude, precisionM: p.coords.accuracy })); },
+        (p) => { resolver(ok({ lat: p.coords.latitude, lng: p.coords.longitude, precisionM: p.coords.accuracy, ...(typeof p.coords.speed === 'number' && p.coords.speed >= 0 ? { velocidadMs: p.coords.speed } : {}) })); },
         (e) => { resolver(err(e.code === e.PERMISSION_DENIED ? 'PERMISO' : e.code === e.TIMEOUT ? 'TIEMPO' : 'NO_DISPONIBLE')); },
         { enableHighAccuracy: true, timeout: tiempoMs, maximumAge: 5_000 },
       );

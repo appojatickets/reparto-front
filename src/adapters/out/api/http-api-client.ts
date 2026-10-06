@@ -225,6 +225,9 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     obtenerConfig: () => ejecutar(() => client.GET('/v1/empresa/config', { signal: timeout() }), { repetible: true }),
     guardarConfig: (config) => ejecutar(() => client.PUT('/v1/empresa/config', { body: config, signal: timeout() })),
 
+    enviarPosiciones: (puntos) => ejecutar(() => client.POST('/v1/jornada/posiciones', { body: { puntos: puntos.map((p) => ({ ...p })) }, signal: timeout() })),
+    analitica: () => ejecutar(() => client.GET('/v1/analitica', { signal: timeout() }), { repetible: true }),
+    ejecutarAnalisis: () => ejecutar(() => client.POST('/v1/analitica/ejecutar', { signal: timeout() })),
     registrarEvento: (facturaId, evento) => ejecutar(() => client.POST('/v1/entregas/{id}/eventos', { params: { path: { id: facturaId } }, body: evento, signal: timeout() })),
 
     async obtenerHorario(localId) {

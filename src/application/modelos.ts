@@ -181,3 +181,38 @@ export type OperacionRuta =
 /** Lo que quedó del día al terminar la ruta (las pendientes no se alcanzaron a entregar y quedan en su día). */
 export type ResumenJornada = { readonly fecha: string; readonly camionId: string; readonly desde: string; readonly hasta: string; readonly entregadas: number; readonly noEntregadas: number; readonly pendientes: number };
 export type Jornada = { readonly id: string; readonly fecha: string; readonly desde: string; readonly camion: CamionResumen };
+
+/** Un punto del recorrido del camión (se sigue al camión, no a la persona). */
+export type PuntoGps = { readonly lat: number; readonly lng: number; readonly precisionM?: number; readonly velocidadMs?: number; readonly tomadoEn: string };
+export type ResultadoPosiciones = { readonly guardados: number; readonly descartados: number; readonly llegadasAutomaticas: readonly string[] };
+
+/** Lo que el sistema aprendió de las rutas reales (ver ADR 0022 del back). */
+export type ClaveAprendida = 'ritmo' | 'servicio_min' | 'capacidad_paradas' | 'duracion_jornada_min';
+export type ParametroAprendido = { readonly clave: ClaveAprendida; readonly ambito: string; readonly valor: number; readonly muestras: number; readonly confianza: number; readonly camion?: string };
+export type EtiquetaLocal = { readonly razonSocial: string; readonly direccion: string; readonly comuna: string };
+export type ResumenAnalisis = {
+  readonly eventos: number;
+  readonly jornadas: number;
+  readonly parametros: number;
+  readonly jornadasComparadas: number;
+  readonly pinesSugeridos: number;
+  readonly pinesProponidos: number;
+  readonly cierresFrecuentes: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly confianzaAbierto: number; readonly horasCerrado: readonly number[] }[];
+};
+export type PanelAnalitica = {
+  readonly desde: string;
+  readonly cobertura: {
+    readonly jornadas: number; readonly jornadasTerminadas: number; readonly avisos: number; readonly avisosConGps: number; readonly avisosAutomaticos: number;
+    readonly paradasConLlegada: number; readonly paradasResueltas: number; readonly puntosGps: number; readonly ultimoPuntoGps?: string; readonly operacionesRuta: number; readonly correccionesManuales: number;
+  };
+  readonly porDia: readonly { readonly fecha: string; readonly jornadas: number; readonly atendidas: number; readonly sinHacer: number }[];
+  readonly calidad: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly distSugeridaM: number; readonly distRealM: number; readonly inversiones: number }[];
+  readonly aprendido: {
+    readonly ritmo: readonly ParametroAprendido[];
+    readonly capacidad: readonly ParametroAprendido[];
+    readonly servicioGeneral?: ParametroAprendido;
+    readonly localesLentos: readonly (ParametroAprendido & { readonly etiqueta?: EtiquetaLocal })[];
+  };
+  readonly cierres: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly horasCerrado: readonly number[]; readonly etiqueta?: EtiquetaLocal }[];
+  readonly ultimaEjecucion?: { readonly iniciadoEn: string; readonly terminadoEn: string; readonly resumen: ResumenAnalisis };
+};

@@ -1,7 +1,7 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
+  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
@@ -88,6 +88,12 @@ export interface ApiClient extends SaludApi {
   guardarConfig(config: ConfigEmpresa): R<ConfigEmpresa>;
 
   registrarEvento(facturaId: string, evento: EventoEntrega): R<ResultadoEvento>;
+  /** Informa dónde está el camión mientras la app está abierta; el servidor anota solo la llegada si se queda junto al pin de una entrega. */
+  enviarPosiciones(puntos: readonly PuntoGps[]): R<ResultadoPosiciones>;
+  /** Solo admin: qué datos se guardan, qué aprendió el sistema y cuánto se parece la ruta sugerida a la manejada. */
+  analitica(): R<PanelAnalitica>;
+  /** Solo admin: correr el análisis ahora (normalmente corre solo). */
+  ejecutarAnalisis(): R<ResumenAnalisis>;
 
   obtenerHorario(localId: string): R<readonly DiaApi[]>;
   guardarHorario(localId: string, dias: readonly DiaApi[]): R<readonly DiaApi[]>;

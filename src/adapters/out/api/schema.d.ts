@@ -7367,6 +7367,559 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/jornada/posiciones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Informar dónde está el camión mientras la app está abierta (se sigue al camión, no a la persona); si se queda junto al pin de una entrega, el servidor anota la llegada solo */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        puntos: {
+                            lat: number;
+                            lng: number;
+                            precisionM?: number;
+                            velocidadMs?: number;
+                            /** Format: date-time */
+                            tomadoEn: string;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            guardados: number;
+                            descartados: number;
+                            llegadasAutomaticas: string[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/analitica": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Panel del admin: qué datos se están guardando, qué aprendió el sistema y cuánto se parece la ruta sugerida a la manejada (últimos 30 días) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            desde: string;
+                            cobertura: {
+                                jornadas: number;
+                                jornadasTerminadas: number;
+                                avisos: number;
+                                avisosConGps: number;
+                                avisosAutomaticos: number;
+                                paradasConLlegada: number;
+                                paradasResueltas: number;
+                                puntosGps: number;
+                                ultimoPuntoGps?: string;
+                                operacionesRuta: number;
+                                correccionesManuales: number;
+                            };
+                            porDia: {
+                                fecha: string;
+                                jornadas: number;
+                                atendidas: number;
+                                sinHacer: number;
+                            }[];
+                            calidad: {
+                                fecha: string;
+                                camionId: string;
+                                camion?: string;
+                                distSugeridaM: number;
+                                distRealM: number;
+                                inversiones: number;
+                            }[];
+                            aprendido: {
+                                ritmo: {
+                                    /** @enum {string} */
+                                    clave: "ritmo" | "servicio_min" | "capacidad_paradas" | "duracion_jornada_min";
+                                    ambito: string;
+                                    valor: number;
+                                    muestras: number;
+                                    confianza: number;
+                                    camion?: string;
+                                }[];
+                                capacidad: {
+                                    /** @enum {string} */
+                                    clave: "ritmo" | "servicio_min" | "capacidad_paradas" | "duracion_jornada_min";
+                                    ambito: string;
+                                    valor: number;
+                                    muestras: number;
+                                    confianza: number;
+                                    camion?: string;
+                                }[];
+                                servicioGeneral?: {
+                                    /** @enum {string} */
+                                    clave: "ritmo" | "servicio_min" | "capacidad_paradas" | "duracion_jornada_min";
+                                    ambito: string;
+                                    valor: number;
+                                    muestras: number;
+                                    confianza: number;
+                                    camion?: string;
+                                };
+                                localesLentos: {
+                                    /** @enum {string} */
+                                    clave: "ritmo" | "servicio_min" | "capacidad_paradas" | "duracion_jornada_min";
+                                    ambito: string;
+                                    valor: number;
+                                    muestras: number;
+                                    confianza: number;
+                                    camion?: string;
+                                    etiqueta?: {
+                                        razonSocial: string;
+                                        direccion: string;
+                                        comuna: string;
+                                    };
+                                }[];
+                            };
+                            cierres: {
+                                localId: string;
+                                cerrados: number;
+                                intentos: number;
+                                horasCerrado: number[];
+                                etiqueta?: {
+                                    razonSocial: string;
+                                    direccion: string;
+                                    comuna: string;
+                                };
+                            }[];
+                            ultimaEjecucion?: {
+                                iniciadoEn: string;
+                                terminadoEn: string;
+                                resumen: {
+                                    eventos: number;
+                                    jornadas: number;
+                                    parametros: number;
+                                    jornadasComparadas: number;
+                                    pinesSugeridos: number;
+                                    pinesProponidos: number;
+                                    cierresFrecuentes: {
+                                        localId: string;
+                                        cerrados: number;
+                                        intentos: number;
+                                        confianzaAbierto: number;
+                                        horasCerrado: number[];
+                                    }[];
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/analitica/ejecutar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Correr el análisis ahora (normalmente corre solo en segundo plano) y devolver su resumen */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            eventos: number;
+                            jornadas: number;
+                            parametros: number;
+                            jornadasComparadas: number;
+                            pinesSugeridos: number;
+                            pinesProponidos: number;
+                            cierresFrecuentes: {
+                                localId: string;
+                                cerrados: number;
+                                intentos: number;
+                                confianzaAbierto: number;
+                                horasCerrado: number[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/entregas/{id}/eventos": {
         parameters: {
             query?: never;

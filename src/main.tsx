@@ -17,6 +17,7 @@ import { crearSesionStore } from './adapters/out/sesion/local-storage-store';
 import { browserTimer } from './adapters/out/timer/browser-timer';
 import { App } from './adapters/in/ui/App';
 import { Aplicacion } from './adapters/in/ui/Aplicacion';
+import { crearPermisosWeb } from './adapters/out/permisos/permisos-web';
 import { crearUbicacionWeb } from './adapters/out/ubicacion/geolocalizacion';
 import { crearDescargaNavegador } from './adapters/out/descarga/descarga-navegador';
 import { crearExportacionStore } from './adapters/out/exportacion/local-storage-exportacion';
@@ -57,6 +58,7 @@ const casos: Casos = {
   ahora: () => new Date(),
   voz: crearVozWeb(),
   ubicacion: crearUbicacionWeb(),
+  permisos: crearPermisosWeb(),
   vista: crearVistaStore(),
   tema: crearTemaStore(),
 };

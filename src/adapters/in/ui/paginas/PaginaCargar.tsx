@@ -189,7 +189,7 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
     let avisoPin: string | undefined;
     if (ubicacion !== undefined) {
       const p = await api.fijarPinDesdeEnlace(r.value.localId, ubicacion);
-      if (!p.ok) avisoPin = `No pude leer la ubicación (${mensajeDeError(p.error)}). El cliente quedó cargado; el pin se completa con la primera entrega o pegando el enlace después.`;
+      if (!p.ok) avisoPin = `No pude leer la ubicación (${mensajeDeError(p.error)}). El cliente quedó cargado y el sistema buscará el lugar por la dirección; si no lo encuentra, el pin se completa con la primera entrega o pegando un enlace con un pin (en Google Maps mantén apretado el lugar, toca Compartir).`;
     }
     setOcupado(false);
     alCrear({ localId: r.value.localId, razonSocial }, { existente: r.value.existente, ...(avisoPin !== undefined ? { pin: avisoPin } : {}) });

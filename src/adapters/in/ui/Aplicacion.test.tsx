@@ -35,6 +35,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     vista: { cargar: () => 'grande' as const, guardar: () => undefined },
     tema: { cargar: () => 'claro' as const, guardar: () => undefined },
     ubicacion: { disponible: false, actual: () => Promise.resolve(err('NO_DISPONIBLE' as const)) },
+    permisos: { estado: () => Promise.resolve({ ubicacion: 'concedido' as const, microfono: 'concedido' as const }), pedir: () => Promise.resolve({ ubicacion: 'concedido' as const, microfono: 'concedido' as const }) },
     ...opciones.casos,
   };
   return { casos, ...render(<ProveedorCasos casos={casos}><Aplicacion /></ProveedorCasos>) };
@@ -89,7 +90,7 @@ describe('entrada y protección por rol', () => {
 
   it('el admin ve todo el menú', async () => {
     montar({ sesion: ADMIN });
-    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'VENDEDORES', 'EXPORTAR DATOS', 'REVISAR FOTOS', 'CONFIGURACIÓN', 'USUARIOS']) {
+    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'VENDEDORES', 'EXPORTAR DATOS', 'REVISAR FOTOS', 'ANALÍTICA', 'CONFIGURACIÓN', 'USUARIOS']) {
       expect(await screen.findByRole('link', { name: nombre })).toBeInTheDocument();
     }
   });
@@ -1793,11 +1794,12 @@ describe('acciones en la parada (chofer)', () => {
     expect(terminarRuta).not.toHaveBeenCalled();
   });
 
-  it('al salir del depósito (sin entregas hechas todavía) ni siquiera se lee el GPS', async () => {
+  it('al salir del depósito (sin entregas hechas todavía) no avisa que llegó, aunque el GPS esté en el depósito', async () => {
     const gpsNuevo = { disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.607, lng: -70.5296, precisionM: 12 }))) };
     abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: { lat: -33.607, lng: -70.5296 } }))) }, { ubicacion: gpsNuevo });
     await screen.findByRole('listitem', { name: 'Parada 1' });
-    expect(gpsNuevo.actual).not.toHaveBeenCalled();
+    await waitFor(() => { expect(gpsNuevo.actual).toHaveBeenCalled(); }); // el seguimiento del camión lee el GPS
+    expect(screen.queryByText(/Llegaste al depósito/)).toBeNull();
   });
 
   it('el ayudante también ve las acciones; el despachador no (solo mira y acomoda)', async () => {
@@ -1852,5 +1854,54 @@ describe('ayudante', () => {
   it('ve el mismo inicio que el chofer: elegir camión, cargar y ruta', async () => {
     montar({ sesion: { id: 'u9', username: 'ayud', nombre: 'Max García', rol: 'ayudante' } });
     expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
+  });
+});
+
+describe('analítica del admin', () => {
+  const panel = {
+    desde: '2026-09-05T12:00:00.000Z',
+    cobertura: { jornadas: 6, jornadasTerminadas: 5, avisos: 80, avisosConGps: 76, avisosAutomaticos: 9, paradasConLlegada: 30, paradasResueltas: 50, puntosGps: 640, ultimoPuntoGps: '2026-10-05T20:00:00.000Z', operacionesRuta: 21, correccionesManuales: 8 },
+    porDia: [{ fecha: '2026-10-05', jornadas: 2, atendidas: 60, sinHacer: 3 }],
+    calidad: [{ fecha: '2026-10-05', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 40_000, distRealM: 44_000, inversiones: 3 }],
+    aprendido: {
+      ritmo: [{ clave: 'ritmo' as const, ambito: 'camion:c1', camion: 'LRST·81', valor: 1.2, muestras: 40, confianza: 1 }],
+      capacidad: [{ clave: 'capacidad_paradas' as const, ambito: 'global', valor: 32, muestras: 6, confianza: 0.5 }],
+      servicioGeneral: { clave: 'servicio_min' as const, ambito: 'global', valor: 9, muestras: 30, confianza: 0.7 },
+      localesLentos: [{ clave: 'servicio_min' as const, ambito: 'local:l1', valor: 22, muestras: 4, confianza: 0.5, etiqueta: { razonSocial: 'Kiosko Ana', direccion: 'Calle 1 100', comuna: 'Buin' } }],
+    },
+    cierres: [{ localId: 'l2', cerrados: 2, intentos: 3, horasCerrado: [9, 14], etiqueta: { razonSocial: 'Bazar Luz', direccion: 'Calle 2 5', comuna: 'Maipú' } }],
+    ultimaEjecucion: { iniciadoEn: '2026-10-05T20:10:00.000Z', terminadoEn: '2026-10-05T20:10:02.000Z', resumen: { eventos: 80, jornadas: 6, parametros: 5, jornadasComparadas: 1, pinesSugeridos: 2, pinesProponidos: 2, cierresFrecuentes: [] } },
+  };
+
+  it('muestra qué datos se guardan, qué aprendió (sin horas) y la ruta sugerida frente a la manejada', async () => {
+    montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(panel)) } });
+    expect(await screen.findByRole('heading', { name: 'Analítica' })).toBeInTheDocument();
+    expect(screen.getByText('30 de 50 (60 %)')).toBeInTheDocument();
+    expect(screen.getByText('20 % más lento que lo calculado')).toBeInTheDocument();
+    expect(screen.getByText('22 min')).toBeInTheDocument();
+    expect(screen.getByText('Lo manejado fue 10 % más largo que lo sugerido.')).toBeInTheDocument();
+    expect(screen.getByText(/Cerrado a las 09:00, 14:00/)).toBeInTheDocument();
+    expect(screen.getByText(/propuso mover 2 pines/)).toBeInTheDocument();
+  });
+
+  it('ANALIZAR AHORA corre el análisis y vuelve a cargar el panel', async () => {
+    const analitica = vi.fn(() => Promise.resolve(ok(panel)));
+    const ejecutarAnalisis = vi.fn(() => Promise.resolve(ok(panel.ultimaEjecucion.resumen)));
+    montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica, ejecutarAnalisis } });
+    await userEvent.click(await screen.findByRole('button', { name: 'ANALIZAR AHORA' }));
+    expect(await screen.findByText(/Listo: se revisaron 80 avisos de 6 jornadas/)).toBeInTheDocument();
+    expect(ejecutarAnalisis).toHaveBeenCalledTimes(1);
+    expect(analitica).toHaveBeenCalledTimes(2);
+  });
+
+  it('sin datos explica que la ruta usa valores de respaldo; y el chofer no entra', async () => {
+    const vacio = { desde: panel.desde, cobertura: panel.cobertura, porDia: panel.porDia, calidad: [], cierres: [], aprendido: { ritmo: [], capacidad: [], localesLentos: [] } };
+    montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(vacio)) } });
+    expect(await screen.findByText(/Aún no hay suficientes rutas reales para aprender/)).toBeInTheDocument();
+  });
+
+  it('un chofer no puede abrir la analítica', async () => {
+    montar({ ruta: '/admin/analitica', sesion: CHOFER });
+    expect(await screen.findByRole('heading', { name: 'Hola, Juan' })).toBeInTheDocument();
   });
 });
