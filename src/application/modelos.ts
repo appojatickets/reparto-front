@@ -21,7 +21,8 @@ export type ResultadoBusqueda = {
   readonly nota?: string;
 };
 
-export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string };
+/** `pinVerificado`: una persona confirmó el pin y ya no se mueve solo; si no, está «por verificar» y cada entrega con buen GPS lo ajusta. */
+export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean };
 
 export type ErrorFila = { readonly fila: number; readonly errores: readonly { readonly codigo: string; readonly mensaje: string }[] };
 export type ResumenImportacion = { readonly clientesCreados: number; readonly clientesActualizados: number; readonly localesCreados: number; readonly localesActualizados: number };
@@ -208,6 +209,8 @@ export type PanelAnalitica = {
     readonly jornadas: number; readonly jornadasTerminadas: number; readonly avisos: number; readonly avisosConGps: number; readonly avisosAutomaticos: number;
     readonly paradasConLlegada: number; readonly paradasResueltas: number; readonly puntosGps: number; readonly ultimoPuntoGps?: string; readonly operacionesRuta: number; readonly correccionesManuales: number;
   };
+  /** Locales con el pin verificado (fijo), por verificar (se ajusta con las entregas) y sin pin. */
+  readonly pines: { readonly verificados: number; readonly porVerificar: number; readonly sinPin: number };
   readonly porDia: readonly { readonly fecha: string; readonly jornadas: number; readonly atendidas: number; readonly sinHacer: number }[];
   readonly calidad: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly distSugeridaM: number; readonly distRealM: number; readonly inversiones: number }[];
   readonly aprendido: {

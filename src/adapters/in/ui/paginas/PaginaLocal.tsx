@@ -71,6 +71,34 @@ const PinLocal = ({ local, recargar }: { readonly local: LocalDetalle; readonly 
   );
 };
 
+/** Verificar el pin: desde ahí ya no se mueve solo con las entregas. Sin verificar, cada ENTREGADO con buen GPS lo va ajustando. */
+const VerificarPin = ({ local, alCambiar }: { readonly local: LocalDetalle; readonly alCambiar: () => void }) => {
+  const { api } = useCasos();
+  const usuario = useUsuario();
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+  const puede = puedeHacer(usuario.rol, 'revisar-pines');
+  const cambiar = async (verificado: boolean): Promise<void> => {
+    setOcupado(true);
+    setError(undefined);
+    const r = await api.verificarPin(local.id, verificado);
+    setOcupado(false);
+    if (r.ok) alCambiar();
+    else setError(mensajeDeError(r.error));
+  };
+  return (
+    <>
+      <p className="ayuda">{local.pinVerificado ? 'Este pin está verificado: no se mueve solo.' : 'Este pin se va ajustando con el lugar donde se entrega. Verifícalo cuando esté bien para dejarlo fijo.'}</p>
+      {puede ? (
+        local.pinVerificado
+          ? <Boton variante="secundario" disabled={ocupado} onClick={() => void cambiar(false)}>QUITAR VERIFICACIÓN</Boton>
+          : <Boton disabled={ocupado} onClick={() => void cambiar(true)}>VERIFICAR PIN</Boton>
+      ) : null}
+      {error ? <Aviso tipo="error">{error}</Aviso> : null}
+    </>
+  );
+};
+
 const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly recargar: () => void }) => {
   const { api, subirFotoLocal } = useCasos();
   const usuario = useUsuario();
@@ -122,7 +150,8 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
     <Pagina titulo={local.razonSocial}>
       <p>{local.direccion}, <strong>{local.comuna}</strong></p>
       {local.rut ? <p>RUT {local.rut}</p> : null}
-      <Insignia>{ETIQUETA_PIN[local.pinEstado]}</Insignia>
+      <Insignia>{tienePin ? (local.pinVerificado ? 'PIN VERIFICADO ✓' : 'PIN POR VERIFICAR') : ETIQUETA_PIN.pendiente}</Insignia>
+      {tienePin ? <VerificarPin local={local} alCambiar={recargar} /> : null}
       {tienePin ? (
         <div className="fila-botones">
           <a className="big-button big-button--primario" href={enlaceWaze(local.lat ?? 0, local.lng ?? 0)} target="_blank" rel="noreferrer">IR CON WAZE</a>

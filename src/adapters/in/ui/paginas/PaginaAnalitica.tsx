@@ -49,6 +49,7 @@ export const PaginaAnalitica = () => {
           <>
             <h2>Qué datos se están guardando</h2>
             <ul className="tarjetas">
+              <Dato titulo="Pines de los locales" valor={`${p.pines.verificados} verificados`} ayuda={`${p.pines.porVerificar} por verificar (se ajustan con cada entrega) · ${p.pines.sinPin} sin pin`} />
               <Dato titulo="Jornadas" valor={`${c.jornadas}`} ayuda={`${c.jornadasTerminadas} terminadas con TERMINAR RUTA`} />
               <Dato titulo="Avisos desde la parada" valor={`${c.avisos}`} ayuda={`${proporcion(c.avisosConGps, c.avisos)} con ubicación`} />
               <Dato titulo="Paradas con «llegué» (aprendizaje de atención)" valor={proporcion(c.paradasConLlegada, c.paradasResueltas)} ayuda={`${c.avisosAutomaticos} llegadas las detectó el sistema solo.${p.ultimaEjecucion && p.ultimaEjecucion.resumen.llegadasDeducidas > 0 ? ` Otras ${p.ultimaEjecucion.resumen.llegadasDeducidas} las dedujo del recorrido del camión.` : ''}`} />

@@ -222,7 +222,7 @@ describe('búsqueda de clientes', () => {
 });
 
 describe('detalle del local', () => {
-  const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'validado' as const, lat: -33.4372, lng: -70.6506, streetviewRumbo: 120, nota: 'portón verde' };
+  const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'validado' as const, lat: -33.4372, lng: -70.6506, streetviewRumbo: 120, nota: 'portón verde', pinVerificado: false };
 
   it('ofrece Waze, Google Maps y Street View con las coordenadas del pin', async () => {
     montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)) } });
@@ -233,7 +233,7 @@ describe('detalle del local', () => {
   });
 
   it('un local sin pin no ofrece navegación y avisa', async () => {
-    const sinPin = { id: 'l1', clienteId: 'c1', razonSocial: 'X', direccion: 'Y', comuna: 'Maipú', pinEstado: 'pendiente' as const };
+    const sinPin = { id: 'l1', clienteId: 'c1', razonSocial: 'X', direccion: 'Y', comuna: 'Maipú', pinEstado: 'pendiente' as const, pinVerificado: false };
     montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(sinPin)) } });
     expect(await screen.findByText('Este local todavía no tiene pin.')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'IR CON WAZE' })).toBeNull();
@@ -271,7 +271,7 @@ describe('detalle del local', () => {
 });
 
 describe('horario del local (editor con botones)', () => {
-  const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'validado' as const, lat: -33.4372, lng: -70.6506 };
+  const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'validado' as const, lat: -33.4372, lng: -70.6506, pinVerificado: false };
   const abrir = async (api: Partial<ApiClient> = {}, sesion = DESPACHADOR) => {
     montar({ ruta: '/clientes/l1', sesion, api: { obtenerLocal: () => Promise.resolve(ok(local)), ...api } });
     return screen.findByRole('region', { name: 'Editar horario de atención' });
@@ -345,7 +345,7 @@ describe('horario del local (editor con botones)', () => {
 });
 
 describe('pin del local', () => {
-  const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Kiosko', direccion: 'Calle 1', comuna: 'Maipú', pinEstado: 'pendiente' as const };
+  const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Kiosko', direccion: 'Calle 1', comuna: 'Maipú', pinEstado: 'pendiente' as const, pinVerificado: false };
   it('en la ficha también se pega el enlace que mandó el vendedor', async () => {
     const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(ok({ resultado: 'fijado' as const, lat: -33.5972, lng: -70.7019 })));
     montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), fijarPinDesdeEnlace } });
@@ -375,7 +375,7 @@ describe('cliente nuevo', () => {
     const crearCliente = vi.fn()
       .mockResolvedValueOnce(err({ kind: 'HTTP', status: 422, mensaje: 'Hay datos inválidos.', detalle: { errores: [{ mensaje: 'Falta la dirección.' }, { mensaje: 'La comuna no es de la Región Metropolitana.' }] } }))
       .mockResolvedValueOnce(ok({ clienteId: 'c9', localId: 'l9' }));
-    montar({ ruta: '/clientes/nuevo', sesion: DESPACHADOR, api: { crearCliente, obtenerLocal: () => Promise.resolve(ok({ id: 'l9', clienteId: 'c9', razonSocial: 'Kiosko Sol', direccion: 'Calle 1', comuna: 'Maipú', pinEstado: 'pendiente' as const })) } });
+    montar({ ruta: '/clientes/nuevo', sesion: DESPACHADOR, api: { crearCliente, obtenerLocal: () => Promise.resolve(ok({ id: 'l9', clienteId: 'c9', razonSocial: 'Kiosko Sol', direccion: 'Calle 1', comuna: 'Maipú', pinEstado: 'pendiente' as const, pinVerificado: false })) } });
     await userEvent.type(await screen.findByLabelText('Razón social o nombre'), 'Kiosko Sol');
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR CLIENTE' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Falta la dirección. La comuna no es de la Región Metropolitana.');
@@ -1899,6 +1899,7 @@ describe('analítica del admin', () => {
   const panel = {
     desde: '2026-09-05T12:00:00.000Z',
     cobertura: { jornadas: 6, jornadasTerminadas: 5, avisos: 80, avisosConGps: 76, avisosAutomaticos: 9, paradasConLlegada: 30, paradasResueltas: 50, puntosGps: 640, ultimoPuntoGps: '2026-10-05T20:00:00.000Z', operacionesRuta: 21, correccionesManuales: 8 },
+    pines: { verificados: 12, porVerificar: 140, sinPin: 590 },
     porDia: [{ fecha: '2026-10-05', jornadas: 2, atendidas: 60, sinHacer: 3 }],
     calidad: [{ fecha: '2026-10-05', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 40_000, distRealM: 44_000, inversiones: 3 }],
     aprendido: {
@@ -1916,6 +1917,8 @@ describe('analítica del admin', () => {
     montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(panel)) } });
     expect(await screen.findByRole('heading', { name: 'Analítica' })).toBeInTheDocument();
     expect(await screen.findByText('30 de 50 (60 %)')).toBeInTheDocument();
+    expect(screen.getByText('12 verificados')).toBeInTheDocument();
+    expect(screen.getByText(/140 por verificar/)).toBeInTheDocument();
     expect(screen.getByText('20 % más lento que lo calculado')).toBeInTheDocument();
     expect(screen.getByText('22 min')).toBeInTheDocument();
     expect(screen.getByText('Lo manejado fue 10 % más largo que lo sugerido.')).toBeInTheDocument();
@@ -1937,7 +1940,7 @@ describe('analítica del admin', () => {
   });
 
   it('sin datos explica que la ruta usa valores de respaldo; y el chofer no entra', async () => {
-    const vacio = { desde: panel.desde, cobertura: panel.cobertura, porDia: panel.porDia, calidad: [], cierres: [], pinesDudosos: [], aprendido: { ritmo: [], capacidad: [], localesLentos: [] } };
+    const vacio = { desde: panel.desde, cobertura: panel.cobertura, pines: panel.pines, porDia: panel.porDia, calidad: [], cierres: [], pinesDudosos: [], aprendido: { ritmo: [], capacidad: [], localesLentos: [] } };
     montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(vacio)) } });
     expect(await screen.findByText(/Aún no hay suficientes rutas reales para aprender/)).toBeInTheDocument();
   });
@@ -1945,5 +1948,36 @@ describe('analítica del admin', () => {
   it('un chofer no puede abrir la analítica', async () => {
     montar({ ruta: '/admin/analitica', sesion: CHOFER });
     expect(await screen.findByRole('heading', { name: 'Hola, Juan' })).toBeInTheDocument();
+  });
+});
+
+describe('verificar el pin de un local', () => {
+  const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'sugerido' as const, lat: -33.4372, lng: -70.6506, pinVerificado: false };
+
+  it('un pin por verificar se ve como tal y el despachador lo puede verificar', async () => {
+    const obtenerLocal = vi.fn().mockResolvedValueOnce(ok(local)).mockResolvedValue(ok({ ...local, pinEstado: 'validado' as const, pinVerificado: true }));
+    const verificarPin = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal, verificarPin } });
+    expect(await screen.findByText('PIN POR VERIFICAR')).toBeInTheDocument();
+    expect(screen.getByText(/se va ajustando con el lugar donde se entrega/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'VERIFICAR PIN' }));
+    expect(verificarPin).toHaveBeenCalledWith('l1', true);
+    expect(await screen.findByText('PIN VERIFICADO ✓')).toBeInTheDocument();
+    expect(screen.getByText(/no se mueve solo/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'QUITAR VERIFICACIÓN' })).toBeInTheDocument();
+  });
+
+  it('quitar la verificación hace que el pin vuelva a ajustarse', async () => {
+    const verificarPin = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok({ ...local, pinVerificado: true })), verificarPin } });
+    await userEvent.click(await screen.findByRole('button', { name: 'QUITAR VERIFICACIÓN' }));
+    expect(verificarPin).toHaveBeenCalledWith('l1', false);
+  });
+
+  it('un local sin pin no ofrece verificar', async () => {
+    const sinCoordenadas = { id: 'l1', clienteId: 'c1', razonSocial: 'X', direccion: 'Y', comuna: 'Maipú', pinEstado: 'pendiente' as const, pinVerificado: false };
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(sinCoordenadas)) } });
+    expect(await screen.findByText('SIN PIN')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'VERIFICAR PIN' })).toBeNull();
   });
 });

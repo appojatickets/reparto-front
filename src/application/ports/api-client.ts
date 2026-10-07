@@ -64,6 +64,8 @@ export interface ApiClient extends SaludApi {
   exportarLocales(filtro?: FiltroExportacion): R<{ readonly total: number; readonly filas: readonly FilaExportacion[] }>;
   /** Quita la foto de la fachada del local (admin o despachador). */
   quitarFoto(localId: string): R<void>;
+  /** Admin o despachador: confirma (o quita la confirmación de) el pin de un local. Un pin verificado ya no se mueve con las entregas. */
+  verificarPin(localId: string, verificado: boolean): R<void>;
   /** Cualquiera reporta la foto de un local mal tomada; el admin la revisa. */
   reportarFoto(localId: string, reporte: { readonly motivo: MotivoFoto; readonly detalle?: string }): R<void>;
   /** Solo admin: las fotos reportadas y las subidas, separadas en por verificar y verificadas. */
