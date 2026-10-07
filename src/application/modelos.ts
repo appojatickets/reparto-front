@@ -178,6 +178,8 @@ export type VistaRuta = {
 };
 export type OperacionRuta =
   | { readonly tipo: 'subir' | 'bajar' | 'primero' | 'despues' | 'quitar'; readonly facturaId: string }
+  /** Arrastrar y soltar: la parada queda en `posicion` (0 = la primera) de la lista de paradas en orden. */
+  | { readonly tipo: 'mover'; readonly facturaId: string; readonly posicion: number }
   | { readonly tipo: 'ordenar' | 'insertar' }
   | { readonly tipo: 'salida'; readonly salidaMin: number };
 

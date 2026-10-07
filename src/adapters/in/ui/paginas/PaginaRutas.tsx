@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
+import { reordenarParadas } from '../../../../domain/arrastre';
 import { enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
 import { horaDeMinutos } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
@@ -9,6 +10,7 @@ import { esDeCamion } from '../../../../domain/rol';
 import { mismoTexto } from '../../../../domain/texto';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ItemRuta, OperacionRuta, ParadaDeRuta, ResumenJornada, VistaRuta } from '../../../../application/modelos';
+import { useArrastre } from '../arrastre';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { AccionesParada, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
@@ -32,8 +34,12 @@ const Etiquetas = ({ i }: { readonly i: ItemRuta }) => (
  * Una fila de la lista de paradas: número, nombre y comuna (y a qué hora llega). Al tocarla se despliega con el resto de los datos y las
  * acciones; así el chofer ve toda su ruta de un vistazo y solo abre la parada que le toca.
  */
-const FilaParada = ({ p, total, ocupado, operar, enCamion, alCambiar, abierta, alAbrir, esSiguiente }: {
+const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, abierta, alAbrir, esSiguiente }: {
   readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void; readonly enCamion: boolean;
+  /** Deja esta parada en la posición indicada (lo mismo que arrastrarla). */
+  readonly mover: (posicion: number) => void;
+  /** Eventos del asa para arrastrar y cómo se dibuja la fila mientras alguna se arrastra. */
+  readonly asa: ReturnType<ReturnType<typeof useArrastre>['asa']>; readonly fila: { readonly clase: string; readonly estilo?: CSSProperties };
   readonly alCambiar: () => void; readonly abierta: boolean; readonly alAbrir: () => void; readonly esSiguiente: boolean;
 }) => {
   const [mas, setMas] = useState(false);
@@ -41,7 +47,7 @@ const FilaParada = ({ p, total, ocupado, operar, enCamion, alCambiar, abierta, a
   const n = p.posicion + 1;
   const idDetalle = `parada-${p.facturaId}`;
   return (
-    <li className={`parada${esSiguiente ? ' parada--siguiente' : ''}`} aria-label={`Parada ${n}`}>
+    <li className={`parada${esSiguiente ? ' parada--siguiente' : ''}${fila.clase}`} style={fila.estilo} aria-label={`Parada ${n}`}>
       <button type="button" className="parada-fila" aria-expanded={abierta} aria-controls={idDetalle} onClick={alAbrir}>
         <span className="parada-num" aria-hidden="true">{n}</span>
         <span className="parada-nombre">
@@ -52,8 +58,22 @@ const FilaParada = ({ p, total, ocupado, operar, enCamion, alCambiar, abierta, a
         </span>
       </button>
       <div className="parada-atajos">
-        <Boton variante="secundario" className="atajo" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} onClick={() => { operar({ tipo: 'subir', facturaId: p.facturaId }); }}>SUBIR</Boton>
-        <Boton variante="secundario" className="atajo" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} onClick={() => { operar({ tipo: 'bajar', facturaId: p.facturaId }); }}>BAJAR</Boton>
+        <Boton
+          variante="secundario"
+          className="atajo asa"
+          disabled={ocupado || total < 2}
+          aria-label={`MOVER ${p.cliente}`}
+          title="Mantén presionado y arrastra. Con el teclado, usa las flechas ↑ ↓."
+          {...asa}
+          onKeyDown={(e) => {
+            const destino = e.key === 'ArrowUp' ? p.posicion - 1 : e.key === 'ArrowDown' ? p.posicion + 1 : undefined;
+            if (destino === undefined) return;
+            e.preventDefault();
+            if (destino >= 0 && destino < total) mover(destino);
+          }}
+        >
+          <span aria-hidden="true">↕</span> MOVER
+        </Boton>
         {enCamion ? <AtajoEntregado p={p} alCambiar={alCambiar} /> : null}
         {enCamion ? <AtajoIr p={p} /> : null}
       </div>
@@ -193,7 +213,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
 
   const vista = actualizada ?? (estado.tipo === 'ok' ? estado.datos : undefined);
 
-  const aplicar = async (llamada: () => ReturnType<typeof api.planificarRuta>): Promise<void> => {
+  const aplicar = async (llamada: () => ReturnType<typeof api.planificarRuta>, alFallar?: () => void): Promise<void> => {
     setOcupado(true);
     setAviso(undefined);
     setConfirmar(false);
@@ -203,6 +223,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       setActualizada(r.value);
       return;
     }
+    alFallar?.();
     setAviso(mensajeDeError(r.error));
     if (r.error.codigo === 'RUTA_DESACTUALIZADA' || r.error.status === 409) {
       setActualizada(undefined);
@@ -216,6 +237,28 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     if (version === undefined) return;
     void aplicar(() => api.operarRuta(camionId, fecha, version, operacion));
   };
+  /** Aviso de lo último que se movió, para quien no ve la lista (lector de pantalla) y como confirmación. */
+  const [anuncio, setAnuncio] = useState<string | undefined>();
+  /**
+   * Arrastrar y soltar (o las flechas del asa): la parada queda en su lugar de inmediato y el servidor lo confirma y recalcula las horas.
+   * Si no se pudo, vuelve a donde estaba y se avisa.
+   */
+  const mover = (facturaId: string, posicion: number): void => {
+    const v = vista;
+    const version = v?.version;
+    const parada = v?.paradas.find((p) => p.facturaId === facturaId);
+    if (!v || version === undefined || !parada || ocupado) return;
+    const anterior = actualizada;
+    const paradas = reordenarParadas(v.paradas, facturaId, posicion);
+    setActualizada({ ...v, paradas });
+    setAnuncio(`${parada.cliente} quedó en el lugar ${(paradas.find((p) => p.facturaId === facturaId)?.posicion ?? posicion) + 1}.`);
+    void aplicar(
+      () => api.operarRuta(camionId, fecha, version, { tipo: 'mover', facturaId, posicion }),
+      () => { setActualizada(anterior); setAnuncio(undefined); },
+    );
+  };
+  const lista = useRef<HTMLOListElement>(null);
+  const arrastre = useArrastre(lista, vista?.paradas.map((p) => p.facturaId) ?? [], mover);
   // Terminar la ruta: con el botón de abajo o al llegar al depósito. El servidor limpia la lista al instante (borra la ruta y suelta lo pendiente del camión).
   const [terminada, setTerminada] = useState<{ readonly resumen: ResumenJornada | null } | undefined>();
   const [confirmandoFin, setConfirmandoFin] = useState(false);
@@ -392,8 +435,9 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           )}
 
           {vista.paradas.length === 0 ? <Aviso>Ninguna parada se pudo ubicar en la ruta.</Aviso> : null}
-          <p role="status" className="ayuda">Toca una parada para ver sus datos y acciones.</p>
-          <ol className="paradas" aria-label="Paradas en orden">
+          <p role="status" className="ayuda">Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar.</p>
+          {anuncio ? <p role="status" className="ayuda">{anuncio}</p> : null}
+          <ol ref={lista} className={`paradas${arrastre.arrastrando ? ' paradas--arrastrando' : ''}`} aria-label="Paradas en orden">
             {vista.paradas.map((p, i) => (
               <FilaParada
                 key={p.facturaId}
@@ -401,6 +445,9 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
                 total={vista.paradas.length}
                 ocupado={ocupado}
                 operar={operar}
+                mover={(posicion) => { mover(p.facturaId, posicion); }}
+                asa={arrastre.asa(p.facturaId)}
+                fila={arrastre.fila(i)}
                 enCamion={enCamion}
                 alCambiar={recargarVista}
                 esSiguiente={i === 0}

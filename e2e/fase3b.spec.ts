@@ -34,13 +34,14 @@ test.describe('fase 3b: rutas y configuración', () => {
     await page.goto('/rutas');
     await page.getByLabel('Camión', { exact: true }).selectOption(CAMION.id);
     await expect(page.getByRole('listitem', { name: 'Parada 1' })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Paradas en riesgo' })).toBeVisible();
     await sinViolaciones(page);
+    await page.getByRole('listitem', { name: 'Parada 2', exact: true }).getByRole('button', { name: /^Local 2/ }).click();
     await page.getByRole('button', { name: 'MÁS OPCIONES Local 2' }).click();
     await sinViolaciones(page);
-    await page.getByRole('button', { name: 'SUBIR Local 2' }).click();
+    await page.getByRole('button', { name: 'MOVER Local 2', exact: true }).focus();
+    await page.keyboard.press('ArrowUp');
     await expect(page.getByText('ACOMODADA A MANO')).toBeVisible();
-    expect(operacion).toMatchObject({ version: 1, operacion: { tipo: 'subir' } });
+    expect(operacion).toMatchObject({ version: 1, operacion: { tipo: 'mover', posicion: 0 } });
   });
 
   test('configuración del depósito accesible', async ({ page }) => {

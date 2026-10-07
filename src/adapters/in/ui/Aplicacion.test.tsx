@@ -1144,19 +1144,49 @@ describe('rutas del día', () => {
     expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05');
   });
 
-  it('SUBIR y BAJAR mandan la operación con la versión y muestran el orden nuevo; los extremos están deshabilitados', async () => {
+  /** Pone el foco en el asa MOVER de una parada y pulsa una tecla (el teclado es la alternativa al arrastre con el dedo). */
+  const teclaEnAsa = async (cliente: string, tecla: string): Promise<void> => {
+    const asa = screen.getByRole('button', { name: `MOVER ${cliente}` });
+    asa.focus();
+    await userEvent.keyboard(`{${tecla}}`);
+  };
+
+  it('las flechas del asa MOVER mandan la operación con la posición y la versión, y muestran el orden nuevo', async () => {
     const operarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 2, modo: 'manual' as const, paradas: [parada('B', 0), parada('A', 1), parada('C', 2)] }))));
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())), operarRuta }) });
     await elegirCamion();
     await screen.findByRole('listitem', { name: 'Parada 1' });
-    expect(screen.getByRole('button', { name: 'SUBIR Local A' })).toBeDisabled();
-    await desplegar(3);
-    expect(screen.getByRole('button', { name: 'BAJAR Local C' })).toBeDisabled();
-    await desplegar(2);
-    await userEvent.click(screen.getByRole('button', { name: 'SUBIR Local B' }));
-    expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'subir', facturaId: 'fB' });
+    await teclaEnAsa('Local B', 'ArrowUp');
+    expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'mover', facturaId: 'fB', posicion: 0 });
     expect(within(await screen.findByRole('listitem', { name: 'Parada 1' })).getByText('Local B')).toBeInTheDocument();
     expect(screen.getByText('ACOMODADA A MANO')).toBeInTheDocument();
+  });
+
+  it('en los extremos las flechas no hacen nada: la primera no sube y la última no baja', async () => {
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 2 }))));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())), operarRuta }) });
+    await elegirCamion();
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    await teclaEnAsa('Local A', 'ArrowUp');
+    await teclaEnAsa('Local C', 'ArrowDown');
+    expect(operarRuta).not.toHaveBeenCalled();
+  });
+
+  it('al soltar la parada queda en su lugar de inmediato, sin esperar al servidor; si falla, vuelve a su sitio y avisa', async () => {
+    let responder: (r: Awaited<ReturnType<ApiClient['operarRuta']>>) => void = () => undefined;
+    const operarRuta = vi.fn(() => new Promise<Awaited<ReturnType<ApiClient['operarRuta']>>>((res) => { responder = res; }));
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())), operarRuta }) });
+    await elegirCamion();
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    await teclaEnAsa('Local C', 'ArrowUp');
+    // El servidor todavía no respondió y la lista ya muestra el orden nuevo: A, C, B.
+    expect(within(screen.getByRole('listitem', { name: 'Parada 2' })).getByText('Local C')).toBeInTheDocument();
+    expect(within(screen.getByRole('listitem', { name: 'Parada 3' })).getByText('Local B')).toBeInTheDocument();
+    expect(screen.getByText('Local C quedó en el lugar 2.')).toBeInTheDocument();
+    responder(http(500, { mensaje: 'Algo falló.' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(within(await screen.findByRole('listitem', { name: 'Parada 2' })).getByText('Local B')).toBeInTheDocument();
+    expect(within(screen.getByRole('listitem', { name: 'Parada 3' })).getByText('Local C')).toBeInTheDocument();
   });
 
   it('IR PRIMERO, DEJAR PARA DESPUÉS y QUITAR están en «MÁS»', async () => {
@@ -1190,23 +1220,18 @@ describe('rutas del día', () => {
     expect(within(segunda).queryByRole('button', { name: 'MÁS OPCIONES Local B' })).toBeNull();
   });
 
-  it('cada fila trae los atajos SUBIR y BAJAR (con texto) siempre a la vista, sin abrir la parada; la primera no sube y la última no baja', async () => {
-    const operarRuta = vi.fn(() => Promise.resolve(ok(vista({ version: 2 }))));
-    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())), operarRuta }) });
+  it('cada fila trae el asa MOVER (con texto) siempre a la vista, sin abrir la parada, y ya no hay SUBIR ni BAJAR', async () => {
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())) }) });
     await elegirCamion();
     const segunda = await screen.findByRole('listitem', { name: 'Parada 2' });
     expect(within(segunda).getByRole('button', { name: /^Local B/ })).toHaveAttribute('aria-expanded', 'false');
-    expect(within(segunda).getByRole('button', { name: 'SUBIR Local B' })).toHaveTextContent(/^SUBIR$/);
-    expect(within(segunda).getByRole('button', { name: 'BAJAR Local B' })).toHaveTextContent(/^BAJAR$/);
-    expect(screen.getByRole('button', { name: 'SUBIR Local A' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'BAJAR Local C' })).toBeDisabled();
-    await userEvent.click(within(segunda).getByRole('button', { name: 'SUBIR Local B' }));
-    expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'subir', facturaId: 'fB' });
-    await userEvent.click(within(segunda).getByRole('button', { name: 'BAJAR Local B' }));
-    expect(operarRuta).toHaveBeenLastCalledWith('c1', '2026-10-05', 2, { tipo: 'bajar', facturaId: 'fB' });
+    expect(within(segunda).getByRole('button', { name: 'MOVER Local B' })).toHaveTextContent(/MOVER$/);
+    expect(screen.queryByRole('button', { name: /^SUBIR / })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^BAJAR / })).toBeNull();
+    expect(screen.getByText(/mantén presionado MOVER y arrastra/i)).toBeInTheDocument();
   });
 
-  it('el despachador acomoda con SUBIR y BAJAR pero no marca entregas ni navega: ENTREGADO e IR son del camión', async () => {
+  it('el despachador acomoda con MOVER pero no marca entregas ni navega: ENTREGADO e IR son del camión', async () => {
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())) }) });
     await elegirCamion();
     await screen.findByRole('listitem', { name: 'Parada 1' });
@@ -1275,8 +1300,8 @@ describe('rutas del día', () => {
     const operarRuta = vi.fn(() => Promise.resolve(http(409, { codigo: 'CONFLICTO', mensaje: 'Otra persona cambió esta ruta. Recarga para ver la versión nueva.', detalle: { codigo: 'RUTA_DESACTUALIZADA' } })));
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta, operarRuta }) });
     await elegirCamion();
-    await desplegar(2);
-    await userEvent.click(await screen.findByRole('button', { name: 'SUBIR Local B' }));
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    await teclaEnAsa('Local B', 'ArrowUp');
     expect(await screen.findByRole('alert')).toHaveTextContent('Otra persona cambió esta ruta');
     expect(within(await screen.findByRole('listitem', { name: 'Parada 1' })).getByText('Local C')).toBeInTheDocument();
     expect(verRuta).toHaveBeenCalledTimes(2);

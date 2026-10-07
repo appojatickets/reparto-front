@@ -6558,6 +6558,12 @@ export interface paths {
                             facturaId: string;
                         } | {
                             /** @enum {string} */
+                            tipo: "mover";
+                            /** Format: uuid */
+                            facturaId: string;
+                            posicion: number;
+                        } | {
+                            /** @enum {string} */
                             tipo: "ordenar" | "insertar";
                         } | {
                             /** @enum {string} */

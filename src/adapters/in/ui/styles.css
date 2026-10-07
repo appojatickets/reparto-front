@@ -573,3 +573,37 @@ html[data-vista='normal'] .parada-num {
   height: 2rem;
   border-width: 2px;
 }
+
+/* Arrastrar una parada: el asa se agarra con el dedo (sin que la pantalla se desplace), la fila sigue al dedo y las demás se corren. */
+.parada-atajos .asa {
+  flex: 0 0 auto;
+  min-width: 7rem;
+  touch-action: none;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.paradas--arrastrando {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.paradas--arrastrando .asa {
+  cursor: grabbing;
+}
+.parada--arrastrada {
+  position: relative;
+  z-index: 20;
+  background: var(--bg);
+  box-shadow: 0 0.5rem 1.5rem rgb(0 0 0 / 40%);
+  outline: 6px solid var(--fg);
+  outline-offset: 2px;
+}
+.parada--corrida {
+  transition: transform 150ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .parada--corrida {
+    transition: none;
+  }
+}
