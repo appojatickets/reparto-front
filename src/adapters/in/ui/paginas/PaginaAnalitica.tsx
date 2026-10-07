@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { aQuienAplica, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, textoDeDiferencia, textoDeHoras, textoDeRitmo } from '../../../../domain/analitica';
+import { aQuienAplica, textoDeFuentePin, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, textoDeDiferencia, textoDeHoras, textoDeRitmo } from '../../../../domain/analitica';
 import { fechaYHoraEnChile } from '../../../../domain/foto-reporte';
 import { mensajeDeError } from '../../../../application/mensajes';
 import { useCasos } from '../contexto';
@@ -51,7 +51,7 @@ export const PaginaAnalitica = () => {
             <ul className="tarjetas">
               <Dato titulo="Jornadas" valor={`${c.jornadas}`} ayuda={`${c.jornadasTerminadas} terminadas con TERMINAR RUTA`} />
               <Dato titulo="Avisos desde la parada" valor={`${c.avisos}`} ayuda={`${proporcion(c.avisosConGps, c.avisos)} con ubicación`} />
-              <Dato titulo="Paradas con «llegué» (aprendizaje de atención)" valor={proporcion(c.paradasConLlegada, c.paradasResueltas)} ayuda={c.avisosAutomaticos > 0 ? `${c.avisosAutomaticos} llegadas las detectó el sistema solo` : 'Sin «llegué» no se puede medir cuánto se demora cada local.'} />
+              <Dato titulo="Paradas con «llegué» (aprendizaje de atención)" valor={proporcion(c.paradasConLlegada, c.paradasResueltas)} ayuda={`${c.avisosAutomaticos} llegadas las detectó el sistema solo.${p.ultimaEjecucion && p.ultimaEjecucion.resumen.llegadasDeducidas > 0 ? ` Otras ${p.ultimaEjecucion.resumen.llegadasDeducidas} las dedujo del recorrido del camión.` : ''}`} />
               <Dato titulo="Recorrido del camión" valor={`${c.puntosGps} puntos`} ayuda={c.ultimoPuntoGps ? `El último: ${fechaYHoraEnChile(c.ultimoPuntoGps)}` : 'Aún no llegan puntos: el chofer debe tener la app abierta y dar permiso de ubicación.'} />
               <Dato titulo="Cambios a la ruta" valor={`${c.operacionesRuta}`} ayuda={`${c.correccionesManuales} los hizo una persona (subir, bajar, ir primero, quitar)`} />
             </ul>
@@ -118,6 +118,18 @@ export const PaginaAnalitica = () => {
                 </ul>
               </>
             )}
+
+            {p.pinesDudosos.length > 0 ? (
+              <>
+                <h2>Entregas avisadas lejos del pin</h2>
+                <p>Se avisó ENTREGADO con buen GPS lejos de donde está el pin del local: o el pin está mal, o se avisó desde otro lado. Revisa estos pines primero.</p>
+                <ul className="tarjetas">
+                  {p.pinesDudosos.map((d) => (
+                    <Dato key={d.localId} titulo={d.etiqueta ? `${d.etiqueta.razonSocial} · ${d.etiqueta.comuna}` : d.localId} valor={`a ${d.distanciaM >= 1000 ? kilometros(d.distanciaM) : `${d.distanciaM} m`} del pin`} ayuda={`${d.visitas} ${d.visitas === 1 ? 'entrega' : 'entregas'}${d.fuente ? ` · el pin vino de: ${textoDeFuentePin(d.fuente)}` : ''}`} />
+                  ))}
+                </ul>
+              </>
+            ) : null}
 
             {p.cierres.length > 0 ? (
               <>

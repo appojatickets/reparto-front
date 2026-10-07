@@ -34,3 +34,16 @@ export const textoDeDiferencia = (d: number): string => {
 };
 
 export const textoDeHoras = (horas: readonly number[]): string => horas.map((h) => `${String(h).padStart(2, '0')}:00`).join(', ');
+
+/** De dónde vino el pin de un local, en palabras. */
+export const textoDeFuentePin = (fuente: string): string => {
+  switch (fuente) {
+    case 'geocodificador': return 'la búsqueda por dirección';
+    case 'chofer': return 'la posición de un chofer';
+    case 'enlace': return 'un enlace de Google Maps';
+    case 'importado': return 'la planilla importada';
+    case 'manual': return 'una persona';
+    case 'aprendido': return 'las visitas';
+    default: return fuente;
+  }
+};

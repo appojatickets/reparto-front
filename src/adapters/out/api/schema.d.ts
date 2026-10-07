@@ -7791,6 +7791,17 @@ export interface paths {
                                     comuna: string;
                                 };
                             }[];
+                            pinesDudosos: {
+                                localId: string;
+                                distanciaM: number;
+                                visitas: number;
+                                fuente?: string;
+                                etiqueta?: {
+                                    razonSocial: string;
+                                    direccion: string;
+                                    comuna: string;
+                                };
+                            }[];
                             ultimaEjecucion?: {
                                 iniciadoEn: string;
                                 terminadoEn: string;
@@ -7801,6 +7812,7 @@ export interface paths {
                                     jornadasComparadas: number;
                                     pinesSugeridos: number;
                                     pinesProponidos: number;
+                                    llegadasDeducidas: number;
                                     cierresFrecuentes: {
                                         localId: string;
                                         cerrados: number;
@@ -7959,6 +7971,7 @@ export interface paths {
                             jornadasComparadas: number;
                             pinesSugeridos: number;
                             pinesProponidos: number;
+                            llegadasDeducidas: number;
                             cierresFrecuentes: {
                                 localId: string;
                                 cerrados: number;

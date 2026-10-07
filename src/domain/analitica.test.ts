@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aQuienAplica, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, textoDeDiferencia, textoDeHoras, textoDeRitmo } from './analitica';
+import { aQuienAplica, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, textoDeDiferencia, textoDeFuentePin, textoDeHoras, textoDeRitmo } from './analitica';
 
 describe('lectura de la analítica', () => {
   it('proporción con porcentaje y guion si no hay base', () => {
@@ -34,6 +34,12 @@ describe('lectura de la analítica', () => {
     expect(textoDeDiferencia(0.05)).toBe('Lo manejado fue 5 % más largo que lo sugerido.');
     expect(textoDeDiferencia(-0.1)).toBe('Lo manejado fue 10 % más corto que lo sugerido.');
     expect(textoDeDiferencia(0)).toBe('Lo manejado fue igual de largo que lo sugerido.');
+  });
+
+  it('de dónde vino el pin', () => {
+    expect(textoDeFuentePin('geocodificador')).toBe('la búsqueda por dirección');
+    expect(textoDeFuentePin('chofer')).toBe('la posición de un chofer');
+    expect(textoDeFuentePin('otra')).toBe('otra');
   });
 
   it('horas', () => {

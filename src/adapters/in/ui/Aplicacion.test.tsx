@@ -1908,18 +1908,22 @@ describe('analítica del admin', () => {
       localesLentos: [{ clave: 'servicio_min' as const, ambito: 'local:l1', valor: 22, muestras: 4, confianza: 0.5, etiqueta: { razonSocial: 'Kiosko Ana', direccion: 'Calle 1 100', comuna: 'Buin' } }],
     },
     cierres: [{ localId: 'l2', cerrados: 2, intentos: 3, horasCerrado: [9, 14], etiqueta: { razonSocial: 'Bazar Luz', direccion: 'Calle 2 5', comuna: 'Maipú' } }],
-    ultimaEjecucion: { iniciadoEn: '2026-10-05T20:10:00.000Z', terminadoEn: '2026-10-05T20:10:02.000Z', resumen: { eventos: 80, jornadas: 6, parametros: 5, jornadasComparadas: 1, pinesSugeridos: 2, pinesProponidos: 2, cierresFrecuentes: [] } },
+    pinesDudosos: [{ localId: 'l3', distanciaM: 1627, visitas: 1, fuente: 'geocodificador', etiqueta: { razonSocial: 'América 557', direccion: 'América 557', comuna: 'San Bernardo' } }],
+    ultimaEjecucion: { iniciadoEn: '2026-10-05T20:10:00.000Z', terminadoEn: '2026-10-05T20:10:02.000Z', resumen: { eventos: 80, jornadas: 6, parametros: 5, jornadasComparadas: 1, pinesSugeridos: 2, pinesProponidos: 2, llegadasDeducidas: 35, cierresFrecuentes: [] } },
   };
 
   it('muestra qué datos se guardan, qué aprendió (sin horas) y la ruta sugerida frente a la manejada', async () => {
     montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(panel)) } });
     expect(await screen.findByRole('heading', { name: 'Analítica' })).toBeInTheDocument();
-    expect(screen.getByText('30 de 50 (60 %)')).toBeInTheDocument();
+    expect(await screen.findByText('30 de 50 (60 %)')).toBeInTheDocument();
     expect(screen.getByText('20 % más lento que lo calculado')).toBeInTheDocument();
     expect(screen.getByText('22 min')).toBeInTheDocument();
     expect(screen.getByText('Lo manejado fue 10 % más largo que lo sugerido.')).toBeInTheDocument();
     expect(screen.getByText(/Cerrado a las 09:00, 14:00/)).toBeInTheDocument();
     expect(screen.getByText(/propuso mover 2 pines/)).toBeInTheDocument();
+    expect(screen.getByText('a 1,6 km del pin')).toBeInTheDocument();
+    expect(screen.getByText(/el pin vino de: la búsqueda por dirección/)).toBeInTheDocument();
+    expect(screen.getByText(/Otras 35 las dedujo del recorrido/)).toBeInTheDocument();
   });
 
   it('ANALIZAR AHORA corre el análisis y vuelve a cargar el panel', async () => {
@@ -1933,7 +1937,7 @@ describe('analítica del admin', () => {
   });
 
   it('sin datos explica que la ruta usa valores de respaldo; y el chofer no entra', async () => {
-    const vacio = { desde: panel.desde, cobertura: panel.cobertura, porDia: panel.porDia, calidad: [], cierres: [], aprendido: { ritmo: [], capacidad: [], localesLentos: [] } };
+    const vacio = { desde: panel.desde, cobertura: panel.cobertura, porDia: panel.porDia, calidad: [], cierres: [], pinesDudosos: [], aprendido: { ritmo: [], capacidad: [], localesLentos: [] } };
     montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(vacio)) } });
     expect(await screen.findByText(/Aún no hay suficientes rutas reales para aprender/)).toBeInTheDocument();
   });

@@ -199,6 +199,7 @@ export type ResumenAnalisis = {
   readonly jornadasComparadas: number;
   readonly pinesSugeridos: number;
   readonly pinesProponidos: number;
+  readonly llegadasDeducidas: number;
   readonly cierresFrecuentes: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly confianzaAbierto: number; readonly horasCerrado: readonly number[] }[];
 };
 export type PanelAnalitica = {
@@ -216,5 +217,7 @@ export type PanelAnalitica = {
     readonly localesLentos: readonly (ParametroAprendido & { readonly etiqueta?: EtiquetaLocal })[];
   };
   readonly cierres: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly horasCerrado: readonly number[]; readonly etiqueta?: EtiquetaLocal }[];
+  /** Locales donde se avisó la entrega con buen GPS lejos del pin. */
+  readonly pinesDudosos: readonly { readonly localId: string; readonly distanciaM: number; readonly visitas: number; readonly fuente?: string; readonly etiqueta?: EtiquetaLocal }[];
   readonly ultimaEjecucion?: { readonly iniciadoEn: string; readonly terminadoEn: string; readonly resumen: ResumenAnalisis };
 };
