@@ -190,6 +190,7 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
       }), { repetible: true }),
     reportarFoto: async (id, reporte) => sinCuerpo(await ejecutar(() => client.POST('/v1/locales/{id}/foto/reportar', { params: { path: { id } }, body: reporte, signal: timeout() }))),
     fotosParaRevision: () => ejecutar(() => client.GET('/v1/fotos/revision', { signal: timeout() }), { repetible: true }),
+    verificarFoto: async (id, fotoPath, verificada) => sinCuerpo(await ejecutar(() => client.PUT('/v1/locales/{id}/foto/verificacion', { params: { path: { id } }, body: { fotoPath, verificada }, signal: timeout() }), { repetible: true })),
     resolverReporteFoto: async (id, accion) => sinCuerpo(await ejecutar(() => client.POST('/v1/fotos/reportes/{id}/resolver', { params: { path: { id } }, body: { accion }, signal: timeout() }))),
     quitarFoto: async (id) => sinCuerpo(await ejecutar(() => client.DELETE('/v1/locales/{id}/foto', { params: { path: { id } }, signal: timeout() }))),
     async listarVendedores(opciones = {}) {

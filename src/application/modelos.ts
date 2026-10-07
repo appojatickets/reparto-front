@@ -71,8 +71,10 @@ export type ReporteFoto = {
   readonly subidaPor?: string;
   readonly subidaEn?: string;
 };
-export type FotoReciente = { readonly localId: string; readonly razonSocial: string; readonly direccion: string; readonly comuna: string; readonly subidaPor?: string; readonly subidaEn?: string };
-export type FotosParaRevision = { readonly reportadas: readonly ReporteFoto[]; readonly recientes: readonly FotoReciente[] };
+/** La foto vigente de un local; `fotoPath` la identifica al verificarla (si la cambian mientras tanto, no se verifica otra). */
+export type FotoSubida = { readonly localId: string; readonly fotoPath: string; readonly razonSocial: string; readonly direccion: string; readonly comuna: string; readonly subidaPor?: string; readonly subidaEn?: string };
+export type FotoVerificada = FotoSubida & { readonly verificadaPor?: string; readonly verificadaEn: string };
+export type FotosParaRevision = { readonly reportadas: readonly ReporteFoto[]; readonly porVerificar: readonly FotoSubida[]; readonly verificadas: readonly FotoVerificada[] };
 export type EstadoBusquedaPines = { readonly sinPin: number; readonly enCola: number; readonly enMarcha: boolean };
 export type CamionResumen = { readonly id: string; readonly patente: string; readonly alias?: string };
 

@@ -5074,7 +5074,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Fotos para revisar (solo admin): las reportadas y las subidas hace poco, con quién y cuándo */
+        /** Fotos para revisar (solo admin): las reportadas, las que faltan por verificar y las ya verificadas, con quién y cuándo */
         get: {
             parameters: {
                 query?: never;
@@ -5105,13 +5105,25 @@ export interface paths {
                                 subidaPor?: string;
                                 subidaEn?: string;
                             }[];
-                            recientes: {
+                            porVerificar: {
                                 localId: string;
+                                fotoPath: string;
                                 razonSocial: string;
                                 direccion: string;
                                 comuna: string;
                                 subidaPor?: string;
                                 subidaEn?: string;
+                            }[];
+                            verificadas: {
+                                localId: string;
+                                fotoPath: string;
+                                razonSocial: string;
+                                direccion: string;
+                                comuna: string;
+                                subidaPor?: string;
+                                subidaEn?: string;
+                                verificadaPor?: string;
+                                verificadaEn: string;
                             }[];
                         };
                     };
@@ -5223,6 +5235,155 @@ export interface paths {
             };
         };
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/locales/{id}/foto/verificacion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Verificar la foto de un local (solo admin): sale de «por verificar» y pasa a «verificadas»; con verificada=false vuelve. Se indica la foto vista para no verificar otra que la cambiaron */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        fotoPath: string;
+                        verificada: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": null;
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
         post?: never;
         delete?: never;
         options?: never;

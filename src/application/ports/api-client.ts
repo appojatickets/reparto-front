@@ -66,8 +66,10 @@ export interface ApiClient extends SaludApi {
   quitarFoto(localId: string): R<void>;
   /** Cualquiera reporta la foto de un local mal tomada; el admin la revisa. */
   reportarFoto(localId: string, reporte: { readonly motivo: MotivoFoto; readonly detalle?: string }): R<void>;
-  /** Solo admin: las fotos reportadas y las subidas hace poco. */
+  /** Solo admin: las fotos reportadas y las subidas, separadas en por verificar y verificadas. */
   fotosParaRevision(): R<FotosParaRevision>;
+  /** Solo admin: da por buena la foto que se vio (`verificada: true`, sale de «por verificar») o la devuelve a «por verificar». */
+  verificarFoto(localId: string, fotoPath: string, verificada: boolean): R<void>;
   /** Solo admin: eliminar la foto reportada o dejarla. */
   resolverReporteFoto(id: string, accion: 'eliminar' | 'descartar'): R<void>;
   listarVendedores(opciones?: { incluirInactivos?: boolean }): R<readonly Vendedor[]>;
