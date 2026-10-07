@@ -1910,7 +1910,7 @@ describe('analítica del admin', () => {
     },
     cierres: [{ localId: 'l2', cerrados: 2, intentos: 3, horasCerrado: [9, 14], etiqueta: { razonSocial: 'Bazar Luz', direccion: 'Calle 2 5', comuna: 'Maipú' } }],
     pinesDudosos: [{ localId: 'l3', distanciaM: 1627, visitas: 1, fuente: 'geocodificador', etiqueta: { razonSocial: 'América 557', direccion: 'América 557', comuna: 'San Bernardo' } }],
-    ultimaEjecucion: { iniciadoEn: '2026-10-05T20:10:00.000Z', terminadoEn: '2026-10-05T20:10:02.000Z', resumen: { eventos: 80, jornadas: 6, parametros: 5, jornadasComparadas: 1, pinesSugeridos: 2, pinesProponidos: 2, llegadasDeducidas: 35, cierresFrecuentes: [] } },
+    ultimaEjecucion: { iniciadoEn: '2026-10-05T20:10:00.000Z', terminadoEn: '2026-10-05T20:10:02.000Z', resumen: { eventos: 80, jornadas: 6, parametros: 5, jornadasComparadas: 1, pinesSugeridos: 2, pinesProponidos: 2, llegadasDeducidas: 35, seguimientoRuta: { entregas: 57, primeraDeLaLista: 50, conRutaDelSistema: 30, primeraDeLaRutaDelSistema: 16 }, cierresFrecuentes: [] } },
   };
 
   it('muestra qué datos se guardan, qué aprendió (sin horas) y la ruta sugerida frente a la manejada', async () => {
@@ -1918,6 +1918,8 @@ describe('analítica del admin', () => {
     expect(await screen.findByRole('heading', { name: 'Analítica' })).toBeInTheDocument();
     expect(await screen.findByText('30 de 50 (60 %)')).toBeInTheDocument();
     expect(screen.getByText('12 verificados')).toBeInTheDocument();
+    expect(screen.getByText('50 de 57 (88 %)')).toBeInTheDocument();
+    expect(screen.getByText('16 de 30 (53 %)')).toBeInTheDocument();
     expect(screen.getByText(/140 por verificar/)).toBeInTheDocument();
     expect(screen.getByText('20 % más lento que lo calculado')).toBeInTheDocument();
     expect(screen.getByText('22 min')).toBeInTheDocument();

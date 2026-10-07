@@ -201,6 +201,8 @@ export type ResumenAnalisis = {
   readonly pinesSugeridos: number;
   readonly pinesProponidos: number;
   readonly llegadasDeducidas: number;
+  /** Qué tanto se hace lo que la ruta mostraba. */
+  readonly seguimientoRuta: { readonly entregas: number; readonly primeraDeLaLista: number; readonly conRutaDelSistema: number; readonly primeraDeLaRutaDelSistema: number };
   readonly cierresFrecuentes: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly confianzaAbierto: number; readonly horasCerrado: readonly number[] }[];
 };
 export type PanelAnalitica = {

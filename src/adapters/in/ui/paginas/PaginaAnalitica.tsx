@@ -107,6 +107,12 @@ export const PaginaAnalitica = () => {
             ) : null}
 
             <h2>La ruta sugerida frente a la manejada</h2>
+            {p.ultimaEjecucion && p.ultimaEjecucion.resumen.seguimientoRuta.entregas > 0 ? (
+              <ul className="tarjetas">
+                <Dato titulo="La siguiente parada fue la que mostraba la ruta" valor={proporcion(p.ultimaEjecucion.resumen.seguimientoRuta.primeraDeLaLista, p.ultimaEjecucion.resumen.seguimientoRuta.entregas)} ayuda="Cuenta también lo que moviste a mano: si la ruta ya refleja lo que haces, sale alto." />
+                <Dato titulo="Con la ruta tal como la dejó el sistema" valor={proporcion(p.ultimaEjecucion.resumen.seguimientoRuta.primeraDeLaRutaDelSistema, p.ultimaEjecucion.resumen.seguimientoRuta.conRutaDelSistema)} ayuda="Lo que se hace manda: si es bajo, el sistema todavía no ordena como trabajan los choferes." />
+              </ul>
+            ) : null}
             {p.calidad.length === 0 ? (
               <Aviso>Se compara cuando hay jornadas terminadas con al menos 3 entregas avisadas desde la parada.</Aviso>
             ) : (

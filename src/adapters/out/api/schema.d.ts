@@ -7969,6 +7969,12 @@ export interface paths {
                                     pinesSugeridos: number;
                                     pinesProponidos: number;
                                     llegadasDeducidas: number;
+                                    seguimientoRuta: {
+                                        entregas: number;
+                                        primeraDeLaLista: number;
+                                        conRutaDelSistema: number;
+                                        primeraDeLaRutaDelSistema: number;
+                                    };
                                     cierresFrecuentes: {
                                         localId: string;
                                         cerrados: number;
@@ -8128,6 +8134,12 @@ export interface paths {
                             pinesSugeridos: number;
                             pinesProponidos: number;
                             llegadasDeducidas: number;
+                            seguimientoRuta: {
+                                entregas: number;
+                                primeraDeLaLista: number;
+                                conRutaDelSistema: number;
+                                primeraDeLaRutaDelSistema: number;
+                            };
                             cierresFrecuentes: {
                                 localId: string;
                                 cerrados: number;
