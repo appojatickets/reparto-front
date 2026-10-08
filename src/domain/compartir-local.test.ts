@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatoPesos, formatoRut, textoParaCompartir } from './compartir-local';
+import { formatoRut, lineaEntregas, textoParaCompartir } from './compartir-local';
 
-describe('formatoPesos', () => {
-  it('escribe pesos chilenos con punto de miles', () => {
-    expect(formatoPesos(1234567)).toBe('$1.234.567');
-    expect(formatoPesos(0)).toBe('$0');
-    expect(formatoPesos(150000.4)).toBe('$150.000');
+describe('lineaEntregas', () => {
+  it('cuenta las entregas hechas, en singular o plural', () => {
+    expect(lineaEntregas(1)).toBe('1 entrega hecha');
+    expect(lineaEntregas(3)).toBe('3 entregas hechas');
   });
 });
 
@@ -31,9 +30,10 @@ describe('textoParaCompartir', () => {
     expect(textoParaCompartir({ razonSocial: 'Kiosko Sol', direccion: 'Calle 1 10', comuna: 'Maipú' })).toBe(['Kiosko Sol', 'Calle 1 10, Maipú', 'Ubicación: sin pin todavía'].join('\n'));
   });
 
-  it('puede sumar lo entregado', () => {
-    expect(textoParaCompartir({ ...local, entregas: 3, recaudado: 450000 })).toContain('Entregado: $450.000 en 3 facturas');
-    expect(textoParaCompartir({ ...local, entregas: 1, recaudado: 1000 })).toContain('Entregado: $1.000 en 1 factura');
-    expect(textoParaCompartir({ ...local, entregas: 0, recaudado: 0 })).not.toContain('Entregado');
+  it('puede sumar cuántas entregas tiene, sin montos', () => {
+    expect(textoParaCompartir({ ...local, entregas: 3 })).toContain('3 entregas hechas');
+    expect(textoParaCompartir({ ...local, entregas: 1 })).toContain('1 entrega hecha');
+    expect(textoParaCompartir({ ...local, entregas: 0 })).not.toContain('entrega');
+    expect(textoParaCompartir({ ...local, entregas: 3 })).not.toContain('$');
   });
 });

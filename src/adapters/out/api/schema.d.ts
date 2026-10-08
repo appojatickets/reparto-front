@@ -2337,7 +2337,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Locales con los datos de su cliente y lo entregado: de una comuna o los que coinciden con un texto (razón social, RUT o dirección); primero los de pin por verificar */
+        /** Locales con los datos de su cliente y cuántas entregas tiene: de una comuna o los que coinciden con un texto (razón social, RUT o dirección); primero los de pin por verificar */
         get: {
             parameters: {
                 query?: {
@@ -2377,7 +2377,6 @@ export interface paths {
                                 streetviewRumbo?: number;
                                 tieneFoto: boolean;
                                 entregas: number;
-                                recaudado: number;
                             }[];
                         };
                     };

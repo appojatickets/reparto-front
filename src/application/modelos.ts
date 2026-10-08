@@ -46,9 +46,8 @@ export type LocalDeLista = {
   readonly nota?: string;
   readonly streetviewRumbo?: number;
   readonly tieneFoto: boolean;
-  /** Facturas entregadas a este local y la suma de sus totales (el sistema no registra cobros). */
+  /** Facturas ya entregadas a este local. */
   readonly entregas: number;
-  readonly recaudado: number;
 };
 export type ResumenComuna = { readonly comuna: string; readonly total: number; readonly verificados: number; readonly sinPin: number };
 

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { COMUNAS_RM } from '../../../../domain/comunas';
-import { lineaEntregado, formatoRut, textoParaCompartir } from '../../../../domain/compartir-local';
+import { formatoRut, lineaEntregas, textoParaCompartir } from '../../../../domain/compartir-local';
 import { enlaceVerEnMapa, enlaceWhatsApp } from '../../../../domain/enlaces';
 import { puedeHacer } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
@@ -171,7 +171,7 @@ const FilaLocal = ({ l, alCambiar }: { readonly l: LocalDeLista; readonly alCamb
       {l.giro ? <span className="ayuda">{l.giro}</span> : null}
       <span>{l.direccion}, <strong className="comuna">{l.comuna}</strong></span>
       <Insignia>{!tienePin ? 'SIN PIN' : l.pinVerificado ? '✓ VERIFICADO' : 'PIN POR VERIFICAR'}</Insignia>
-      {l.entregas > 0 ? <span>{lineaEntregado(l.entregas, l.recaudado)}</span> : null}
+      {l.entregas > 0 ? <span>{lineaEntregas(l.entregas)}</span> : null}
       {l.nota ? <span className="ayuda">Nota: {l.nota}</span> : null}
       {verFoto ? <ImagenFoto localId={l.localId} cliente={l.razonSocial} /> : null}
       <div className="fila-botones">

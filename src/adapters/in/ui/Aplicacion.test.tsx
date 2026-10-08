@@ -865,10 +865,10 @@ describe('pines', () => {
 });
 
 describe('locales por comuna', () => {
-  const L = (n: number, extra: object = {}) => ({ localId: `l${n}`, clienteId: `c${n}`, razonSocial: `Local ${n} SpA`, rut: '77975918-0', direccion: `Calle ${n} 100`, comuna: 'Maipú', pinVerificado: false, tieneFoto: false, entregas: 0, recaudado: 0, ...extra });
+  const L = (n: number, extra: object = {}) => ({ localId: `l${n}`, clienteId: `c${n}`, razonSocial: `Local ${n} SpA`, rut: '77975918-0', direccion: `Calle ${n} 100`, comuna: 'Maipú', pinVerificado: false, tieneFoto: false, entregas: 0, ...extra });
   const COMUNAS = [{ comuna: 'Maipú', total: 3, verificados: 1, sinPin: 1 }, { comuna: 'Ñuñoa', total: 1, verificados: 0, sinPin: 0 }];
   const lista = [
-    L(1, { entregas: 2, recaudado: 200000 }),
+    L(1, { entregas: 2 }),
     L(2, { lat: -33.5, lng: -70.7, pinFuente: 'chofer' }),
     L(3, { lat: -33.51, lng: -70.71, pinVerificado: true, pinVerificacion: 'persona' as const, tieneFoto: true }),
   ];
@@ -904,17 +904,18 @@ describe('locales por comuna', () => {
     expect(screen.queryByRole('listitem', { name: 'Local 1 SpA' })).toBeNull();
   });
 
-  it('cada local muestra razón social, RUT, dirección, el estado del pin y lo entregado', async () => {
+  it('cada local muestra razón social, RUT, dirección, el estado del pin y cuántas entregas tiene', async () => {
     await abrirComuna();
     const uno = within(await screen.findByRole('listitem', { name: 'Local 1 SpA' }));
     expect(uno.getByText('RUT 77.975.918-0')).toBeInTheDocument();
     expect(uno.getByText(/Calle 1 100/)).toBeInTheDocument();
     expect(uno.getByText('SIN PIN')).toBeInTheDocument();
-    expect(uno.getByText('Entregado: $200.000 en 2 facturas')).toBeInTheDocument();
+    expect(uno.getByText('2 entregas hechas')).toBeInTheDocument();
+    expect(uno.queryByText(/\$/)).toBeNull();
     const dos = within(screen.getByRole('listitem', { name: 'Local 2 SpA' }));
     expect(dos.getByText('PIN POR VERIFICAR')).toBeInTheDocument();
     expect(dos.getByRole('link', { name: 'VER EL PIN DE Local 2 SpA EN EL MAPA' })).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=-33.5,-70.7');
-    expect(dos.queryByText(/Entregado:/)).toBeNull();
+    expect(dos.queryByText(/entregas? hechas?/)).toBeNull();
   });
 
   it('busca por nombre, RUT o dirección en todas las comunas', async () => {

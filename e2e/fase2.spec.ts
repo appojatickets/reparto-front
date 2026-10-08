@@ -140,15 +140,15 @@ test.describe('pantallas de administración y despacho', () => {
 
   test('locales por comuna: lista con verificados, editar y compartir son accesibles', async ({ page }) => {
     const locales = [
-      { localId: LOCAL.id, clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', rut: '76543210-3', direccion: 'Av. Providencia 2500', comuna: 'Providencia', lat: -33.43, lng: -70.61, pinVerificado: false, tieneFoto: false, entregas: 2, recaudado: 200000 },
-      { localId: '323e4567-e89b-42d3-a456-426614174000', clienteId: 'c3', razonSocial: 'Bazar Sol', direccion: 'Calle 9 90', comuna: 'Providencia', pinVerificado: false, tieneFoto: false, entregas: 0, recaudado: 0 },
+      { localId: LOCAL.id, clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', rut: '76543210-3', direccion: 'Av. Providencia 2500', comuna: 'Providencia', lat: -33.43, lng: -70.61, pinVerificado: false, tieneFoto: false, entregas: 2 },
+      { localId: '323e4567-e89b-42d3-a456-426614174000', clienteId: 'c3', razonSocial: 'Bazar Sol', direccion: 'Calle 9 90', comuna: 'Providencia', pinVerificado: false, tieneFoto: false, entregas: 0 },
     ];
     await simularApi(page, { ...comunes(ADMIN), 'GET /v1/locales/comunas': () => ({ status: 200, json: { comunas: [{ comuna: 'Providencia', total: 2, verificados: 0, sinPin: 1 }] } }), 'GET /v1/locales': () => ({ status: 200, json: { total: 2, locales } }) });
     await conSesionGuardada(page);
     await page.goto('/locales');
     await page.getByLabel('Comuna').selectOption('Providencia');
     await expect(page.getByRole('listitem', { name: 'Rabelo Mágica SpA' })).toBeVisible();
-    await expect(page.getByText('Entregado: $200.000 en 2 facturas')).toBeVisible();
+    await expect(page.getByText('2 entregas hechas')).toBeVisible();
     await sinViolaciones(page);
     await page.getByRole('button', { name: 'EDITAR Rabelo Mágica SpA' }).click();
     await expect(page.getByRole('form', { name: 'Editar Rabelo Mágica SpA' })).toBeVisible();

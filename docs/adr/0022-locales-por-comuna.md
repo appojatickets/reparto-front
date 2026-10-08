@@ -7,10 +7,10 @@ Estado: aceptada (2026-10-08). Complementa el ADR 0035 del back.
 - Los resultados se separan en **POR VERIFICAR (n)** —los sin pin también— y **VERIFICADOS (n)**, como en fotos. Cada local es una tarjeta con razón social, RUT con puntos y guion, giro, dirección, insignia del pin, lo entregado y la nota.
 - **Acciones por local**: VERIFICAR PIN / QUITAR VERIFICACIÓN, VER EN EL MAPA (enlace al lugar, sin iniciar navegación), VER FOTO (la URL firmada se pide solo al tocarlo, para no cargar cientos de fotos), COMPARTIR, EDITAR y FICHA.
 - **EDITAR** muestra todo en un solo formulario (razón social, RUT, giro, dirección, comuna, nota) y envía solo lo que cambió: primero los datos del cliente y luego los del local; si el primero falla (por ejemplo RUT repetido) lo dice y no sigue. La ubicación se pega con el mismo componente de siempre (enlace o coordenadas). ELIMINAR ESTA DIRECCIÓN pide confirmar y explica si la API lo impide por entregas hechas.
-- **COMPARTIR**: con el menú del teléfono (`navigator.share`; con la foto si `canShare` acepta archivos) o, si no existe, ENVIAR POR WHATSAPP y COPIAR EL TEXTO. El mensaje es nombre, RUT, dirección, enlace al pin y lo entregado (`textoParaCompartir`, en el dominio).
+- **COMPARTIR**: con el menú del teléfono (`navigator.share`; con la foto si `canShare` acepta archivos) o, si no existe, ENVIAR POR WHATSAPP y COPIAR EL TEXTO. El mensaje es nombre, RUT, dirección, enlace al pin y cuántas entregas tiene (`textoParaCompartir`, en el dominio).
 - Se quita la planilla «Proponer pines»; la pantalla anterior queda como **PROPUESTAS DE PIN** (solo lo que propone el sistema).
 - **Reportar la ubicación** también aparece en las paradas con pin aproximado (antes solo con pin preciso); el nombre se puede reportar siempre.
 - **Última parada anclada: volver a la empresa.** Toda ruta calculada termina con una fila fija (`FilaDeposito`) fuera de la lista arrastrable: «VOLVER A <nombre del depósito>» (o «LA EMPRESA»), con la hora de regreso estimada y, para quien va en el camión, IR y WAZE hacia el depósito. No se mueve, no es una parada ni se entrega. Al hacer la última entrega se destaca («Terminaste las entregas · VUELVE A …») con borde grueso. El nombre sale de CONFIGURACIÓN → «Nombre del depósito».
 
 ## Fuera de alcance
-Paginar más de 500 locales por consulta (se avisa «se muestran N de M» y se pide afinar); un permiso más fino para ver los montos entregados.
+Paginar más de 500 locales por consulta (se avisa «se muestran N de M» y se pide afinar).
