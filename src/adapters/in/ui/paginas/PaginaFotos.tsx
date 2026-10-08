@@ -50,12 +50,21 @@ const FilaReportada = ({ r, alCambiar }: { readonly r: ReporteFoto; readonly alC
   };
   return (
     <li className="tarjeta" aria-label={`Foto reportada de ${r.razonSocial}`}>
-      <ImagenFoto localId={r.localId} cliente={r.razonSocial} />
+      {r.fotoReemplazada ? null : <ImagenFoto localId={r.localId} cliente={r.razonSocial} />}
       <strong>{r.razonSocial}</strong>
       <span>{r.direccion}, <strong className="comuna">{r.comuna}</strong></span>
       <span>Reportada: <strong>{textoDeMotivo(r.motivo)}</strong>{r.detalle ? ` · «${r.detalle}»` : ''}</span>
       <span className="ayuda">Reportó {r.reportadoPor ?? 'alguien'}{fechaYHoraEnChile(r.reportadoEn) !== '' ? ` el ${fechaYHoraEnChile(r.reportadoEn)}` : ''}. {quienYCuando(r.subidaPor, r.subidaEn)}</span>
-      <BotonesEliminar cliente={r.razonSocial} ocupado={ocupado} alEliminar={() => void resolver('eliminar')} dejar={{ texto: 'LA FOTO ESTÁ BIEN', etiqueta: `LA FOTO DE ${r.razonSocial} ESTÁ BIEN`, alTocar: () => void resolver('descartar') }} />
+      {r.fotoReemplazada ? (
+        <>
+          <Aviso>Esta foto ya fue reemplazada o eliminada. Si hay una foto nueva, aparece en «Por verificar».</Aviso>
+          <div className="fila-botones">
+            <Boton variante="secundario" disabled={ocupado} aria-label={`CERRAR EL REPORTE DE ${r.razonSocial}`} onClick={() => void resolver('descartar')}>CERRAR EL REPORTE</Boton>
+          </div>
+        </>
+      ) : (
+        <BotonesEliminar cliente={r.razonSocial} ocupado={ocupado} alEliminar={() => void resolver('eliminar')} dejar={{ texto: 'LA FOTO ESTÁ BIEN', etiqueta: `LA FOTO DE ${r.razonSocial} ESTÁ BIEN`, alTocar: () => void resolver('descartar') }} />
+      )}
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
     </li>
   );

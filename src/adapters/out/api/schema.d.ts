@@ -5260,6 +5260,7 @@ export interface paths {
                                 detalle?: string;
                                 reportadoPor?: string;
                                 reportadoEn: string;
+                                fotoReemplazada: boolean;
                                 subidaPor?: string;
                                 subidaEn?: string;
                             }[];

@@ -430,7 +430,7 @@ describe('importar una lista de direcciones con enlace de Google Maps', () => {
 });
 
 describe('revisar fotos (admin)', () => {
-  const reportada = { id: 'r1', localId: 'lA', razonSocial: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', motivo: 'se_ven_personas' as const, detalle: 'sale el dueño', reportadoPor: 'Juan Pérez', reportadoEn: '2026-10-05T15:58:00.000Z', subidaPor: 'Max García', subidaEn: '2026-10-05T14:00:00.000Z' };
+  const reportada = { id: 'r1', localId: 'lA', razonSocial: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', motivo: 'se_ven_personas' as const, detalle: 'sale el dueño', reportadoPor: 'Juan Pérez', reportadoEn: '2026-10-05T15:58:00.000Z', fotoReemplazada: false, subidaPor: 'Max García', subidaEn: '2026-10-05T14:00:00.000Z' };
   const porVerificar = { localId: 'lB', fotoPath: 'e1/lB/b.webp', razonSocial: 'Local B', direccion: 'Calle B 200', comuna: 'Paine', subidaPor: 'Ana Soto', subidaEn: '2026-10-05T13:00:00.000Z' };
   const verificada = { localId: 'lD', fotoPath: 'e1/lD/d.webp', razonSocial: 'Local D', direccion: 'Calle D 400', comuna: 'Buin', subidaPor: 'Ana Soto', subidaEn: '2026-10-04T13:00:00.000Z', verificadaPor: 'Matías Admin', verificadaEn: '2026-10-06T14:30:00.000Z' };
   const revision = (extra: Partial<FotosParaRevision> = {}) => ok<FotosParaRevision>({ reportadas: [], porVerificar: [], verificadas: [], ...extra });
@@ -502,6 +502,20 @@ describe('revisar fotos (admin)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'SÍ, ELIMINAR LA FOTO DE Local A' }));
     expect(resolverReporteFoto).toHaveBeenCalledWith('r1', 'eliminar');
     expect(await screen.findByText('No hay fotos reportadas por revisar.')).toBeInTheDocument();
+  });
+
+  it('un reporte cuya foto ya fue reemplazada sigue visible, lo explica y solo se puede cerrar (no hay foto que eliminar)', async () => {
+    const resolverReporteFoto = vi.fn(() => Promise.resolve(ok(undefined)));
+    const reemplazada = { id: 'r1', localId: 'lA', razonSocial: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', motivo: 'se_ven_personas' as const, detalle: 'sale el dueño', reportadoPor: 'Juan Pérez', reportadoEn: '2026-10-05T15:58:00.000Z', fotoReemplazada: true };
+    montar({ ruta: '/admin/fotos', sesion: ADMIN, api: { fotosParaRevision: () => Promise.resolve(revision({ reportadas: [reemplazada] })), resolverReporteFoto, urlFoto } });
+    const fila = await screen.findByRole('listitem', { name: 'Foto reportada de Local A' });
+    expect(fila).toHaveTextContent('Se ven personas');
+    expect(fila).toHaveTextContent('Reportó Juan Pérez');
+    expect(fila).toHaveTextContent('Esta foto ya fue reemplazada o eliminada');
+    expect(within(fila).queryByRole('img')).toBeNull();
+    expect(within(fila).queryByRole('button', { name: /ELIMINAR LA FOTO/ })).toBeNull();
+    await userEvent.click(within(fila).getByRole('button', { name: 'CERRAR EL REPORTE DE Local A' }));
+    expect(resolverReporteFoto).toHaveBeenCalledWith('r1', 'descartar');
   });
 
   it('«la foto está bien» descarta el reporte sin eliminar nada', async () => {

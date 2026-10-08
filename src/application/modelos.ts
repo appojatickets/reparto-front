@@ -71,6 +71,8 @@ export type ReporteFoto = {
   readonly detalle?: string;
   readonly reportadoPor?: string;
   readonly reportadoEn: string;
+  /** La foto reportada ya no es la del local (la reemplazaron o la quitaron): el reporte sigue abierto hasta cerrarlo. */
+  readonly fotoReemplazada: boolean;
   readonly subidaPor?: string;
   readonly subidaEn?: string;
 };
