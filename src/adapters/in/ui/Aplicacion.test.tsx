@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { err, ok } from '../../../domain/result';
@@ -79,7 +79,7 @@ describe('entrada y protección por rol', () => {
   it('el despachador ve clientes y pines, no importación ni usuarios', async () => {
     montar({ sesion: DESPACHADOR });
     expect(await screen.findByRole('link', { name: 'BUSCAR CLIENTE' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'PINES DE LOCALES' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'PROPUESTAS DE PIN' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'FACTURAS DEL DÍA' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'RUTAS DEL DÍA' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'CONFIGURACIÓN' })).toBeNull();
@@ -90,7 +90,7 @@ describe('entrada y protección por rol', () => {
 
   it('el admin ve todo el menú', async () => {
     montar({ sesion: ADMIN });
-    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'CAMIONES', 'VENDEDORES', 'EXPORTAR DATOS', 'REVISAR FOTOS', 'ANALÍTICA', 'CONFIGURACIÓN', 'USUARIOS']) {
+    for (const nombre of ['FACTURAS DEL DÍA', 'RUTAS DEL DÍA', 'BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PROPUESTAS DE PIN', 'IMPORTAR CLIENTES', 'CAMIONES', 'VENDEDORES', 'EXPORTAR DATOS', 'REVISAR FOTOS', 'ANALÍTICA', 'CONFIGURACIÓN', 'USUARIOS']) {
       expect(await screen.findByRole('link', { name: nombre })).toBeInTheDocument();
     }
   });
@@ -262,17 +262,17 @@ describe('detalle del local', () => {
     const EDITOR: UsuarioSesion = { ...CHOFER, editor: true };
 
     it('puede abrir la ficha, quitar la foto y corregir la razón social; un chofer común no entra', async () => {
-      const cambiarRazonSocial = vi.fn(() => Promise.resolve(ok(undefined)));
+      const corregirCliente = vi.fn(() => Promise.resolve(ok(undefined)));
       const quitarFoto = vi.fn(() => Promise.resolve(ok(undefined)));
       const obtenerLocal = vi.fn(() => Promise.resolve(ok({ ...local, fotoPath: 'e/l1/f.webp' })));
-      montar({ ruta: '/clientes/l1', sesion: EDITOR, api: { obtenerLocal, cambiarRazonSocial, quitarFoto, urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 600 })) } });
+      montar({ ruta: '/clientes/l1', sesion: EDITOR, api: { obtenerLocal, corregirCliente, quitarFoto, urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 600 })) } });
       expect(await screen.findByRole('button', { name: 'QUITAR FOTO' })).toBeInTheDocument();
       const campo = screen.getByLabelText('Razón social (corrige un error de tipeo)');
       expect(campo).toHaveValue('Rabelo Mágica SpA');
       await userEvent.clear(campo);
       await userEvent.type(campo, 'Rabelo Magica SpA');
       await userEvent.click(screen.getByRole('button', { name: 'GUARDAR NOMBRE' }));
-      expect(cambiarRazonSocial).toHaveBeenCalledWith('c1', 'Rabelo Magica SpA');
+      expect(corregirCliente).toHaveBeenCalledWith('c1', { razonSocial: 'Rabelo Magica SpA' });
       expect(await screen.findByText('Nombre corregido.')).toBeInTheDocument();
     });
 
@@ -862,14 +862,211 @@ describe('pines', () => {
     expect(await screen.findByText('No hay propuestas pendientes.')).toBeInTheDocument();
   });
 
-  it('propone pines desde una planilla y muestra el resumen', async () => {
-    const importarPines = vi.fn(() => Promise.resolve(ok({ recibidas: 1, pendientes: 1, sinLocal: 0, errores: [] })));
-    montar({ ruta: '/pines', sesion: DESPACHADOR, api: { importarPines, listarPropuestas: () => Promise.resolve(ok([])) } });
-    await userEvent.click(await screen.findByLabelText('Planilla de pines'));
-    await userEvent.paste('Dirección\tLatitud\tLongitud\nCalle 1 10\t-33,5\t-70,7');
-    await userEvent.click(await screen.findByRole('button', { name: 'PROPONER PINES' }));
-    expect(await screen.findByText(/Recibidos: 1 · para revisar: 1/)).toBeInTheDocument();
-    expect(importarPines).toHaveBeenCalledWith([{ direccion: 'Calle 1 10', lat: '-33,5', lng: '-70,7' }]);
+});
+
+describe('locales por comuna', () => {
+  const L = (n: number, extra: object = {}) => ({ localId: `l${n}`, clienteId: `c${n}`, razonSocial: `Local ${n} SpA`, rut: '77975918-0', direccion: `Calle ${n} 100`, comuna: 'Maipú', pinVerificado: false, tieneFoto: false, entregas: 0, recaudado: 0, ...extra });
+  const COMUNAS = [{ comuna: 'Maipú', total: 3, verificados: 1, sinPin: 1 }, { comuna: 'Ñuñoa', total: 1, verificados: 0, sinPin: 0 }];
+  const lista = [
+    L(1, { entregas: 2, recaudado: 200000 }),
+    L(2, { lat: -33.5, lng: -70.7, pinFuente: 'chofer' }),
+    L(3, { lat: -33.51, lng: -70.71, pinVerificado: true, pinVerificacion: 'persona' as const, tieneFoto: true }),
+  ];
+  const api = (extra: Partial<ApiClient> = {}): Partial<ApiClient> => ({
+    resumenComunas: () => Promise.resolve(ok(COMUNAS)),
+    listarLocales: () => Promise.resolve(ok({ total: 3, locales: lista })),
+    ...extra,
+  });
+  const abrirComuna = async (extra: Partial<ApiClient> = {}, sesion = ADMIN) => {
+    montar({ ruta: '/locales', sesion, api: api(extra) });
+    await screen.findByRole('option', { name: /^Maipú/ });
+    await userEvent.selectOptions(screen.getByLabelText('Comuna'), 'Maipú');
+  };
+
+  it('pide elegir una comuna o buscar; el selector muestra cuántos locales y cuántos sin pin hay en cada una', async () => {
+    montar({ ruta: '/locales', sesion: ADMIN, api: api() });
+    expect(await screen.findByText(/Elige una comuna o busca/)).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'Maipú · 3 locales · 1 sin pin' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Ñuñoa · 1 local' })).toBeInTheDocument();
+  });
+
+  it('al elegir la comuna separa por verificar y verificados, con sus cantidades', async () => {
+    const listarLocales = vi.fn(() => Promise.resolve(ok({ total: 3, locales: lista })));
+    await abrirComuna({ listarLocales });
+    expect(listarLocales).toHaveBeenCalledWith({ comuna: 'Maipú', limite: 500 });
+    expect(await screen.findByRole('button', { name: 'POR VERIFICAR (2)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'VERIFICADOS (1)' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('listitem', { name: 'Local 1 SpA' })).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: 'Local 2 SpA' })).toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: 'Local 3 SpA' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'VERIFICADOS (1)' }));
+    expect(screen.getByRole('listitem', { name: 'Local 3 SpA' })).toBeInTheDocument();
+    expect(screen.queryByRole('listitem', { name: 'Local 1 SpA' })).toBeNull();
+  });
+
+  it('cada local muestra razón social, RUT, dirección, el estado del pin y lo entregado', async () => {
+    await abrirComuna();
+    const uno = within(await screen.findByRole('listitem', { name: 'Local 1 SpA' }));
+    expect(uno.getByText('RUT 77.975.918-0')).toBeInTheDocument();
+    expect(uno.getByText(/Calle 1 100/)).toBeInTheDocument();
+    expect(uno.getByText('SIN PIN')).toBeInTheDocument();
+    expect(uno.getByText('Entregado: $200.000 en 2 facturas')).toBeInTheDocument();
+    const dos = within(screen.getByRole('listitem', { name: 'Local 2 SpA' }));
+    expect(dos.getByText('PIN POR VERIFICAR')).toBeInTheDocument();
+    expect(dos.getByRole('link', { name: 'VER EL PIN DE Local 2 SpA EN EL MAPA' })).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=-33.5,-70.7');
+    expect(dos.queryByText(/Entregado:/)).toBeNull();
+  });
+
+  it('busca por nombre, RUT o dirección en todas las comunas', async () => {
+    const listarLocales = vi.fn(() => Promise.resolve(ok({ total: 1, locales: [L(9, { comuna: 'Ñuñoa' })] })));
+    montar({ ruta: '/locales', sesion: ADMIN, api: api({ listarLocales }) });
+    await userEvent.type(await screen.findByLabelText('Buscar por nombre, RUT o dirección'), 'rabelo');
+    await waitFor(() => { expect(listarLocales).toHaveBeenCalledWith({ texto: 'rabelo', limite: 500 }); });
+    expect(await screen.findByRole('listitem', { name: 'Local 9 SpA' })).toBeInTheDocument();
+  });
+
+  it('VERIFICAR PIN y QUITAR VERIFICACIÓN cambian el estado y recargan la lista', async () => {
+    const verificarPin = vi.fn(() => Promise.resolve(ok(undefined)));
+    const listarLocales = vi.fn(() => Promise.resolve(ok({ total: 3, locales: lista })));
+    await abrirComuna({ verificarPin, listarLocales });
+    const dos = within(await screen.findByRole('listitem', { name: 'Local 2 SpA' }));
+    await userEvent.click(dos.getByRole('button', { name: 'VERIFICAR EL PIN DE Local 2 SpA' }));
+    expect(verificarPin).toHaveBeenCalledWith('l2', true);
+    await waitFor(() => { expect(listarLocales).toHaveBeenCalledTimes(2); });
+    expect(within(screen.getByRole('listitem', { name: 'Local 1 SpA' })).queryByRole('button', { name: /VERIFICAR EL PIN/ })).toBeNull(); // sin pin no hay nada que verificar
+    await userEvent.click(screen.getByRole('button', { name: 'VERIFICADOS (1)' }));
+    await userEvent.click(within(screen.getByRole('listitem', { name: 'Local 3 SpA' })).getByRole('button', { name: 'QUITAR LA VERIFICACIÓN DE Local 3 SpA' }));
+    expect(verificarPin).toHaveBeenLastCalledWith('l3', false);
+  });
+
+  it('VER FOTO muestra la fachada solo cuando se pide', async () => {
+    const urlFoto = vi.fn(() => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 300 })));
+    await abrirComuna({ urlFoto });
+    await userEvent.click(await screen.findByRole('button', { name: 'VERIFICADOS (1)' }));
+    expect(urlFoto).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'VER LA FOTO DE Local 3 SpA' }));
+    expect(await screen.findByRole('img', { name: 'Fachada de Local 3 SpA' })).toHaveAttribute('src', 'https://alm.test/f.webp');
+    expect(within(screen.getByRole('listitem', { name: 'Local 3 SpA' })).queryByRole('button', { name: /^VER LA FOTO/ })).toBeNull();
+  });
+
+  describe('compartir', () => {
+    afterEach(() => { Reflect.deleteProperty(navigator, 'share'); });
+
+    it('sin menú de compartir del teléfono: WhatsApp con el mensaje armado y COPIAR', async () => {
+      const writeText = vi.fn(() => Promise.resolve());
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+      await abrirComuna();
+      const dos = within(await screen.findByRole('listitem', { name: 'Local 2 SpA' }));
+      await userEvent.click(dos.getByRole('button', { name: 'COMPARTIR Local 2 SpA' }));
+      const wa = dos.getByRole('link', { name: 'ENVIAR POR WHATSAPP' });
+      const texto = decodeURIComponent(wa.getAttribute('href') ?? '');
+      expect(texto).toContain('Local 2 SpA\nRUT 77.975.918-0\nCalle 2 100, Maipú\nUbicación: https://www.google.com/maps/search/?api=1&query=-33.5,-70.7');
+      await userEvent.click(dos.getByRole('button', { name: 'COPIAR EL TEXTO' }));
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('Local 2 SpA\nRUT 77.975.918-0'));
+      expect(await dos.findByText('Texto copiado.')).toBeInTheDocument();
+    });
+
+    it('con el menú de compartir del teléfono lo abre con el mismo texto', async () => {
+      const share = vi.fn(() => Promise.resolve());
+      Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+      await abrirComuna();
+      await userEvent.click(within(await screen.findByRole('listitem', { name: 'Local 2 SpA' })).getByRole('button', { name: 'COMPARTIR Local 2 SpA' }));
+      expect(share).toHaveBeenCalledTimes(1);
+      const [datos] = share.mock.calls[0] as unknown as [{ title: string; text: string }];
+      expect(datos.title).toBe('Local 2 SpA');
+      expect(datos.text).toContain('Local 2 SpA\nRUT 77.975.918-0\nCalle 2 100, Maipú');
+    });
+  });
+
+  describe('editar', () => {
+    it('EDITAR muestra todos los datos; GUARDAR envía solo lo que cambió y deja la lista actualizada', async () => {
+      const corregirCliente = vi.fn(() => Promise.resolve(ok(undefined)));
+      const actualizarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
+      const listarLocales = vi.fn(() => Promise.resolve(ok({ total: 3, locales: lista })));
+      await abrirComuna({ corregirCliente, actualizarLocal, listarLocales });
+      await userEvent.click(within(await screen.findByRole('listitem', { name: 'Local 2 SpA' })).getByRole('button', { name: 'EDITAR Local 2 SpA' }));
+      const form = within(screen.getByRole('form', { name: 'Editar Local 2 SpA' }));
+      expect(form.getByLabelText('Razón social')).toHaveValue('Local 2 SpA');
+      expect(form.getByLabelText('RUT')).toHaveValue('77975918-0');
+      expect(form.getByLabelText('Dirección')).toHaveValue('Calle 2 100');
+      expect(form.getByLabelText('Comuna')).toHaveValue('Maipú');
+      await userEvent.clear(form.getByLabelText('Razón social'));
+      await userEvent.type(form.getByLabelText('Razón social'), 'Local Dos Ltda');
+      await userEvent.clear(form.getByLabelText('Dirección'));
+      await userEvent.type(form.getByLabelText('Dirección'), 'Av. Nueva 55');
+      await userEvent.selectOptions(form.getByLabelText('Comuna'), 'Ñuñoa');
+      await userEvent.type(form.getByLabelText('Nota'), 'portón verde');
+      await userEvent.click(form.getByRole('button', { name: 'GUARDAR CAMBIOS' }));
+      expect(corregirCliente).toHaveBeenCalledWith('c2', { razonSocial: 'Local Dos Ltda' });
+      expect(actualizarLocal).toHaveBeenCalledWith('l2', { direccion: 'Av. Nueva 55', comuna: 'Ñuñoa', nota: 'portón verde' });
+      await waitFor(() => { expect(listarLocales).toHaveBeenCalledTimes(2); });
+    });
+
+    it('GUARDAR sin cambios no llama a la API; un RUT vacío lo borra', async () => {
+      const corregirCliente = vi.fn(() => Promise.resolve(ok(undefined)));
+      const actualizarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
+      await abrirComuna({ corregirCliente, actualizarLocal });
+      await userEvent.click(within(await screen.findByRole('listitem', { name: 'Local 2 SpA' })).getByRole('button', { name: 'EDITAR Local 2 SpA' }));
+      const form = within(screen.getByRole('form', { name: 'Editar Local 2 SpA' }));
+      expect(form.getByRole('button', { name: 'GUARDAR CAMBIOS' })).toBeDisabled();
+      await userEvent.clear(form.getByLabelText('RUT'));
+      await userEvent.click(form.getByRole('button', { name: 'GUARDAR CAMBIOS' }));
+      expect(corregirCliente).toHaveBeenCalledWith('c2', { rut: '' });
+      expect(actualizarLocal).not.toHaveBeenCalled();
+    });
+
+    it('si la API rechaza (RUT repetido, dirección repetida) lo dice y no cierra el formulario', async () => {
+      const corregirCliente = vi.fn(() => Promise.resolve(http(409, { mensaje: 'Ya existe otro cliente con ese RUT.' })));
+      await abrirComuna({ corregirCliente });
+      await userEvent.click(within(await screen.findByRole('listitem', { name: 'Local 2 SpA' })).getByRole('button', { name: 'EDITAR Local 2 SpA' }));
+      const form = within(screen.getByRole('form', { name: 'Editar Local 2 SpA' }));
+      await userEvent.clear(form.getByLabelText('RUT'));
+      await userEvent.type(form.getByLabelText('RUT'), '12345678-5');
+      await userEvent.click(form.getByRole('button', { name: 'GUARDAR CAMBIOS' }));
+      expect(await form.findByText('Ya existe otro cliente con ese RUT.')).toBeInTheDocument();
+      expect(screen.getByRole('form', { name: 'Editar Local 2 SpA' })).toBeInTheDocument();
+    });
+
+    it('permite pegar la ubicación del vendedor para fijar el pin', async () => {
+      const fijarPinDesdeEnlace = vi.fn(() => Promise.resolve(ok({ resultado: 'fijado' as const, lat: -33.5, lng: -70.7 })));
+      await abrirComuna({ fijarPinDesdeEnlace });
+      await userEvent.click(within(await screen.findByRole('listitem', { name: 'Local 1 SpA' })).getByRole('button', { name: 'EDITAR Local 1 SpA' }));
+      const form = screen.getByRole('form', { name: 'Editar Local 1 SpA' });
+      await userEvent.type(within(form).getByLabelText('Ubicación del pin (pega el enlace de Google Maps o las coordenadas)'), 'https://maps.app.goo.gl/abc');
+      await userEvent.click(within(form).getByRole('button', { name: 'GUARDAR UBICACIÓN' }));
+      expect(fijarPinDesdeEnlace).toHaveBeenCalledWith('l1', 'https://maps.app.goo.gl/abc');
+    });
+
+    it('ELIMINAR ESTA DIRECCIÓN pide confirmar; con entregas hechas la API lo impide y se explica', async () => {
+      const eliminarLocal = vi.fn(() => Promise.resolve(http(409, { mensaje: 'Esta dirección ya tiene entregas hechas: no se puede eliminar para no perder el historial.' })));
+      await abrirComuna({ eliminarLocal });
+      await userEvent.click(within(await screen.findByRole('listitem', { name: 'Local 2 SpA' })).getByRole('button', { name: 'EDITAR Local 2 SpA' }));
+      const form = within(screen.getByRole('form', { name: 'Editar Local 2 SpA' }));
+      await userEvent.click(form.getByRole('button', { name: 'ELIMINAR ESTA DIRECCIÓN' }));
+      expect(eliminarLocal).not.toHaveBeenCalled();
+      await userEvent.click(form.getByRole('button', { name: 'SÍ, ELIMINAR' }));
+      expect(eliminarLocal).toHaveBeenCalledWith('l2');
+      expect(await form.findByText(/ya tiene entregas hechas/)).toBeInTheDocument();
+    });
+
+    it('al eliminar con éxito el local sale de la lista', async () => {
+      const eliminarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
+      const listarLocales = vi.fn().mockResolvedValueOnce(ok({ total: 3, locales: lista })).mockResolvedValue(ok({ total: 2, locales: [lista[0], lista[2]] }));
+      await abrirComuna({ eliminarLocal, listarLocales });
+      await userEvent.click(within(await screen.findByRole('listitem', { name: 'Local 2 SpA' })).getByRole('button', { name: 'EDITAR Local 2 SpA' }));
+      const form = within(screen.getByRole('form', { name: 'Editar Local 2 SpA' }));
+      await userEvent.click(form.getByRole('button', { name: 'ELIMINAR ESTA DIRECCIÓN' }));
+      await userEvent.click(form.getByRole('button', { name: 'SÍ, ELIMINAR' }));
+      await waitFor(() => { expect(screen.queryByRole('listitem', { name: 'Local 2 SpA' })).toBeNull(); });
+    });
+  });
+
+  it('el chofer común no entra; el chofer editor sí', async () => {
+    montar({ ruta: '/locales', sesion: CHOFER, api: api() });
+    await waitFor(() => { expect(screen.queryByLabelText('Buscar por nombre, RUT o dirección')).toBeNull(); });
+    cleanup();
+    montar({ ruta: '/locales', sesion: { ...CHOFER, editor: true }, api: api() });
+    expect(await screen.findByLabelText('Buscar por nombre, RUT o dirección')).toBeInTheDocument();
   });
 });
 
@@ -1369,6 +1566,18 @@ describe('rutas del día', () => {
     const a = await screen.findByRole('listitem', { name: 'Parada 1' });
     expect(within(a).getByText(/botón UBICACIÓN DEL VENDEDOR/)).toBeInTheDocument();
     expect(within(a).queryByRole('link', { name: 'Fijar el pin' })).toBeNull();
+  });
+
+  it('una parada con pin aproximado deja reportar la ubicación (y el nombre); sin pin solo el nombre', async () => {
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, { ubicacionAproximada: true, lat: -33.5, lng: -70.6 }), parada('B', 1, { lat: undefined, lng: undefined, ubicacionAproximada: true })] }))) }) });
+    await elegirCamion();
+    const a = await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(within(a).getByRole('button', { name: 'REPORTAR LA UBICACIÓN DE Local A' })).toBeInTheDocument();
+    expect(within(a).getByRole('button', { name: 'REPORTAR EL NOMBRE DE Local A' })).toBeInTheDocument();
+    await userEvent.click(within(screen.getByRole('listitem', { name: 'Parada 2' })).getByRole('button', { expanded: false, name: /^Local B/ }));
+    const b = screen.getByRole('listitem', { name: 'Parada 2' });
+    expect(within(b).getByRole('button', { name: 'REPORTAR EL NOMBRE DE Local B' })).toBeInTheDocument();
+    expect(within(b).queryByRole('button', { name: /REPORTAR LA UBICACIÓN/ })).toBeNull();
   });
 
   it('al volver a la app (por ejemplo desde Waze) la ruta se pide de nuevo para actualizar las horas', async () => {

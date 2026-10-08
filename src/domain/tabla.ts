@@ -107,41 +107,6 @@ export const mapearClientes = (tabla: Tabla): MapeoClientes => {
   return { filas, ignoradas, faltantes: OBLIGATORIOS.filter((c) => !ocupados.has(c)) };
 };
 
-export type PinCrudo = { readonly rut?: string; readonly direccion?: string; readonly lat?: string; readonly lng?: string };
-export type MapeoPines = { readonly pines: readonly PinCrudo[]; readonly ignoradas: readonly string[]; readonly faltantes: readonly ('direccion' | 'lat' | 'lng')[] };
-
-const SINONIMOS_PIN: Readonly<Record<keyof PinCrudo, readonly string[]>> = {
-  rut: SINONIMOS.rut,
-  direccion: SINONIMOS.direccion,
-  lat: SINONIMOS.lat,
-  lng: SINONIMOS.lng,
-};
-
-/** Planilla de pines (p. ej. la que arman los choferes): RUT (opcional), dirección, latitud y longitud. */
-export const mapearPines = (tabla: Tabla): MapeoPines => {
-  const campoPorColumna = new Map<number, keyof PinCrudo>();
-  const ocupados = new Set<keyof PinCrudo>();
-  const ignoradas: string[] = [];
-  tabla.encabezados.forEach((nombre, i) => {
-    const k = clave(nombre);
-    const campo = (Object.keys(SINONIMOS_PIN) as (keyof PinCrudo)[]).find((c) => SINONIMOS_PIN[c].includes(k));
-    if (campo && !ocupados.has(campo)) {
-      campoPorColumna.set(i, campo);
-      ocupados.add(campo);
-    } else ignoradas.push(nombre);
-  });
-  const pines = tabla.filas.map((f) => {
-    const salida: { -readonly [K in keyof PinCrudo]?: string } = {};
-    campoPorColumna.forEach((campo, i) => {
-      const v = f[i];
-      if (v !== undefined && v !== '') salida[campo] = v;
-    });
-    return salida;
-  });
-  const obligatorios = ['direccion', 'lat', 'lng'] as const;
-  return { pines, ignoradas, faltantes: obligatorios.filter((c) => !ocupados.has(c)) };
-};
-
 const numero = (t: string | undefined): number | undefined => {
   if (t === undefined) return undefined;
   const n = Number(t.trim().replace(',', '.'));

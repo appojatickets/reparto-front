@@ -7,7 +7,7 @@ describe('acciones por rol (solo para mostrar el menú; la API es quien manda)',
   });
 
   it('el despachador ve clientes y pines, pero no usuarios ni importación', () => {
-    expect(accionesDe('despachador')).toEqual(['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'verificar-pines', 'revisar-pines', 'reportes']);
+    expect(accionesDe('despachador')).toEqual(['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'reportes']);
     expect(puedeHacer('despachador', 'usuarios')).toBe(false);
     expect(puedeHacer('despachador', 'camiones')).toBe(false);
     expect(puedeHacer('despachador', 'configuracion')).toBe(false);
@@ -39,7 +39,7 @@ describe('acciones por rol (solo para mostrar el menú; la API es quien manda)',
     expect(puedeHacer('chofer', 'buscar-clientes')).toBe(false);
     expect(puedeHacer('chofer', 'buscar-clientes', true)).toBe(true);
     expect(puedeHacer('ayudante', 'buscar-clientes', true)).toBe(true);
-    expect(accionesDe('chofer', true)).toEqual(['mi-ruta', 'cargar-facturas', 'buscar-clientes', 'verificar-pines']);
+    expect(accionesDe('chofer', true)).toEqual(['mi-ruta', 'cargar-facturas', 'buscar-clientes', 'verificar-pines', 'locales']);
     expect(puedeHacer('chofer', 'verificar-pines')).toBe(false);
     expect(puedeHacer('chofer', 'revisar-pines', true)).toBe(false);
     expect(accionesDe('chofer', false)).toEqual(['mi-ruta', 'cargar-facturas']);
@@ -54,5 +54,13 @@ describe('acciones por rol (solo para mostrar el menú; la API es quien manda)',
     expect(puedeEditar('chofer', true)).toBe(true);
     expect(puedeEditar('ayudante', true)).toBe(true);
     expect(puedeEditar('ayudante', false)).toBe(false);
+  });
+
+  it('la sección LOCALES (por comuna, con edición) la ven admin, despachador y el chofer o ayudante editor; no el chofer común', () => {
+    expect(puedeHacer('admin', 'locales')).toBe(true);
+    expect(puedeHacer('despachador', 'locales')).toBe(true);
+    expect(puedeHacer('chofer', 'locales')).toBe(false);
+    expect(puedeHacer('chofer', 'locales', true)).toBe(true);
+    expect(puedeHacer('ayudante', 'locales', true)).toBe(true);
   });
 });

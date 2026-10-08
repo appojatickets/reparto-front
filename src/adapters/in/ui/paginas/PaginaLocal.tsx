@@ -118,7 +118,7 @@ const CorregirFicha = ({ local, recargar }: { readonly local: LocalDetalle; read
   const guardarNombre = async (e: SyntheticEvent): Promise<void> => {
     e.preventDefault();
     setOcupado(true);
-    const r = await api.cambiarRazonSocial(local.clienteId, nombre);
+    const r = await api.corregirCliente(local.clienteId, { razonSocial: nombre });
     setOcupado(false);
     if (r.ok) {
       setMensaje({ tipo: 'exito', texto: 'Nombre corregido.' });

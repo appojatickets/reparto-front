@@ -36,7 +36,7 @@ test.describe('arranque y entrada', () => {
     await page.getByLabel('Clave (6 números)').fill('482915');
     await page.getByRole('button', { name: 'ENTRAR' }).click();
     await expect(page.getByRole('heading', { name: 'Hola, Matías' })).toBeVisible();
-    for (const n of ['BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PINES DE LOCALES', 'IMPORTAR CLIENTES', 'USUARIOS']) await expect(page.getByRole('link', { name: n })).toBeVisible();
+    for (const n of ['BUSCAR CLIENTE', 'CLIENTE NUEVO', 'PROPUESTAS DE PIN', 'IMPORTAR CLIENTES', 'USUARIOS']) await expect(page.getByRole('link', { name: n })).toBeVisible();
     await sinViolaciones(page);
     expect(await page.evaluate(() => localStorage.getItem('reparto.sesion.v1'))).toContain('"accessToken":"at"');
   });
@@ -135,6 +135,26 @@ test.describe('pantallas de administración y despacho', () => {
     const resultado = page.getByRole('region', { name: 'Resultado de la importación' });
     await expect(resultado).toContainText('Clientes nuevos: 1');
     await expect(resultado).toContainText('La comuna no es de la Región Metropolitana.');
+    await sinViolaciones(page);
+  });
+
+  test('locales por comuna: lista con verificados, editar y compartir son accesibles', async ({ page }) => {
+    const locales = [
+      { localId: LOCAL.id, clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', rut: '76543210-3', direccion: 'Av. Providencia 2500', comuna: 'Providencia', lat: -33.43, lng: -70.61, pinVerificado: false, tieneFoto: false, entregas: 2, recaudado: 200000 },
+      { localId: '323e4567-e89b-42d3-a456-426614174000', clienteId: 'c3', razonSocial: 'Bazar Sol', direccion: 'Calle 9 90', comuna: 'Providencia', pinVerificado: false, tieneFoto: false, entregas: 0, recaudado: 0 },
+    ];
+    await simularApi(page, { ...comunes(ADMIN), 'GET /v1/locales/comunas': () => ({ status: 200, json: { comunas: [{ comuna: 'Providencia', total: 2, verificados: 0, sinPin: 1 }] } }), 'GET /v1/locales': () => ({ status: 200, json: { total: 2, locales } }) });
+    await conSesionGuardada(page);
+    await page.goto('/locales');
+    await page.getByLabel('Comuna').selectOption('Providencia');
+    await expect(page.getByRole('listitem', { name: 'Rabelo Mágica SpA' })).toBeVisible();
+    await expect(page.getByText('Entregado: $200.000 en 2 facturas')).toBeVisible();
+    await sinViolaciones(page);
+    await page.getByRole('button', { name: 'EDITAR Rabelo Mágica SpA' }).click();
+    await expect(page.getByRole('form', { name: 'Editar Rabelo Mágica SpA' })).toBeVisible();
+    await sinViolaciones(page);
+    await page.getByRole('button', { name: 'COMPARTIR Rabelo Mágica SpA' }).click();
+    await expect(page.getByRole('link', { name: 'ENVIAR POR WHATSAPP' })).toBeVisible();
     await sinViolaciones(page);
   });
 

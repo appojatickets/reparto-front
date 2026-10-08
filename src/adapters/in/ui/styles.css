@@ -631,3 +631,11 @@ html[data-vista='normal'] .parada-num {
     transition: none;
   }
 }
+
+/* El mensaje que se comparte de un local: se ve tal cual, con sus saltos de línea. */
+.texto-compartir {
+  margin: 0;
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -1,8 +1,8 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
-  PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
+  CambiosFactura, LocalDeLista, ResumenComuna, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
+  PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
@@ -37,9 +37,14 @@ export interface ApiClient extends SaludApi {
   crearCliente(fila: FilaCliente): R<{ clienteId: string; localId: string; existente: boolean }>;
   importarClientes(filas: readonly FilaCliente[]): R<ResultadoImportacion>;
   obtenerLocal(localId: string): R<LocalDetalle>;
-  actualizarLocal(localId: string, cambios: { nota?: string; streetviewRumbo?: number; lat?: number; lng?: number }): R<void>;
+  /** Cuántos locales hay por comuna, cuántos con pin verificado y cuántos sin pin. */
+  resumenComunas(): R<readonly ResumenComuna[]>;
+  /** Locales de una comuna, o los que coinciden con un texto (razón social, RUT o dirección); primero los de pin por verificar. */
+  listarLocales(filtro: { comuna?: string; texto?: string; limite?: number }): R<{ total: number; locales: readonly LocalDeLista[] }>;
+  actualizarLocal(localId: string, cambios: { direccion?: string; comuna?: string; nota?: string; streetviewRumbo?: number; lat?: number; lng?: number }): R<void>;
   /** Corrige la razón social del cliente (error de tipeo). Por ahora el cliente de la ficha es el mismo para todos sus locales. */
-  cambiarRazonSocial(clienteId: string, razonSocial: string): R<void>;
+  /** Corrige razón social, RUT o giro del cliente (RUT o giro vacíos los borran). La API responde 409 si el RUT ya lo tiene otro cliente. */
+  corregirCliente(clienteId: string, cambios: { razonSocial?: string; rut?: string; giro?: string }): R<void>;
   /** Elimina una dirección cargada por error. La API responde 409 si ya tiene entregas hechas (para no perder el historial). */
   eliminarLocal(localId: string): R<void>;
 
@@ -47,7 +52,6 @@ export interface ApiClient extends SaludApi {
   registrarFoto(localId: string, path: string): R<void>;
   urlFoto(localId: string): R<{ url: string; expiraEnSegundos: number }>;
 
-  importarPines(pines: readonly PinCrudo[]): R<ResultadoPines>;
   listarPropuestas(estado: PropuestaPin['estado']): R<readonly PropuestaPin[]>;
   resolverPropuesta(id: string, accion: 'aceptar' | 'rechazar'): R<void>;
   /** La lista para verificar pines: «por verificar» (lo más seguro primero) o «verificados». Hasta 100; `total` dice cuántos hay. */

@@ -2040,7 +2040,7 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /** Nota, rumbo de Street View (solo la referencia) y pin del local */
+        /** Dirección y comuna, nota, rumbo de Street View (solo la referencia) y pin del local */
         patch: {
             parameters: {
                 query?: never;
@@ -2053,6 +2053,8 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
+                        direccion?: string;
+                        comuna?: string;
                         nota?: string;
                         streetviewRumbo?: number;
                         lat?: number;
@@ -2191,7 +2193,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Corregir la razón social del cliente (error de tipeo) */
+        /** Corregir los datos del cliente: razón social, RUT y giro (RUT o giro vacíos los borran) */
         patch: {
             parameters: {
                 query?: never;
@@ -2204,7 +2206,9 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        razonSocial: string;
+                        razonSocial?: string;
+                        rut?: string;
+                        giro?: string;
                     };
                 };
             };
@@ -2326,35 +2330,26 @@ export interface paths {
         };
         trace?: never;
     };
-    "/v1/pines/importaciones": {
+    "/v1/locales": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /** Proponer pines (quedan pendientes de revisión; nada cambia solo) */
-        post: {
+        /** Locales con los datos de su cliente y lo entregado: de una comuna o los que coinciden con un texto (razón social, RUT o dirección); primero los de pin por verificar */
+        get: {
             parameters: {
-                query?: never;
+                query?: {
+                    comuna?: string;
+                    texto?: string;
+                    limite?: number;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
             };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        pines: {
-                            rut?: string;
-                            direccion?: string;
-                            lat?: number | string;
-                            lng?: number | string;
-                        }[];
-                    };
-                };
-            };
+            requestBody?: never;
             responses: {
                 /** @description Default Response */
                 200: {
@@ -2363,15 +2358,26 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            recibidas: number;
-                            pendientes: number;
-                            sinLocal: number;
-                            errores: {
-                                fila: number;
-                                errores: {
-                                    codigo: string;
-                                    mensaje: string;
-                                }[];
+                            total: number;
+                            locales: {
+                                localId: string;
+                                clienteId: string;
+                                razonSocial: string;
+                                rut?: string;
+                                giro?: string;
+                                direccion: string;
+                                comuna: string;
+                                lat?: number;
+                                lng?: number;
+                                pinFuente?: string;
+                                pinVerificado: boolean;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
+                                nota?: string;
+                                streetviewRumbo?: number;
+                                tieneFoto: boolean;
+                                entregas: number;
+                                recaudado: number;
                             }[];
                         };
                     };
@@ -2482,6 +2488,155 @@ export interface paths {
                 };
             };
         };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/locales/comunas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Por comuna: cuántos locales hay, cuántos con pin verificado y cuántos sin pin */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            comunas: {
+                                comuna: string;
+                                total: number;
+                                verificados: number;
+                                sinPin: number;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;

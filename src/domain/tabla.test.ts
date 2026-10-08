@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completarConPin, mapearClientes, mapearPines, parsearTabla, sinEnlace } from './tabla';
+import { completarConPin, mapearClientes, parsearTabla, sinEnlace } from './tabla';
 
 describe('parsearTabla', () => {
   it('lee TSV pegado desde Excel', () => {
@@ -61,19 +61,6 @@ describe('mapearClientes', () => {
 
   it('una tabla vacía lo declara todo faltante', () => {
     expect(mapearClientes({ encabezados: [], filas: [] }).faltantes).toEqual(['razonSocial', 'direccion', 'comuna']);
-  });
-});
-
-describe('mapearPines', () => {
-  it('reconoce RUT, dirección, latitud y longitud con sus sinónimos', () => {
-    const m = mapearPines(parsearTabla('Rut;Domicilio;Latitud;Lon;Chofer\n12.345.678-5;Av. X 1;-33,5;-70,7;Juan'));
-    expect(m.pines).toEqual([{ rut: '12.345.678-5', direccion: 'Av. X 1', lat: '-33,5', lng: '-70,7' }]);
-    expect(m.ignoradas).toEqual(['Chofer']);
-    expect(m.faltantes).toEqual([]);
-  });
-
-  it('informa lo que falta', () => {
-    expect(mapearPines(parsearTabla('direccion\nCalle 1')).faltantes).toEqual(['lat', 'lng']);
   });
 });
 

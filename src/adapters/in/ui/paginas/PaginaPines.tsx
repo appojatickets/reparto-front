@@ -1,10 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
-import { mapearPines, parsearTabla } from '../../../../domain/tabla';
+import { useCallback, useState } from 'react';
 import { mensajeDeError } from '../../../../application/mensajes';
-import type { PropuestaPin, ResultadoPines } from '../../../../application/modelos';
+import type { PropuestaPin } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
-import { AreaTexto, Aviso, Boton, Cargando, ErrorCarga, Insignia, Pagina } from '../componentes/ui';
+import { Aviso, Boton, Cargando, ErrorCarga, Insignia, Pagina } from '../componentes/ui';
 
 const Propuestas = ({ estado }: { readonly estado: 'pendiente' | 'sin_local' }) => {
   const { api } = useCasos();
@@ -43,45 +42,17 @@ const Propuestas = ({ estado }: { readonly estado: 'pendiente' | 'sin_local' }) 
   );
 };
 
+/** Las propuestas de pin que arma el sistema solo (lo que aprendió de las entregas o el enlace de un vendedor sobre un pin ya confirmado). Nada cambia hasta que se acepta. */
 export const PaginaPines = () => {
-  const { api } = useCasos();
-  const [texto, setTexto] = useState('');
-  const [resultado, setResultado] = useState<ResultadoPines | undefined>();
-  const [error, setError] = useState<string | undefined>();
-  const [ocupado, setOcupado] = useState(false);
   const [vista, setVista] = useState<'pendiente' | 'sin_local'>('pendiente');
-  const [version, setVersion] = useState(0);
-  const mapeo = useMemo(() => mapearPines(parsearTabla(texto)), [texto]);
-  const lista = mapeo.pines.length > 0 && mapeo.faltantes.length === 0;
-
-  const proponer = async (): Promise<void> => {
-    setOcupado(true);
-    setError(undefined);
-    const r = await api.importarPines(mapeo.pines);
-    setOcupado(false);
-    if (r.ok) {
-      setResultado(r.value);
-      setVersion((v) => v + 1);
-    } else setError(mensajeDeError(r.error));
-  };
-
   return (
-    <Pagina titulo="Pines de locales">
-      <h2>Proponer pines</h2>
-      <p>Pega la planilla con RUT (opcional), dirección, latitud y longitud. Nada cambia solo: cada pin queda pendiente para revisar.</p>
-      <AreaTexto etiqueta="Planilla de pines" value={texto} onChange={(e) => { setTexto(e.target.value); setResultado(undefined); }} rows={5} />
-      {texto.trim() !== '' && mapeo.faltantes.length > 0 ? <Aviso tipo="error">Faltan columnas: {mapeo.faltantes.join(', ')}.</Aviso> : null}
-      {lista ? <Aviso tipo="exito">{mapeo.pines.length} pines listos.</Aviso> : null}
-      <Boton disabled={!lista || ocupado} onClick={() => void proponer()}>{ocupado ? 'ENVIANDO…' : 'PROPONER PINES'}</Boton>
-      {error ? <Aviso tipo="error">{error}</Aviso> : null}
-      {resultado ? <Aviso tipo="exito">Recibidos: {resultado.recibidas} · para revisar: {resultado.pendientes} · sin local: {resultado.sinLocal} · con errores: {resultado.errores.length}.</Aviso> : null}
-
-      <h2>Revisión</h2>
+    <Pagina titulo="Propuestas de pin">
+      <p>Aquí llegan los pines que sugiere el sistema cuando un local ya tiene un pin confirmado. Nada cambia solo: acepta o rechaza cada uno.</p>
       <div className="fila-botones" role="group" aria-label="Estado">
         <Boton variante={vista === 'pendiente' ? 'primario' : 'secundario'} aria-pressed={vista === 'pendiente'} onClick={() => { setVista('pendiente'); }}>PENDIENTES</Boton>
         <Boton variante={vista === 'sin_local' ? 'primario' : 'secundario'} aria-pressed={vista === 'sin_local'} onClick={() => { setVista('sin_local'); }}>SIN LOCAL</Boton>
       </div>
-      <Propuestas key={`${vista}-${version}`} estado={vista} />
+      <Propuestas key={vista} estado={vista} />
     </Pagina>
   );
 };

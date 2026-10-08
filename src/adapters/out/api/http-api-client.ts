@@ -151,8 +151,13 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     },
     crearCliente: (fila) => ejecutar(() => client.POST('/v1/clientes', { body: fila, signal: timeout() })),
     importarClientes: (filas) => ejecutar(() => client.POST('/v1/clientes/importaciones', { body: { filas: [...filas] }, signal: timeout() }), { repetible: true }),
+    async resumenComunas() {
+      const r = await ejecutar(() => client.GET('/v1/locales/comunas', { signal: timeout() }), { repetible: true });
+      return mapear(r, (d) => d.comunas);
+    },
+    listarLocales: (filtro) => ejecutar(() => client.GET('/v1/locales', { params: { query: { ...(filtro.comuna ? { comuna: filtro.comuna } : {}), ...(filtro.texto ? { texto: filtro.texto } : {}), ...(filtro.limite ? { limite: filtro.limite } : {}) } }, signal: timeout() }), { repetible: true }),
     obtenerLocal: (id) => ejecutar(() => client.GET('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
-    cambiarRazonSocial: async (id, razonSocial) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/clientes/{id}', { params: { path: { id } }, body: { razonSocial }, signal: timeout() }))),
+    corregirCliente: async (id, cambios) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/clientes/{id}', { params: { path: { id } }, body: cambios, signal: timeout() }))),
     eliminarLocal: async (id) => sinCuerpo(await ejecutar(() => client.DELETE('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() }))),
     actualizarLocal: async (id, cambios) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/locales/{id}', { params: { path: { id } }, body: cambios, signal: timeout() }), { repetible: true })),
 
@@ -160,7 +165,6 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     registrarFoto: async (id, path) => sinCuerpo(await ejecutar(() => client.PUT('/v1/locales/{id}/foto', { params: { path: { id } }, body: { path }, signal: timeout() }), { repetible: true })),
     urlFoto: (id) => ejecutar(() => client.GET('/v1/locales/{id}/foto-url', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
 
-    importarPines: (pines) => ejecutar(() => client.POST('/v1/pines/importaciones', { body: { pines: [...pines] }, signal: timeout() })),
     async listarPropuestas(estado) {
       const r = await ejecutar(() => client.GET('/v1/pines/propuestas', { params: { query: { estado } }, signal: timeout() }), { repetible: true });
       return mapear(r, (d) => d.propuestas);

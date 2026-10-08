@@ -4,6 +4,9 @@ export const enlaceWaze = (lat: number, lng: number): string => `https://waze.co
 export const enlaceGoogleMaps = (lat: number, lng: number): string =>
   `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
 
+/** Abre el lugar en Google Maps (para mirarlo o compartirlo; no inicia la navegación). */
+export const enlaceVerEnMapa = (lat: number, lng: number): string => `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
 /** De Street View solo se guarda la referencia (lat, lng, rumbo), nunca la imagen. */
 export const enlaceStreetView = (lat: number, lng: number, rumbo = 0): string =>
   `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}&heading=${rumbo}`;

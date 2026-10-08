@@ -7,7 +7,7 @@ import { Aviso, Boton, Campo } from './ui';
  * Pegar la ubicación que mandó el vendedor (enlace de «Compartir» de Google Maps o Waze, o coordenadas). Cualquiera del equipo
  * puede: lo que se guarda sirve a todos y a los días siguientes (ADR 0018).
  */
-export const PegarUbicacion = ({ localId, etiqueta = 'Enlace de la ubicación', alGuardar }: { readonly localId: string; readonly etiqueta?: string; readonly alGuardar?: () => void }) => {
+export const PegarUbicacion = ({ localId, etiqueta = 'Enlace de la ubicación', textoBoton = 'GUARDAR UBICACIÓN DEL VENDEDOR', alGuardar }: { readonly localId: string; readonly etiqueta?: string; readonly textoBoton?: string; readonly alGuardar?: () => void }) => {
   const { api } = useCasos();
   const [enlace, setEnlace] = useState('');
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error' | 'info'; texto: string } | undefined>();
@@ -37,7 +37,7 @@ export const PegarUbicacion = ({ localId, etiqueta = 'Enlace de la ubicación', 
   return (
     <form className="pagina" onSubmit={(e) => void guardar(e)} noValidate>
       <Campo etiqueta={etiqueta} ayuda="En WhatsApp, mantén apretado el mensaje con la ubicación y copia el enlace; pégalo aquí." value={enlace} onChange={(e) => { setEnlace(e.target.value); }} autoComplete="off" inputMode="url" />
-      <Boton type="submit" disabled={ocupado}>{ocupado ? 'LEYENDO…' : 'GUARDAR UBICACIÓN DEL VENDEDOR'}</Boton>
+      <Boton type="submit" disabled={ocupado}>{ocupado ? 'LEYENDO…' : textoBoton}</Boton>
       {mensaje ? <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
     </form>
   );

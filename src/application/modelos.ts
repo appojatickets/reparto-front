@@ -29,6 +29,29 @@ export type ResultadoBusqueda = {
 /** `pinRespaldo`: qué tan firme es el pin según las entregas (solo si el local tiene pin y el servidor pudo calcularlo). */
 export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean; readonly pinVerificacion?: QuienVerifico; readonly fotoVerificada?: boolean; readonly pinRespaldo?: PinRespaldo };
 
+/** Una fila de la sección «Locales»: los datos del cliente y del local, el pin y lo entregado. */
+export type LocalDeLista = {
+  readonly localId: string;
+  readonly clienteId: string;
+  readonly razonSocial: string;
+  readonly rut?: string;
+  readonly giro?: string;
+  readonly direccion: string;
+  readonly comuna: string;
+  readonly lat?: number;
+  readonly lng?: number;
+  readonly pinFuente?: string;
+  readonly pinVerificado: boolean;
+  readonly pinVerificacion?: 'persona' | 'entregas';
+  readonly nota?: string;
+  readonly streetviewRumbo?: number;
+  readonly tieneFoto: boolean;
+  /** Facturas entregadas a este local y la suma de sus totales (el sistema no registra cobros). */
+  readonly entregas: number;
+  readonly recaudado: number;
+};
+export type ResumenComuna = { readonly comuna: string; readonly total: number; readonly verificados: number; readonly sinPin: number };
+
 export type ErrorFila = { readonly fila: number; readonly errores: readonly { readonly codigo: string; readonly mensaje: string }[] };
 export type ResumenImportacion = { readonly clientesCreados: number; readonly clientesActualizados: number; readonly localesCreados: number; readonly localesActualizados: number };
 export type ResultadoImportacion = { readonly totalFilas: number; readonly validas: number; readonly errores: readonly ErrorFila[]; readonly resumen: ResumenImportacion };
@@ -83,8 +106,6 @@ export type ReporteDelLocal = {
 };
 export type ReportesDelLocal = { readonly total: number; readonly reportes: readonly ReporteDelLocal[] };
 export type AccionReporteLocal = 'verificar_pin' | 'corregido' | 'descartar';
-export type PinCrudo = { readonly rut?: string; readonly direccion?: string; readonly lat?: string; readonly lng?: string };
-export type ResultadoPines = { readonly recibidas: number; readonly pendientes: number; readonly sinLocal: number; readonly errores: readonly ErrorFila[] };
 
 export type UsuarioAdmin = UsuarioSesion & { readonly activo: boolean };
 export type NuevoUsuario = { readonly nombre: string; readonly apellidoPaterno: string; readonly apellidoMaterno?: string; readonly rol: Rol; readonly pin: string };
