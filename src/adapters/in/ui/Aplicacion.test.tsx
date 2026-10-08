@@ -1900,15 +1900,12 @@ describe('acciones en la parada (chofer)', () => {
     expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'primero', facturaId: 'fB' });
   });
 
-  it('si la ruta estaba acomodada a mano, tras fijar la primera también se reordena lo que queda', async () => {
-    const operarRuta = vi.fn()
-      .mockResolvedValueOnce(ok(vistaBase({ version: 2, modo: 'manual' as const })))
-      .mockResolvedValueOnce(ok(vistaBase({ version: 3 })));
+  it('si la ruta estaba acomodada a mano, basta un solo pedido: el servidor ordena lo de abajo', async () => {
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ version: 2, modo: 'manual' as const }))));
     abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'manual' as const }))), operarRuta });
     await userEvent.selectOptions(await screen.findByLabelText('Primera entrega (el resto se ordena desde ahí)'), 'fB');
-    await waitFor(() => { expect(operarRuta).toHaveBeenCalledTimes(2); });
-    expect(operarRuta).toHaveBeenNthCalledWith(1, 'c1', '2026-10-05', 1, { tipo: 'primero', facturaId: 'fB' });
-    expect(operarRuta).toHaveBeenNthCalledWith(2, 'c1', '2026-10-05', 2, { tipo: 'ordenar' });
+    await waitFor(() => { expect(operarRuta).toHaveBeenCalledTimes(1); });
+    expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'primero', facturaId: 'fB' });
   });
 
 });

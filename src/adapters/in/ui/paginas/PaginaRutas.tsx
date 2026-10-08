@@ -309,11 +309,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   const elegirPrimera = (facturaId: string): void => {
     const version = vista?.version;
     if (version === undefined || facturaId === '') return;
-    void aplicar(async () => {
-      const r = await api.operarRuta(camionId, fecha, version, { tipo: 'primero', facturaId });
-      const siguiente = r.ok ? r.value.version : undefined;
-      return r.ok && r.value.modo === 'manual' && siguiente !== undefined ? api.operarRuta(camionId, fecha, siguiente, { tipo: 'ordenar' }) : r;
-    });
+    // El servidor deja esa parada primera y ordena solo lo de abajo, también en una ruta acomodada a mano (ADR 0029 del back).
+    void aplicar(() => api.operarRuta(camionId, fecha, version, { tipo: 'primero', facturaId }));
   };
 
   /** La lista se mantiene al día sola: cada pocos minutos y al volver a la app (por ejemplo desde Waze) se recalculan las horas. */
