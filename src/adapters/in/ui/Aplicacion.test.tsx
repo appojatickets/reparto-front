@@ -2129,6 +2129,51 @@ describe('acciones en la parada (chofer)', () => {
     expect(screen.queryByText(/quedó guardada con tu GPS/)).toBeNull();
   });
 
+  describe('la última parada: volver a la empresa', () => {
+    const DEPOSITO = { lat: -33.6, lng: -70.55, nombre: 'Ibiza' };
+
+    it('toda ruta termina con una fila fija «VOLVER A IBIZA», con la hora de regreso y cómo ir, que no se puede mover', async () => {
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: DEPOSITO, regreso: 700 }))) });
+      const fin = await screen.findByLabelText('Volver a la empresa');
+      expect(within(fin).getByText('VOLVER A IBIZA')).toBeInTheDocument();
+      expect(within(fin).getByText(/Llegada estimada 11:40/)).toBeInTheDocument();
+      expect(within(fin).getByRole('link', { name: 'IR A IBIZA CON GOOGLE MAPS' })).toHaveAttribute('href', expect.stringContaining('destination=-33.6,-70.55'));
+      expect(within(fin).getByRole('link', { name: 'IR A IBIZA CON WAZE' })).toHaveAttribute('href', 'https://waze.com/ul?ll=-33.6,-70.55&navigate=yes');
+      expect(within(fin).queryByRole('button', { name: /MOVER/ })).toBeNull();
+      // viene después de la última parada y no cuenta como una parada más
+      const ultima = screen.getByRole('listitem', { name: 'Parada 2' });
+      expect(ultima.compareDocumentPosition(fin) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(screen.queryByRole('listitem', { name: 'Parada 3' })).toBeNull();
+    });
+
+    it('sin nombre de depósito dice «VOLVER A LA EMPRESA»; sin depósito configurado no hay fila', async () => {
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: { lat: -33.6, lng: -70.55 } }))) });
+      expect(within(await screen.findByLabelText('Volver a la empresa')).getByText('VOLVER A LA EMPRESA')).toBeInTheDocument();
+      cleanup();
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase())) });
+      await screen.findByRole('listitem', { name: 'Parada 1' });
+      expect(screen.queryByLabelText('Volver a la empresa')).toBeNull();
+    });
+
+    it('al hacer la última entrega destaca: «Terminaste las entregas», ahora vuelve a Ibiza', async () => {
+      const hechas = [{ facturaId: 'fA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', estado: 'entregada' as const }];
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: DEPOSITO, paradas: [], hechas }))) });
+      const fin = await screen.findByLabelText('Volver a la empresa');
+      expect(within(fin).getByText('Terminaste las entregas')).toBeInTheDocument();
+      expect(within(fin).getByText('VUELVE A IBIZA')).toBeInTheDocument();
+      expect(within(fin).getByRole('link', { name: 'IR A IBIZA CON GOOGLE MAPS' })).toBeInTheDocument();
+    });
+
+    it('quien arma la ruta (no va en el camión) la ve igual, sin botones de navegación', async () => {
+      montar({ ruta: '/rutas', sesion: DESPACHADOR, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true }])), verRuta: () => Promise.resolve(ok(vistaBase({ deposito: DEPOSITO }))) } });
+      await screen.findByRole('option', { name: 'Camión 3 · AB·1234' });
+      await userEvent.selectOptions(screen.getByLabelText('Camión'), 'c1');
+      const fin = await screen.findByLabelText('Volver a la empresa');
+      expect(within(fin).getByText('VOLVER A IBIZA')).toBeInTheDocument();
+      expect(within(fin).queryByRole('link')).toBeNull();
+    });
+  });
+
   it('si ENTREGADO falla, lo dice en la fila y la parada sigue en su lugar', async () => {
     const registrarEvento = vi.fn(() => Promise.resolve(http(500, { mensaje: 'Algo falló.' })));
     abrir({ registrarEvento });

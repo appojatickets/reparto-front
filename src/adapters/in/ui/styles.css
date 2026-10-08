@@ -639,3 +639,19 @@ html[data-vista='normal'] .parada-num {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* La última parada de la ruta: volver a la empresa. Fija (no se arrastra) y con trazo de doble línea para distinguirla de las entregas. */
+.parada--deposito {
+  border-style: double;
+  border-width: 6px;
+  margin-top: 0.5rem;
+}
+.parada--deposito-final {
+  border-style: solid;
+  border-color: var(--accent-bg);
+  outline: 6px solid var(--accent-bg);
+  outline-offset: 2px;
+}
+.parada-fila--fija {
+  cursor: default;
+}

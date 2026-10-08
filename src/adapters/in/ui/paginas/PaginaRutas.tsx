@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { reordenarParadas } from '../../../../domain/arrastre';
-import { enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
+import { enlaceNavegar, enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
 import { horaDeMinutos } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
@@ -226,6 +226,36 @@ const ListaItems = ({ titulo, items, children }: { readonly titulo: string; read
       </ul>
     </section>
   );
+
+/**
+ * La última parada de toda ruta: volver a la empresa (el depósito configurado). Está anclada: no se mueve ni se entrega, solo marca adónde se
+ * vuelve y a qué hora se llega. Al hacer la última entrega se destaca: ya no queda nada y es hora de volver.
+ */
+const FilaDeposito = ({ v, enCamion }: { readonly v: VistaRuta; readonly enCamion: boolean }) => {
+  const deposito = v.deposito;
+  if (!deposito || !v.planificada || (v.paradas.length === 0 && v.hechas.length === 0)) return null;
+  const nombre = deposito.nombre?.trim() ? deposito.nombre.trim().toUpperCase() : 'LA EMPRESA';
+  const terminaste = v.paradas.length === 0;
+  const destino = { direccion: deposito.nombre ?? 'Depósito', comuna: '', lat: deposito.lat, lng: deposito.lng };
+  return (
+    <div className={`parada parada--deposito${terminaste ? ' parada--deposito-final' : ''}`} aria-label="Volver a la empresa">
+      <div className="parada-fila parada-fila--fija">
+        <span className="parada-num" aria-hidden="true">⌂</span>
+        <span className="parada-nombre">
+          {terminaste ? <strong>Terminaste las entregas</strong> : null}
+          <strong>{terminaste ? `VUELVE A ${nombre}` : `VOLVER A ${nombre}`}</strong>
+          <span className="comuna">{v.regreso !== undefined && !terminaste ? `Llegada estimada ${horaDeMinutos(v.regreso)} · ` : ''}Última parada: no se mueve</span>
+        </span>
+      </div>
+      {enCamion ? (
+        <div className="parada-atajos">
+          <a className="big-button big-button--primario atajo" href={enlaceNavegar(destino, 'google')} target="_blank" rel="noreferrer" aria-label={`IR A ${nombre} CON GOOGLE MAPS`}>IR</a>
+          <a className="big-button big-button--secundario atajo" href={enlaceNavegar(destino, 'waze')} target="_blank" rel="noreferrer" aria-label={`IR A ${nombre} CON WAZE`}>WAZE</a>
+        </div>
+      ) : null}
+    </div>
+  );
+};
 
 /** Todo el estado de UN camión y día vive aquí: al cambiar de camión o de día se vuelve a montar y parte limpio. */
 export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; readonly fecha: string }) => {
@@ -490,6 +520,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               />
             ))}
           </ol>
+          <FilaDeposito v={vista} enCamion={enCamion} />
         </>
       )}
 
