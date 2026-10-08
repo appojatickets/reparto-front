@@ -13,7 +13,7 @@ export const fakeApi = (extra: Partial<ApiClient> = {}): ApiClient => ({
   importarClientes: sinImplementar, obtenerLocal: sinImplementar, actualizarLocal: sinImplementar, solicitarUrlSubida: sinImplementar,
   registrarFoto: sinImplementar, urlFoto: sinImplementar, importarPines: sinImplementar, listarPropuestas: sinImplementar,
   resolverPropuesta: sinImplementar, listarUsuarios: sinImplementar, crearUsuario: sinImplementar, resetearPin: sinImplementar,
-  cambiarEstadoUsuario: sinImplementar, listarCamiones: () => Promise.resolve(ok([])), crearCamion: sinImplementar, actualizarCamion: sinImplementar,
+  cambiarEstadoUsuario: sinImplementar, cambiarEditorUsuario: sinImplementar, cambiarRazonSocial: sinImplementar, eliminarLocal: sinImplementar, listarCamiones: () => Promise.resolve(ok([])), crearCamion: sinImplementar, actualizarCamion: sinImplementar,
   fijarPinDesdeEnlace: sinImplementar, buscarPinesPendientes: sinImplementar, exportarLocales: sinImplementar, quitarFoto: sinImplementar, verificarPin: sinImplementar, reportarFoto: sinImplementar, fotosParaRevision: sinImplementar, verificarFoto: sinImplementar, resolverReporteFoto: sinImplementar, estadoBusquedaPines: () => Promise.resolve(ok({ sinPin: 0, enCola: 0, enMarcha: false })), listarVendedores: () => Promise.resolve(ok([])), crearVendedor: sinImplementar, actualizarVendedor: sinImplementar,
   listarFacturas: sinImplementar, registrarFactura: sinImplementar, actualizarFactura: sinImplementar,
   registrarEvento: sinImplementar, enviarPosiciones: sinImplementar, analitica: sinImplementar, ejecutarAnalisis: sinImplementar, obtenerHorario: () => Promise.resolve(ok([])), guardarHorario: sinImplementar, miJornada: () => Promise.resolve(ok(null)), iniciarJornada: sinImplementar, terminarJornada: sinImplementar, terminarRuta: sinImplementar, obtenerConfig: sinImplementar, guardarConfig: sinImplementar, verRuta: sinImplementar, planificarRuta: sinImplementar, operarRuta: sinImplementar, ...extra,
@@ -29,7 +29,7 @@ export const fakeStore = (inicial?: Tokens) => {
   return store;
 };
 
-export const USUARIO: UsuarioSesion = { id: 'u1', username: 'jperez', nombre: 'Juan Pérez', rol: 'chofer' };
+export const USUARIO: UsuarioSesion = { id: 'u1', username: 'jperez', nombre: 'Juan Pérez', rol: 'chofer', editor: false };
 export const TOKENS: Tokens = { accessToken: 'at', refreshToken: 'rt' };
 export const http = (status: number, extra: Partial<ApiError> = {}): { ok: false; error: ApiError } => err({ kind: 'HTTP', status, ...extra });
 export { ok, err };

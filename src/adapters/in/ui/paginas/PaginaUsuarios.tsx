@@ -1,5 +1,5 @@
 import { useCallback, useState, type SyntheticEvent } from 'react';
-import type { Rol } from '../../../../domain/rol';
+import { esDeCamion, type Rol } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { UsuarioAdmin } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
@@ -69,6 +69,11 @@ const Fila = ({ u, esYo, alCambiar }: { readonly u: UsuarioAdmin; readonly esYo:
     if (r.ok) alCambiar();
     else setMensaje({ tipo: 'error', texto: mensajeDeError(r.error) });
   };
+  const cambiarEditor = async (): Promise<void> => {
+    const r = await api.cambiarEditorUsuario(u.id, !u.editor);
+    if (r.ok) alCambiar();
+    else setMensaje({ tipo: 'error', texto: mensajeDeError(r.error) });
+  };
   const resetear = async (e: SyntheticEvent): Promise<void> => {
     e.preventDefault();
     const r = await api.resetearPin(u.id, pin);
@@ -84,8 +89,10 @@ const Fila = ({ u, esYo, alCambiar }: { readonly u: UsuarioAdmin; readonly esYo:
       <strong>{u.nombre}</strong>
       <span>Usuario: {u.username} · {ROLES.find((r) => r.valor === u.rol)?.texto}</span>
       <Insignia>{u.activo ? 'ACTIVO' : 'DESACTIVADO'}</Insignia>
+      {u.editor ? <Insignia>EDITOR</Insignia> : null}
       <div className="fila-botones">
         <Boton variante="secundario" onClick={() => { setAbierto(!abierto); }} aria-expanded={abierto}>CAMBIAR CLAVE</Boton>
+        {esDeCamion(u.rol) ? <Boton variante="secundario" onClick={() => void cambiarEditor()}>{u.editor ? 'QUITAR PERMISO DE EDITOR' : 'DAR PERMISO DE EDITOR'}</Boton> : null}
         {!esYo ? <Boton variante="peligro" onClick={() => void cambiarEstado()}>{u.activo ? 'DESACTIVAR' : 'ACTIVAR'}</Boton> : null}
       </div>
       {abierto ? (

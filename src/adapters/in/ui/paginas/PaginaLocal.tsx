@@ -1,9 +1,9 @@
 import { useCallback, useState, type ChangeEvent, type SyntheticEvent } from 'react';
-import { useParams } from 'react-router';
+import { useNavigate, useParams } from 'react-router';
 import { leerCoordenadas } from '../../../../domain/coordenadas';
 import { enlaceGoogleMaps, enlaceStreetView, enlaceWaze } from '../../../../domain/enlaces';
 import { describirRespaldo } from '../../../../domain/respaldo-pin';
-import { puedeHacer } from '../../../../domain/rol';
+import { puedeEditar, puedeHacer } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { LocalDetalle } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
@@ -100,10 +100,63 @@ const VerificarPin = ({ local, alCambiar }: { readonly local: LocalDetalle; read
   );
 };
 
+/**
+ * Corregir lo que se cargó mal (solo admin, despachador y choferes con permiso de editor): el nombre con un error de tipeo y la dirección
+ * equivocada, que se elimina con confirmación. Si ya tiene entregas hechas la API lo rechaza (para no perder el historial) y aquí se explica.
+ */
+const CorregirFicha = ({ local, recargar }: { readonly local: LocalDetalle; readonly recargar: () => void }) => {
+  const { api } = useCasos();
+  const navegar = useNavigate();
+  const [nombre, setNombre] = useState(local.razonSocial);
+  const [confirmando, setConfirmando] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
+  const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | undefined>();
+
+  const guardarNombre = async (e: SyntheticEvent): Promise<void> => {
+    e.preventDefault();
+    setOcupado(true);
+    const r = await api.cambiarRazonSocial(local.clienteId, nombre);
+    setOcupado(false);
+    if (r.ok) {
+      setMensaje({ tipo: 'exito', texto: 'Nombre corregido.' });
+      recargar();
+    } else setMensaje({ tipo: 'error', texto: mensajeDeError(r.error) });
+  };
+
+  const eliminar = async (): Promise<void> => {
+    setOcupado(true);
+    const r = await api.eliminarLocal(local.id);
+    setOcupado(false);
+    if (r.ok) void navegar('/clientes', { replace: true });
+    else {
+      setConfirmando(false);
+      setMensaje({ tipo: 'error', texto: mensajeDeError(r.error) });
+    }
+  };
+
+  return (
+    <section className="pagina" aria-label="Corregir esta ficha">
+      <h2>Corregir esta ficha</h2>
+      <form className="pagina" onSubmit={(e) => void guardarNombre(e)} noValidate>
+        <Campo etiqueta="Razón social (corrige un error de tipeo)" value={nombre} onChange={(e) => { setNombre(e.target.value); }} maxLength={200} />
+        <Boton type="submit" variante="secundario" disabled={ocupado || nombre.trim() === '' || nombre.trim() === local.razonSocial}>GUARDAR NOMBRE</Boton>
+      </form>
+      {confirmando ? (
+        <div className="pagina" role="group" aria-label="Confirmar eliminación">
+          <Aviso tipo="error">¿Eliminar la dirección «{local.direccion}, {local.comuna}» de {local.razonSocial}? No se puede deshacer.</Aviso>
+          <Boton variante="peligro" disabled={ocupado} onClick={() => void eliminar()}>SÍ, ELIMINAR</Boton>
+          <Boton variante="secundario" disabled={ocupado} onClick={() => { setConfirmando(false); }}>NO, DEJARLA</Boton>
+        </div>
+      ) : <Boton variante="peligro" onClick={() => { setMensaje(undefined); setConfirmando(true); }}>ELIMINAR ESTA DIRECCIÓN</Boton>}
+      {mensaje ? <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
+    </section>
+  );
+};
+
 const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly recargar: () => void }) => {
   const { api, subirFotoLocal } = useCasos();
   const usuario = useUsuario();
-  const editar = puedeHacer(usuario.rol, 'cliente-nuevo');
+  const editar = puedeEditar(usuario.rol, usuario.editor);
   const [nota, setNota] = useState(local.nota ?? '');
   const [rumbo, setRumbo] = useState(local.streetviewRumbo === undefined ? '' : String(local.streetviewRumbo));
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | undefined>();
@@ -176,6 +229,7 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
         </form>
       ) : null}
       {mensaje ? <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
+      {editar ? <CorregirFicha key={`${local.id}:${local.razonSocial}`} local={local} recargar={recargar} /> : null}
       {editar ? <PinLocal key={`${local.lat ?? ''},${local.lng ?? ''}`} local={local} recargar={recargar} /> : null}
       <SeccionHorario localId={local.id} editar={editar} />
     </Pagina>

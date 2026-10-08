@@ -22,7 +22,7 @@ const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: str
 
 export const PaginaInicio = () => {
   const usuario = useUsuario();
-  const acciones = accionesDe(usuario.rol);
+  const acciones = accionesDe(usuario.rol, usuario.editor);
   const enlaces = acciones.flatMap((a) => {
     const e = ENTRADAS[a];
     return e ? [e] : [];

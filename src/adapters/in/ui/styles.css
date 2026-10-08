@@ -527,7 +527,7 @@ html[data-vista='normal'] td {
 .parada-atajos .atajo {
   flex: 1 1 auto;
   min-width: 4.5rem;
-  min-height: 3.5rem;
+  min-height: 4rem;
   padding: 0.25rem 0.75rem;
   display: grid;
   place-items: center;
@@ -539,6 +539,9 @@ html[data-vista='normal'] td {
 .parada-atajos .aviso {
   flex-basis: 100%;
   margin: 0;
+}
+.parada-atajos .parada-panel {
+  flex-basis: 100%;
 }
 html[data-vista='normal'] .parada-atajos {
   padding: 0 0.5rem 0.5rem;

@@ -10,9 +10,9 @@ import { Aplicacion } from './Aplicacion';
 import { EVENTO_SERVIDOR_DESPERTANDO } from './despertando';
 import { ProveedorCasos, type Casos } from './contexto';
 
-const CHOFER: UsuarioSesion = { id: 'u1', username: 'jperez', nombre: 'Juan Pérez', rol: 'chofer' };
-const ADMIN: UsuarioSesion = { id: 'u2', username: 'admin', nombre: 'Matías Carrión', rol: 'admin' };
-const DESPACHADOR: UsuarioSesion = { id: 'u3', username: 'desp', nombre: 'Ana Soto', rol: 'despachador' };
+const CHOFER: UsuarioSesion = { id: 'u1', username: 'jperez', nombre: 'Juan Pérez', rol: 'chofer', editor: false };
+const ADMIN: UsuarioSesion = { id: 'u2', username: 'admin', nombre: 'Matías Carrión', rol: 'admin', editor: false };
+const DESPACHADOR: UsuarioSesion = { id: 'u3', username: 'desp', nombre: 'Ana Soto', rol: 'despachador', editor: false };
 
 const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial<ApiClient>; casos?: Partial<Casos> } = {}) => {
   window.history.pushState({}, '', opciones.ruta ?? '/');
@@ -256,6 +256,53 @@ describe('detalle del local', () => {
     montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)) } });
     await screen.findByText('Sin foto de la fachada.');
     expect(screen.queryByRole('button', { name: 'QUITAR FOTO' })).toBeNull();
+  });
+
+  describe('chofer con permiso de editor', () => {
+    const EDITOR: UsuarioSesion = { ...CHOFER, editor: true };
+
+    it('puede abrir la ficha, quitar la foto y corregir la razón social; un chofer común no entra', async () => {
+      const cambiarRazonSocial = vi.fn(() => Promise.resolve(ok(undefined)));
+      const quitarFoto = vi.fn(() => Promise.resolve(ok(undefined)));
+      const obtenerLocal = vi.fn(() => Promise.resolve(ok({ ...local, fotoPath: 'e/l1/f.webp' })));
+      montar({ ruta: '/clientes/l1', sesion: EDITOR, api: { obtenerLocal, cambiarRazonSocial, quitarFoto, urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 600 })) } });
+      expect(await screen.findByRole('button', { name: 'QUITAR FOTO' })).toBeInTheDocument();
+      const campo = screen.getByLabelText('Razón social (corrige un error de tipeo)');
+      expect(campo).toHaveValue('Rabelo Mágica SpA');
+      await userEvent.clear(campo);
+      await userEvent.type(campo, 'Rabelo Magica SpA');
+      await userEvent.click(screen.getByRole('button', { name: 'GUARDAR NOMBRE' }));
+      expect(cambiarRazonSocial).toHaveBeenCalledWith('c1', 'Rabelo Magica SpA');
+      expect(await screen.findByText('Nombre corregido.')).toBeInTheDocument();
+    });
+
+    it('un chofer sin el permiso no llega a la ficha', async () => {
+      montar({ ruta: '/clientes/l1', sesion: CHOFER, api: { obtenerLocal: () => Promise.resolve(ok(local)) } });
+      await waitFor(() => { expect(screen.queryByRole('heading', { name: 'Rabelo Mágica SpA' })).toBeNull(); });
+    });
+
+    it('eliminar una dirección pide confirmar y vuelve a la búsqueda', async () => {
+      const eliminarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
+      montar({ ruta: '/clientes/l1', sesion: EDITOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), eliminarLocal, buscarClientes: () => Promise.resolve(ok([])) } });
+      await userEvent.click(await screen.findByRole('button', { name: 'ELIMINAR ESTA DIRECCIÓN' }));
+      expect(eliminarLocal).not.toHaveBeenCalled();
+      expect(screen.getByText(/No se puede deshacer/)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'SÍ, ELIMINAR' }));
+      expect(eliminarLocal).toHaveBeenCalledWith('l1');
+      expect(await screen.findByRole('heading', { name: 'Buscar cliente' })).toBeInTheDocument();
+    });
+
+    it('«No, dejarla» cancela; y si la API dice que ya tiene entregas, lo explica sin borrar', async () => {
+      const eliminarLocal = vi.fn(() => Promise.resolve(err({ kind: 'HTTP' as const, status: 409, mensaje: 'Esta dirección ya tiene entregas hechas: no se puede eliminar para no perder el historial.' })));
+      montar({ ruta: '/clientes/l1', sesion: EDITOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), eliminarLocal } });
+      await userEvent.click(await screen.findByRole('button', { name: 'ELIMINAR ESTA DIRECCIÓN' }));
+      await userEvent.click(screen.getByRole('button', { name: 'NO, DEJARLA' }));
+      expect(screen.getByRole('button', { name: 'ELIMINAR ESTA DIRECCIÓN' })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'ELIMINAR ESTA DIRECCIÓN' }));
+      await userEvent.click(screen.getByRole('button', { name: 'SÍ, ELIMINAR' }));
+      expect(await screen.findByText(/ya tiene entregas hechas/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Rabelo Mágica SpA' })).toBeInTheDocument();
+    });
   });
 
   it('guarda nota y rumbo', async () => {
@@ -750,7 +797,7 @@ describe('importar clientes', () => {
 
 describe('usuarios', () => {
   it('crear un usuario muestra el usuario generado y la clave para entregarlos', async () => {
-    const crearUsuario = vi.fn(() => Promise.resolve(ok({ id: 'u9', username: 'jperez', nombre: 'Juan Pérez', rol: 'chofer' as const, activo: true })));
+    const crearUsuario = vi.fn(() => Promise.resolve(ok({ id: 'u9', username: 'jperez', nombre: 'Juan Pérez', rol: 'chofer' as const, editor: false, activo: true })));
     const listarUsuarios = vi.fn(() => Promise.resolve(ok([{ ...ADMIN, activo: true }])));
     montar({ ruta: '/admin/usuarios', sesion: ADMIN, api: { crearUsuario, listarUsuarios } });
     await userEvent.type(await screen.findByLabelText('Nombre'), 'Juan');
@@ -771,6 +818,25 @@ describe('usuarios', () => {
     expect(botones).toHaveLength(1);
     await userEvent.click(botones[0] as HTMLElement);
     expect(cambiarEstadoUsuario).toHaveBeenCalledWith('u1', false);
+  });
+
+  it('el admin da y quita el permiso de editor a un chofer; no se ofrece para admin ni despachador', async () => {
+    const cambiarEditorUsuario = vi.fn(() => Promise.resolve(ok(undefined)));
+    const listarUsuarios = vi.fn(() => Promise.resolve(ok([{ ...ADMIN, activo: true }, { ...CHOFER, activo: true }, { ...DESPACHADOR, activo: true }])));
+    montar({ ruta: '/admin/usuarios', sesion: ADMIN, api: { listarUsuarios, cambiarEditorUsuario } });
+    const dar = await screen.findAllByRole('button', { name: 'DAR PERMISO DE EDITOR' });
+    expect(dar).toHaveLength(1);
+    await userEvent.click(dar[0] as HTMLElement);
+    expect(cambiarEditorUsuario).toHaveBeenCalledWith('u1', true);
+  });
+
+  it('un chofer que ya es editor muestra la insignia y permite quitarle el permiso', async () => {
+    const cambiarEditorUsuario = vi.fn(() => Promise.resolve(ok(undefined)));
+    const listarUsuarios = vi.fn(() => Promise.resolve(ok([{ ...ADMIN, activo: true }, { ...CHOFER, editor: true, activo: true }])));
+    montar({ ruta: '/admin/usuarios', sesion: ADMIN, api: { listarUsuarios, cambiarEditorUsuario } });
+    expect(await screen.findByText('EDITOR')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'QUITAR PERMISO DE EDITOR' }));
+    expect(cambiarEditorUsuario).toHaveBeenCalledWith('u1', false);
   });
 
   it('un error de la API al crear se muestra en lenguaje simple', async () => {
@@ -1479,7 +1545,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
     expect(await form.findByRole('alert')).toHaveTextContent('Falta la dirección o la comuna.');
     expect(crearCliente).not.toHaveBeenCalled();
     await userEvent.selectOptions(form.getByLabelText('Comuna'), 'Maipú');
-    await userEvent.type(form.getByLabelText('Nombre del local (opcional)'), 'Almacén Don Pepe');
+    await userEvent.type(form.getByLabelText('Razón social'), 'Almacén Don Pepe');
     await userEvent.click(form.getByRole('button', { name: 'GUARDAR Y CARGAR' }));
     await waitFor(() => { expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'Almacén Don Pepe', direccion: 'Calle 1 123', comuna: 'Maipú' }); });
   });
@@ -1638,7 +1704,7 @@ describe('acciones en la parada (chofer)', () => {
     abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [paradaDe('A', 0), paradaDe('B', 1, { lat: undefined, lng: undefined })] }))) });
     expect(await screen.findByRole('link', { name: 'NAVEGAR CON WAZE a Local A' })).toHaveAttribute('href', 'https://waze.com/ul?ll=-33.59,-70.7&navigate=yes');
     expect(screen.getByRole('link', { name: 'NAVEGAR CON GOOGLE MAPS a Local A' })).toHaveAttribute('href', expect.stringContaining('destination=-33.59,-70.7'));
-    await userEvent.click(within(screen.getByRole('listitem', { name: 'Parada 2' })).getByRole('button', { expanded: false }));
+    await userEvent.click(within(screen.getByRole('listitem', { name: 'Parada 2' })).getByRole('button', { expanded: false, name: /^Local B/ }));
     expect(screen.getByRole('link', { name: 'NAVEGAR CON WAZE a Local B' })).toHaveAttribute('href', expect.stringContaining('waze.com/ul?q=Calle%20B%20100%2C%20San%20Bernardo'));
     expect(screen.getByRole('link', { name: 'LAS PRÓXIMAS 2 EN GOOGLE MAPS' })).toHaveAttribute('href', expect.stringContaining('waypoints='));
   });
@@ -1799,6 +1865,70 @@ describe('acciones en la parada (chofer)', () => {
     expect(screen.getByRole('listitem', { name: 'Parada 1' })).toBeInTheDocument();
   });
 
+  it('la fila trae CERRADO: un toque anota el aviso y despliega lo habitual (WhatsApp al vendedor, esperar 10, volver más tarde); MÁS OPCIONES suma el resto', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })));
+    abrir({ registrarEvento }, { ubicacion: gps() });
+    const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(within(fila).getByRole('button', { name: 'CERRADO Local A' })).toHaveTextContent(/^CERRADO$/);
+    expect(within(fila).queryByLabelText('Opciones de local cerrado: Local A')).toBeNull();
+    await userEvent.click(within(fila).getByRole('button', { name: 'CERRADO Local A' }));
+    expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'cerrado', lat: -33.5901, lng: -70.7002, precisionM: 10 });
+    const panel = within(await within(fila).findByLabelText('Opciones de local cerrado: Local A'));
+    expect(decodeURIComponent(panel.getByRole('link', { name: 'AVISAR AL VENDEDOR POR WHATSAPP' }).getAttribute('href') ?? '')).toContain('está cerrado');
+    expect(panel.getByRole('button', { name: 'ESPERAR 10 MIN' })).toBeInTheDocument();
+    expect(panel.getByRole('button', { name: 'VOLVER MÁS TARDE' })).toBeInTheDocument();
+    expect(panel.queryByRole('button', { name: 'DEJAR PARA OTRO DÍA' })).toBeNull();
+    await userEvent.click(panel.getByRole('button', { name: 'MÁS OPCIONES DE CERRADO Local A' }));
+    expect(panel.getByRole('button', { name: 'ESPERAR 15 MIN' })).toBeInTheDocument();
+    expect(panel.getByRole('button', { name: 'ESPERAR 20 MIN' })).toBeInTheDocument();
+    expect(panel.getByRole('button', { name: 'DEJAR PARA OTRO DÍA' })).toBeInTheDocument();
+  });
+
+  it('desde la fila: ESPERAR 10 MIN anota la espera; VOLVER MÁS TARDE deja la parada para después; DEJAR PARA OTRO DÍA la marca no entregada', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })));
+    const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ version: 2 }))));
+    abrir({ registrarEvento, operarRuta });
+    const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
+    await userEvent.click(within(fila).getByRole('button', { name: 'CERRADO Local A' }));
+    await userEvent.click(await within(fila).findByRole('button', { name: 'ESPERAR 10 MIN' }));
+    expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'espera', minutos: 10 });
+    await userEvent.click(within(fila).getByRole('button', { name: 'VOLVER MÁS TARDE' }));
+    expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'vuelve_mas_tarde' });
+    await waitFor(() => { expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'despues', facturaId: 'fA' }); });
+  });
+
+  it('desde la fila: DEJAR PARA OTRO DÍA marca la parada como no entregada por estar cerrado', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'no_entregada' as const, pinFijado: false })));
+    abrir({ registrarEvento });
+    const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
+    await userEvent.click(within(fila).getByRole('button', { name: 'CERRADO Local A' }));
+    await userEvent.click(await within(fila).findByRole('button', { name: 'MÁS OPCIONES DE CERRADO Local A' }));
+    await userEvent.click(within(fila).getByRole('button', { name: 'DEJAR PARA OTRO DÍA' }));
+    expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'no_entregado', motivo: 'cerrado' });
+  });
+
+  it('tocar CERRADO otra vez cierra la lista sin anotar un segundo aviso', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })));
+    abrir({ registrarEvento });
+    const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
+    await userEvent.click(within(fila).getByRole('button', { name: 'CERRADO Local A' }));
+    await within(fila).findByLabelText('Opciones de local cerrado: Local A');
+    await userEvent.click(within(fila).getByRole('button', { name: 'CERRADO Local A' }));
+    expect(within(fila).queryByLabelText('Opciones de local cerrado: Local A')).toBeNull();
+    expect(registrarEvento).toHaveBeenCalledTimes(1);
+  });
+
+  it('el chofer editor ve CORREGIR ESTA DIRECCIÓN en la parada (lleva a la ficha); el chofer común no', async () => {
+    abrir({}, {}, { ...CHOFER, editor: true });
+    expect(await screen.findByRole('link', { name: 'CORREGIR ESTA DIRECCIÓN Local A' })).toHaveAttribute('href', '/clientes/lA');
+  });
+
+  it('el chofer sin permiso de editor no ve CORREGIR ESTA DIRECCIÓN', async () => {
+    abrir();
+    await screen.findByRole('button', { name: 'ESTÁ CERRADO Local A' });
+    expect(screen.queryByRole('link', { name: /CORREGIR ESTA DIRECCIÓN/ })).toBeNull();
+  });
+
   const hechaA = { facturaId: 'fH', cliente: 'Local H', direccion: 'Calle H 1', comuna: 'San Bernardo', estado: 'entregada' as const };
   const enDeposito = { disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.607, lng: -70.5296, precisionM: 12 }))) };
   const lejos = { disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.5, lng: -70.7, precisionM: 12 }))) };
@@ -1838,7 +1968,7 @@ describe('acciones en la parada (chofer)', () => {
   });
 
   it('el despachador no ve TERMINAR RUTA: la termina el camión', async () => {
-    montar({ ruta: '/rutas', sesion: { id: 'u3', username: 'desp', nombre: 'Ana Soto', rol: 'despachador' }, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true }])), verRuta: () => Promise.resolve(ok(vistaBase({ hechas: [hechaA] }))) } });
+    montar({ ruta: '/rutas', sesion: { id: 'u3', username: 'desp', nombre: 'Ana Soto', rol: 'despachador', editor: false }, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true }])), verRuta: () => Promise.resolve(ok(vistaBase({ hechas: [hechaA] }))) } });
     await screen.findByRole('option', { name: 'Camión 3 · AB·1234' });
     await userEvent.selectOptions(screen.getByLabelText('Camión'), 'c1');
     await screen.findByRole('listitem', { name: 'Parada 1' });
@@ -1880,7 +2010,7 @@ describe('acciones en la parada (chofer)', () => {
   });
 
   it('el ayudante también ve las acciones; el despachador no (solo mira y acomoda)', async () => {
-    abrir({}, {}, { id: 'u9', username: 'ayud', nombre: 'Max García', rol: 'ayudante' });
+    abrir({}, {}, { id: 'u9', username: 'ayud', nombre: 'Max García', rol: 'ayudante', editor: false });
     expect(await screen.findByRole('button', { name: 'ENTREGADO Local A' })).toBeInTheDocument();
   });
 
@@ -1926,7 +2056,7 @@ describe('acciones en la parada (chofer)', () => {
 
 describe('ayudante', () => {
   it('ve el mismo inicio que el chofer: elegir camión, cargar y ruta', async () => {
-    montar({ sesion: { id: 'u9', username: 'ayud', nombre: 'Max García', rol: 'ayudante' } });
+    montar({ sesion: { id: 'u9', username: 'ayud', nombre: 'Max García', rol: 'ayudante', editor: false } });
     expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
   });
 });

@@ -84,6 +84,7 @@ test.describe('fase 4a: el chofer', () => {
     await simularApi(page, rutas({
       'GET /v1/rutas': () => ({ status: 200, json: vista }),
       [`POST /v1/entregas/${parada('1', 0).facturaId}/eventos`]: (req) => { evento = req.postDataJSON(); return { status: 200, json: { estado: 'pendiente', pinFijado: false } }; },
+      [`POST /v1/entregas/${parada('2', 1).facturaId}/eventos`]: () => ({ status: 200, json: { estado: 'pendiente', pinFijado: false } }),
     }));
     await page.context().grantPermissions(['geolocation']);
     await page.context().setGeolocation({ latitude: -33.5901, longitude: -70.7002, accuracy: 10 });
@@ -95,6 +96,12 @@ test.describe('fase 4a: el chofer', () => {
     await page.getByRole('button', { name: 'ESTÁ CERRADO Local 1' }).click();
     await expect(page.getByRole('link', { name: 'AVISAR AL VENDEDOR POR WHATSAPP' })).toBeVisible();
     expect(evento).toMatchObject({ tipo: 'cerrado', lat: -33.5901, lng: -70.7002 });
+    await sinViolaciones(page);
+    await page.getByRole('button', { name: 'CERRADO Local 2', exact: true }).click();
+    const lista = page.getByLabel('Opciones de local cerrado: Local 2');
+    await expect(lista.getByRole('button', { name: 'ESPERAR 10 MIN' })).toBeVisible();
+    await lista.getByRole('button', { name: 'MÁS OPCIONES DE CERRADO Local 2' }).click();
+    await expect(lista.getByRole('button', { name: 'DEJAR PARA OTRO DÍA' })).toBeVisible();
     await sinViolaciones(page);
     for (const b of await page.getByRole('button').all()) expect((await b.boundingBox())?.height ?? 64).toBeGreaterThanOrEqual(63);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);

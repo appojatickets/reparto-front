@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { accionesDe, esDeCamion, puedeHacer } from './rol';
+import { accionesDe, esDeCamion, puedeEditar, puedeHacer } from './rol';
 
 describe('acciones por rol (solo para mostrar el menú; la API es quien manda)', () => {
   it('el chofer solo ve su ruta', () => {
@@ -33,5 +33,24 @@ describe('acciones por rol (solo para mostrar el menú; la API es quien manda)',
     expect(esDeCamion('chofer')).toBe(true);
     expect(esDeCamion('despachador')).toBe(false);
     expect(esDeCamion('admin')).toBe(false);
+  });
+
+  it('un chofer o ayudante con permiso de editor puede buscar clientes y corregir direcciones; sin el permiso, no', () => {
+    expect(puedeHacer('chofer', 'buscar-clientes')).toBe(false);
+    expect(puedeHacer('chofer', 'buscar-clientes', true)).toBe(true);
+    expect(puedeHacer('ayudante', 'buscar-clientes', true)).toBe(true);
+    expect(accionesDe('chofer', true)).toEqual(['mi-ruta', 'cargar-facturas', 'buscar-clientes']);
+    expect(accionesDe('chofer', false)).toEqual(['mi-ruta', 'cargar-facturas']);
+    expect(puedeHacer('chofer', 'usuarios', true)).toBe(false);
+    expect(puedeHacer('chofer', 'fotos', true)).toBe(false);
+  });
+
+  it('puedeEditar: admin y despachador siempre; chofer y ayudante solo con el permiso', () => {
+    expect(puedeEditar('admin', false)).toBe(true);
+    expect(puedeEditar('despachador', false)).toBe(true);
+    expect(puedeEditar('chofer', false)).toBe(false);
+    expect(puedeEditar('chofer', true)).toBe(true);
+    expect(puedeEditar('ayudante', true)).toBe(true);
+    expect(puedeEditar('ayudante', false)).toBe(false);
   });
 });

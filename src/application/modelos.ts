@@ -3,7 +3,7 @@ import type { Motivo } from '../domain/motivos';
 import type { Rol } from '../domain/rol';
 import type { FilaClienteCruda } from '../domain/tabla';
 
-export type UsuarioSesion = { readonly id: string; readonly username: string; readonly nombre: string; readonly rol: Rol };
+export type UsuarioSesion = { readonly id: string; readonly username: string; readonly nombre: string; readonly rol: Rol; readonly editor: boolean };
 export type Tokens = { readonly accessToken: string; readonly refreshToken: string };
 
 export type EstadoPin = 'pendiente' | 'sugerido' | 'validado';

@@ -57,7 +57,7 @@ export const RutaProtegida = ({ accion, children }: { readonly accion?: Accion; 
     case 'sin_sesion':
       return <Navigate to="/entrar" replace state={{ desde: ubicacion.pathname }} />;
     case 'sesion':
-      return accion && !puedeHacer(estado.usuario.rol, accion) ? <Navigate to="/" replace /> : <>{children}</>;
+      return accion && !puedeHacer(estado.usuario.rol, accion, estado.usuario.editor) ? <Navigate to="/" replace /> : <>{children}</>;
   }
 };
 

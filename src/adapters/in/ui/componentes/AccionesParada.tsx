@@ -77,7 +77,24 @@ const useEventosDeParada = (p: ParadaDeRuta) => {
     if (!r.ok) setAviso({ tipo: 'error', texto: mensajeDeError(r.error) });
     return { r, sinGps };
   };
-  return { aviso, setAviso, ocupado, avisar };
+
+  /** Lo que se hace con un local cerrado cuando ya se avisó al vendedor: esperar, seguir y volver más tarde, o dejarlo para otro día. */
+  const esperar = async (minutos: number): Promise<void> => {
+    const { r } = await avisar({ tipo: 'espera', minutos }, false);
+    if (r.ok) setAviso({ tipo: 'exito', texto: `Esperando ${minutos} minutos. Cuando termine, toca ENTREGADO o decide qué hacer.` });
+  };
+  const volverMasTarde = async (alPosponer: () => void, alTerminar: () => void): Promise<void> => {
+    const { r } = await avisar({ tipo: 'vuelve_mas_tarde' }, false);
+    if (r.ok) {
+      alTerminar();
+      alPosponer();
+    }
+  };
+  const noEntregado = async (motivo: 'cerrado' | 'direccion', alCambiar: () => void): Promise<void> => {
+    const { r } = await avisar({ tipo: 'no_entregado', motivo });
+    if (r.ok) alCambiar();
+  };
+  return { aviso, setAviso, ocupado, avisar, esperar, volverMasTarde, noEntregado };
 };
 
 /** Atajo de la fila de la ruta: ENTREGADO marca la entrega como hecha con un toque (queda en «Hechas hoy» y se puede deshacer). */
@@ -95,6 +112,55 @@ export const AtajoEntregado = ({ p, alCambiar }: { readonly p: ParadaDeRuta; rea
   );
 };
 
+/**
+ * Atajo de la fila de la ruta: CERRADO anota que el local está cerrado (con la posición del GPS) y despliega la lista habitual: avisar al
+ * vendedor por WhatsApp, esperar 10 minutos o seguir y volver más tarde. «Más opciones» suma esperar 15 o 20 minutos y dejarla para otro día.
+ * Tocarlo de nuevo cierra la lista sin anotar otro aviso.
+ */
+export const AtajoCerrado = ({ p, alCambiar, alPosponer }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void }) => {
+  const { ahora } = useCasos();
+  const { aviso, setAviso, ocupado, avisar, esperar, volverMasTarde, noEntregado } = useEventosDeParada(p);
+  const [abierto, setAbierto] = useState(false);
+  const [mas, setMas] = useState(false);
+  const destino = { direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng };
+
+  const tocar = async (): Promise<void> => {
+    if (abierto) {
+      setAbierto(false);
+      return;
+    }
+    const { r, sinGps } = await avisar({ tipo: 'cerrado' });
+    if (!r.ok) return;
+    setMas(false);
+    setAbierto(true);
+    if (sinGps) setAviso({ tipo: 'info', texto: 'No pude leer el GPS; quedó sin ubicación.' });
+  };
+
+  return (
+    <>
+      <Boton variante="secundario" className="atajo" disabled={ocupado} aria-expanded={abierto} aria-label={`CERRADO ${p.cliente}`} onClick={() => void tocar()}>CERRADO</Boton>
+      {abierto ? (
+        <div className="tarjeta parada-panel" aria-label={`Opciones de local cerrado: ${p.cliente}`}>
+          <strong>Local cerrado. ¿Qué hacemos?</strong>
+          <AvisoAlVendedor mensaje={(nombre) => mensajeLocalCerrado({ ...destino, nombre }, horaDelDia(minutosEnChile(ahora())))} />
+          <div className="fila-botones">
+            <Boton variante="secundario" disabled={ocupado} onClick={() => void esperar(10)}>ESPERAR 10 MIN</Boton>
+            <Boton variante="secundario" disabled={ocupado} onClick={() => void volverMasTarde(alPosponer, () => { setAbierto(false); })}>VOLVER MÁS TARDE</Boton>
+          </div>
+          <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES DE CERRADO ${p.cliente}`} onClick={() => { setMas(!mas); }}>MÁS OPCIONES</Boton>
+          {mas ? (
+            <div className="fila-botones">
+              {[15, 20].map((m) => <Boton key={m} variante="secundario" disabled={ocupado} onClick={() => void esperar(m)}>{`ESPERAR ${m} MIN`}</Boton>)}
+              <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('cerrado', alCambiar)}>DEJAR PARA OTRO DÍA</Boton>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {aviso ? <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso> : null}
+    </>
+  );
+};
+
 /** Atajo de la fila de la ruta: IR abre Google Maps con el destino (Waze sigue en el detalle de la parada). */
 export const AtajoIr = ({ p }: { readonly p: ParadaDeRuta }) => (
   <a className="big-button big-button--primario atajo" href={enlaceNavegar({ direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng }, 'google')} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON GOOGLE MAPS`}>IR</a>
@@ -103,7 +169,7 @@ export const AtajoIr = ({ p }: { readonly p: ParadaDeRuta }) => (
 export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void }) => {
   const { ahora } = useCasos();
   const [panel, setPanel] = useState<Panel>(undefined);
-  const { aviso, setAviso, ocupado, avisar } = useEventosDeParada(p);
+  const { aviso, setAviso, ocupado, avisar, esperar, volverMasTarde, noEntregado } = useEventosDeParada(p);
   const destino = { direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng };
   const horaAhora = (): string => horaDelDia(minutosEnChile(ahora()));
 
@@ -120,22 +186,6 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
       if (sinGps) setAviso({ tipo: 'info', texto: nota(true).trim() });
     }
   };
-  const esperar = async (minutos: number): Promise<void> => {
-    const { r } = await avisar({ tipo: 'espera', minutos }, false);
-    if (r.ok) setAviso({ tipo: 'exito', texto: `Esperando ${minutos} minutos. Cuando termine, toca ENTREGADO o decide qué hacer.` });
-  };
-  const volverMasTarde = async (): Promise<void> => {
-    const { r } = await avisar({ tipo: 'vuelve_mas_tarde' }, false);
-    if (r.ok) {
-      setPanel(undefined);
-      alPosponer();
-    }
-  };
-  const noEntregado = async (motivo: 'cerrado' | 'direccion'): Promise<void> => {
-    const { r } = await avisar({ tipo: 'no_entregado', motivo });
-    if (r.ok) alCambiar();
-  };
-
   return (
     <div className="pagina" aria-label={`Acciones de ${p.cliente}`}>
       <div className="fila-botones">
@@ -159,8 +209,8 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
           <div className="fila-botones">
             {[10, 15, 20].map((m) => <Boton key={m} variante="secundario" disabled={ocupado} onClick={() => void esperar(m)}>{`ESPERAR ${m} MIN`}</Boton>)}
           </div>
-          <Boton variante="secundario" disabled={ocupado} onClick={() => void volverMasTarde()}>SEGUIR Y VOLVER MÁS TARDE</Boton>
-          <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('cerrado')}>SEGUIR: DEJAR PARA OTRO DÍA</Boton>
+          <Boton variante="secundario" disabled={ocupado} onClick={() => void volverMasTarde(alPosponer, () => { setPanel(undefined); })}>SEGUIR Y VOLVER MÁS TARDE</Boton>
+          <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('cerrado', alCambiar)}>SEGUIR: DEJAR PARA OTRO DÍA</Boton>
         </div>
       ) : null}
 
@@ -174,7 +224,7 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
         <div className="tarjeta" aria-label={`No encuentra la dirección: ${p.cliente}`}>
           <strong>¿No encuentras la dirección?</strong>
           <a className="big-button big-button--primario" href={enlaceWhatsApp(mensajeDireccionNoEncontrada({ ...destino, nombre: p.cliente }))} target="_blank" rel="noreferrer">ENVIAR LA DIRECCIÓN POR WHATSAPP</a>
-          <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('direccion')}>NO SE PUDO ENTREGAR (DIRECCIÓN)</Boton>
+          <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('direccion', alCambiar)}>NO SE PUDO ENTREGAR (DIRECCIÓN)</Boton>
         </div>
       ) : null}
 

@@ -120,7 +120,7 @@ type Lugar = { readonly lat: number; readonly lng: number; readonly etiqueta: st
 
 /**
  * «No está»: el chofer escribe solo la dirección que dice la factura. El sistema la busca en el mapa gratuito (un toque, hasta 5 lugares
- * para elegir); si no la halla, se busca en Google Maps, se toca Compartir → Copiar enlace y se pega aquí. El nombre y el RUT son opcionales:
+ * para elegir); si no la halla, se busca en Google Maps, se toca Compartir → Copiar enlace y se pega aquí. La razón social y el RUT son opcionales:
  * se cruzan después. El lugar elegido queda como pin del cliente, para todos y para los días siguientes.
  */
 const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: {
@@ -239,8 +239,8 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
         )}
       </section>
 
-      <Campo etiqueta="Nombre del local (opcional)" ayuda="Si lo sabes. Si no, se guarda con la dirección." value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />
-      <BotonHablar dictado={dictarNombre} etiqueta="DICTAR NOMBRE" />
+      <Campo etiqueta="Razón social" ayuda="Como sale en la guía. Si no la sabes, déjala vacía y se guarda con la dirección; un editor la corrige después." value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />
+      <BotonHablar dictado={dictarNombre} etiqueta="DICTAR RAZÓN SOCIAL" />
       <Campo etiqueta="RUT (opcional)" ayuda="Solo los números. El RUT no cambia: sirve para reconocer al cliente en todas sus direcciones." inputMode="numeric" value={rutEscrito} onChange={(e) => { setRutEscrito(e.target.value); }} autoComplete="off" />
       {rutEscrito.trim() !== '' && completarRut(rutEscrito) !== undefined ? <p role="status">RUT {formatearRut(completarRut(rutEscrito) ?? '')}</p> : null}
       {errores.length > 0 ? <Aviso tipo="error">{errores.join(' ')}</Aviso> : null}

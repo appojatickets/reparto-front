@@ -141,7 +141,7 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
 
     async iniciarSesion(username, pin) {
       const r = await ejecutar(() => client.POST('/v1/auth/login', { body: { username, pin }, signal: timeout() }), { renovar: false, repetible: true });
-      return mapear(r, (d) => ({ tokens: { accessToken: d.accessToken, refreshToken: d.refreshToken }, usuario: { id: d.usuario.id, username: d.usuario.username, nombre: d.usuario.nombre, rol: d.usuario.rol } }));
+      return mapear(r, (d) => ({ tokens: { accessToken: d.accessToken, refreshToken: d.refreshToken }, usuario: { id: d.usuario.id, username: d.usuario.username, nombre: d.usuario.nombre, rol: d.usuario.rol, editor: d.usuario.editor } }));
     },
     yo: () => ejecutar(() => client.GET('/v1/me', { signal: timeout() }), { repetible: true }),
 
@@ -152,6 +152,8 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     crearCliente: (fila) => ejecutar(() => client.POST('/v1/clientes', { body: fila, signal: timeout() })),
     importarClientes: (filas) => ejecutar(() => client.POST('/v1/clientes/importaciones', { body: { filas: [...filas] }, signal: timeout() }), { repetible: true }),
     obtenerLocal: (id) => ejecutar(() => client.GET('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
+    cambiarRazonSocial: async (id, razonSocial) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/clientes/{id}', { params: { path: { id } }, body: { razonSocial }, signal: timeout() }))),
+    eliminarLocal: async (id) => sinCuerpo(await ejecutar(() => client.DELETE('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() }))),
     actualizarLocal: async (id, cambios) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/locales/{id}', { params: { path: { id } }, body: cambios, signal: timeout() }), { repetible: true })),
 
     solicitarUrlSubida: (localId, tipo) => ejecutar(() => client.POST('/v1/archivos/url-subida', { body: { localId, tipo }, signal: timeout() }), { repetible: true }),
@@ -172,6 +174,8 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     crearUsuario: (datos) => ejecutar(() => client.POST('/v1/usuarios', { body: datos, signal: timeout() })),
     resetearPin: async (id, pin) => sinCuerpo(await ejecutar(() => client.POST('/v1/usuarios/{id}/pin', { params: { path: { id } }, body: { pin }, signal: timeout() }))),
     cambiarEstadoUsuario: async (id, activo) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/usuarios/{id}', { params: { path: { id } }, body: { activo }, signal: timeout() }))),
+
+    cambiarEditorUsuario: async (id, editor) => sinCuerpo(await ejecutar(() => client.PUT('/v1/usuarios/{id}/editor', { params: { path: { id } }, body: { editor }, signal: timeout() }))),
 
     async listarCamiones(opciones = {}) {
       const r = await ejecutar(() => client.GET('/v1/camiones', { params: { query: opciones.incluirInactivos ? { incluirInactivos: 'true' } : {} }, signal: timeout() }), { repetible: true });

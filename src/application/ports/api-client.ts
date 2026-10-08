@@ -37,6 +37,10 @@ export interface ApiClient extends SaludApi {
   importarClientes(filas: readonly FilaCliente[]): R<ResultadoImportacion>;
   obtenerLocal(localId: string): R<LocalDetalle>;
   actualizarLocal(localId: string, cambios: { nota?: string; streetviewRumbo?: number; lat?: number; lng?: number }): R<void>;
+  /** Corrige la razón social del cliente (error de tipeo). Por ahora el cliente de la ficha es el mismo para todos sus locales. */
+  cambiarRazonSocial(clienteId: string, razonSocial: string): R<void>;
+  /** Elimina una dirección cargada por error. La API responde 409 si ya tiene entregas hechas (para no perder el historial). */
+  eliminarLocal(localId: string): R<void>;
 
   solicitarUrlSubida(localId: string, tipo: TipoFoto): R<{ path: string; url: string }>;
   registrarFoto(localId: string, path: string): R<void>;
@@ -50,6 +54,8 @@ export interface ApiClient extends SaludApi {
   crearUsuario(datos: NuevoUsuario): R<UsuarioAdmin>;
   resetearPin(usuarioId: string, pin: string): R<void>;
   cambiarEstadoUsuario(usuarioId: string, activo: boolean): R<void>;
+  /** Solo admin: da o quita el permiso de editor (corregir nombres, quitar fotos, eliminar direcciones) a un chofer o ayudante. */
+  cambiarEditorUsuario(usuarioId: string, editor: boolean): R<void>;
 
   listarCamiones(opciones?: { incluirInactivos?: boolean }): R<readonly Camion[]>;
   crearCamion(datos: { patente: string; alias?: string }): R<Camion>;

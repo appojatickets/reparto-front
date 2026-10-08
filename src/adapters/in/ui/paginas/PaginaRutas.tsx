@@ -6,14 +6,14 @@ import { horaDeMinutos } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
 import { llegoAlDeposito } from '../../../../domain/deposito';
-import { esDeCamion } from '../../../../domain/rol';
+import { esDeCamion, puedeEditar } from '../../../../domain/rol';
 import { mismoTexto } from '../../../../domain/texto';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ItemRuta, OperacionRuta, ParadaDeRuta, ResumenJornada, VistaRuta } from '../../../../application/modelos';
 import { useArrastre } from '../arrastre';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
-import { AccionesParada, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
+import { AccionesParada, AtajoCerrado, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
 import { FotoFachada } from '../componentes/FotoFachada';
 import { useDiaDeReparto } from '../componentes/dia';
 import { useUsuario } from '../sesion';
@@ -43,6 +43,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
   readonly alCambiar: () => void; readonly abierta: boolean; readonly alAbrir: () => void; readonly esSiguiente: boolean;
 }) => {
   const [mas, setMas] = useState(false);
+  const usuario = useUsuario();
   const motivos = textoMotivos(p.motivos);
   const n = p.posicion + 1;
   const idDetalle = `parada-${p.facturaId}`;
@@ -75,6 +76,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           <span aria-hidden="true">↕</span> MOVER
         </Boton>
         {enCamion ? <AtajoEntregado p={p} alCambiar={alCambiar} /> : null}
+        {enCamion ? <AtajoCerrado p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
         {enCamion ? <AtajoIr p={p} /> : null}
       </div>
       {abierta ? (
@@ -89,6 +91,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           ) : null}
           {p.nota ? <span>Nota: {p.nota}</span> : null}
           {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
+          {puedeEditar(usuario.rol, usuario.editor) ? <Link className="big-button big-button--secundario" to={`/clientes/${p.localId}`} aria-label={`CORREGIR ESTA DIRECCIÓN ${p.cliente}`}>CORREGIR ESTA DIRECCIÓN</Link> : null}
           {enCamion ? <AccionesParada p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
           <div className="fila-botones">
             <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES ${p.cliente}`} onClick={() => { setMas(!mas); }}>MÁS</Boton>
