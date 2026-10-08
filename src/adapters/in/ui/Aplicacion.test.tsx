@@ -1991,6 +1991,35 @@ describe('verificar el pin de un local', () => {
     expect(screen.getByRole('button', { name: 'QUITAR VERIFICACIÓN' })).toBeInTheDocument();
   });
 
+  it('un pin respaldado por entregas lo dice, con cuántas y en cuántos días, y se puede verificar con confianza', async () => {
+    const respaldado = { ...local, pinRespaldo: { nivel: 'respaldado' as const, entregas: 3, dias: 2, distanciaM: 12 } };
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(respaldado)) } });
+    expect(await screen.findByText('PIN RESPALDADO POR ENTREGAS')).toBeInTheDocument();
+    expect(screen.getByText('3 entregas, en 2 días, coinciden junto a este pin. Puedes verificarlo con confianza.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'VERIFICAR PIN' })).toBeInTheDocument();
+  });
+
+  it('un pin en conflicto avisa a cuántos metros coinciden las entregas, y uno sin respaldo explica qué falta', async () => {
+    const conflicto = { ...local, pinRespaldo: { nivel: 'en_conflicto' as const, entregas: 2, dias: 2, distanciaM: 445 } };
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(conflicto)) } });
+    expect(await screen.findByText('PIN EN CONFLICTO')).toBeInTheDocument();
+    expect(screen.getByText('Las entregas coinciden a 445 m de este pin. Revisa dónde está el local.')).toBeInTheDocument();
+  });
+
+  it('un pin sin respaldo con una entrega explica qué falta; uno verificado suma las entregas que lo acompañan', async () => {
+    const sinRespaldo = { ...local, pinRespaldo: { nivel: 'sin_respaldo' as const, entregas: 1, dias: 1 } };
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(sinRespaldo)) } });
+    expect(await screen.findByText('PIN SIN RESPALDO')).toBeInTheDocument();
+    expect(screen.getByText(/Hay 1 entrega con GPS/)).toBeInTheDocument();
+  });
+
+  it('un pin verificado con entregas que lo acompañan lo dice', async () => {
+    const verificado = { ...local, pinVerificado: true, pinRespaldo: { nivel: 'verificado' as const, entregas: 3, dias: 2, distanciaM: 8 } };
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(verificado)) } });
+    expect(await screen.findByText('PIN VERIFICADO ✓')).toBeInTheDocument();
+    expect(screen.getByText('Este pin está verificado: no se mueve solo. 3 entregas coinciden con él.')).toBeInTheDocument();
+  });
+
   it('quitar la verificación hace que el pin vuelva a ajustarse', async () => {
     const verificarPin = vi.fn(() => Promise.resolve(ok(undefined)));
     montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok({ ...local, pinVerificado: true })), verificarPin } });

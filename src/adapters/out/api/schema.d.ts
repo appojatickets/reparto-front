@@ -1633,6 +1633,13 @@ export interface paths {
                             /** @enum {string} */
                             pinFuente?: "geocodificador" | "manual" | "importado" | "aprendido" | "chofer" | "enlace";
                             pinVerificado: boolean;
+                            pinRespaldo?: {
+                                /** @enum {string} */
+                                nivel: "verificado" | "respaldado" | "en_conflicto" | "sin_respaldo";
+                                entregas: number;
+                                dias: number;
+                                distanciaM?: number;
+                            };
                             fotoPath?: string;
                             streetviewRumbo?: number;
                             nota?: string;

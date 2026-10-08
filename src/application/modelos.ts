@@ -1,3 +1,4 @@
+import type { PinRespaldo } from '../domain/respaldo-pin';
 import type { Motivo } from '../domain/motivos';
 import type { Rol } from '../domain/rol';
 import type { FilaClienteCruda } from '../domain/tabla';
@@ -22,7 +23,8 @@ export type ResultadoBusqueda = {
 };
 
 /** `pinVerificado`: una persona confirmó el pin y ya no se mueve solo; si no, está «por verificar» y cada entrega con buen GPS lo ajusta. */
-export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean };
+/** `pinRespaldo`: qué tan firme es el pin según las entregas (solo si el local tiene pin y el servidor pudo calcularlo). */
+export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean; readonly pinRespaldo?: PinRespaldo };
 
 export type ErrorFila = { readonly fila: number; readonly errores: readonly { readonly codigo: string; readonly mensaje: string }[] };
 export type ResumenImportacion = { readonly clientesCreados: number; readonly clientesActualizados: number; readonly localesCreados: number; readonly localesActualizados: number };

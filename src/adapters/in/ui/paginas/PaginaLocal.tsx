@@ -2,6 +2,7 @@ import { useCallback, useState, type ChangeEvent, type SyntheticEvent } from 're
 import { useParams } from 'react-router';
 import { leerCoordenadas } from '../../../../domain/coordenadas';
 import { enlaceGoogleMaps, enlaceStreetView, enlaceWaze } from '../../../../domain/enlaces';
+import { describirRespaldo } from '../../../../domain/respaldo-pin';
 import { puedeHacer } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { LocalDetalle } from '../../../../application/modelos';
@@ -88,7 +89,7 @@ const VerificarPin = ({ local, alCambiar }: { readonly local: LocalDetalle; read
   };
   return (
     <>
-      <p className="ayuda">{local.pinVerificado ? 'Este pin está verificado: no se mueve solo.' : 'Este pin se va ajustando con el lugar donde se entrega. Verifícalo cuando esté bien para dejarlo fijo.'}</p>
+      <p className="ayuda">{local.pinRespaldo ? describirRespaldo(local.pinRespaldo).ayuda : local.pinVerificado ? 'Este pin está verificado: no se mueve solo.' : 'Este pin se va ajustando con el lugar donde se entrega. Verifícalo cuando esté bien para dejarlo fijo.'}</p>
       {puede ? (
         local.pinVerificado
           ? <Boton variante="secundario" disabled={ocupado} onClick={() => void cambiar(false)}>QUITAR VERIFICACIÓN</Boton>
@@ -150,7 +151,7 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
     <Pagina titulo={local.razonSocial}>
       <p>{local.direccion}, <strong>{local.comuna}</strong></p>
       {local.rut ? <p>RUT {local.rut}</p> : null}
-      <Insignia>{tienePin ? (local.pinVerificado ? 'PIN VERIFICADO ✓' : 'PIN POR VERIFICAR') : ETIQUETA_PIN.pendiente}</Insignia>
+      <Insignia>{tienePin ? (local.pinRespaldo ? describirRespaldo(local.pinRespaldo).etiqueta : local.pinVerificado ? 'PIN VERIFICADO ✓' : 'PIN POR VERIFICAR') : ETIQUETA_PIN.pendiente}</Insignia>
       {tienePin ? <VerificarPin local={local} alCambiar={recargar} /> : null}
       {tienePin ? (
         <div className="fila-botones">
