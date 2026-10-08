@@ -2178,3 +2178,57 @@ describe('verificar el pin de un local', () => {
     expect(screen.queryByRole('button', { name: 'VERIFICAR PIN' })).toBeNull();
   });
 });
+
+describe('verificar pines (lista como la de fotos)', () => {
+  const pin = (id: string, extra: Record<string, unknown> = {}) => ({ id, razonSocial: `Local ${id}`, direccion: `Calle ${id} 10`, comuna: 'Maipú', lat: -33.5, lng: -70.7, respaldo: { nivel: 'sin_respaldo' as const, entregas: 0, dias: 0 }, ...extra });
+
+  it('por verificar: muestra cada pin con qué tan firme es, y VERIFICAR PIN lo verifica y recarga la lista', async () => {
+    const pinesParaRevisar = vi.fn()
+      .mockResolvedValueOnce(ok({ total: 2, pines: [pin('a', { respaldo: { nivel: 'respaldado', entregas: 3, dias: 2, distanciaM: 12 } }), pin('b')] }))
+      .mockResolvedValue(ok({ total: 1, pines: [pin('b')] }));
+    const verificarPin = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/pines/verificar', sesion: DESPACHADOR, api: { pinesParaRevisar, verificarPin } });
+    expect(await screen.findByText('PIN RESPALDADO POR ENTREGAS')).toBeInTheDocument();
+    expect(screen.getByText('PIN SIN RESPALDO')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'VERIFICAR EL PIN DE Local a' }));
+    expect(verificarPin).toHaveBeenCalledWith('a', true);
+    await waitFor(() => { expect(screen.queryByRole('button', { name: 'VERIFICAR EL PIN DE Local a' })).toBeNull(); });
+    expect(pinesParaRevisar).toHaveBeenCalledWith('por_verificar');
+  });
+
+  it('verificados: dice si los verificó una persona o las entregas, con insignia ✓, y permite quitar la verificación', async () => {
+    const pinesParaRevisar = vi.fn((estado: string) => Promise.resolve(ok(estado === 'verificados' ? { total: 2, pines: [pin('a', { pinVerificacion: 'entregas' }), pin('b', { pinVerificacion: 'persona' })] } : { total: 0, pines: [] })));
+    const verificarPin = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/pines/verificar', sesion: DESPACHADOR, api: { pinesParaRevisar, verificarPin } });
+    expect(await screen.findByText('No quedan pines por verificar.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'VERIFICADOS' }));
+    expect(await screen.findAllByText('✓ VERIFICADO')).toHaveLength(2);
+    expect(screen.getByText('Lo verificaron las entregas: coinciden con el pin.')).toBeInTheDocument();
+    expect(screen.getByText('Lo verificó una persona.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'QUITAR LA VERIFICACIÓN DE Local a' }));
+    expect(verificarPin).toHaveBeenCalledWith('a', false);
+  });
+
+  it('con más de 100 dice cuántos se muestran; el chofer editor entra y verifica; el chofer común no entra', async () => {
+    const pinesParaRevisar = () => Promise.resolve(ok({ total: 130, pines: [pin('a')] }));
+    montar({ ruta: '/pines/verificar', sesion: { ...CHOFER, editor: true }, api: { pinesParaRevisar } });
+    expect(await screen.findByText(/Se muestran 1 de 130/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'VERIFICAR EL PIN DE Local a' })).toBeInTheDocument();
+  });
+
+  it('el chofer sin permiso de editor no ve la pantalla ni el atajo en el inicio', async () => {
+    montar({ ruta: '/pines/verificar', sesion: CHOFER, api: { pinesParaRevisar: () => Promise.resolve(ok({ total: 0, pines: [] })) } });
+    await waitFor(() => { expect(screen.queryByRole('heading', { name: 'Verificar pines' })).toBeNull(); });
+  });
+
+  it('en el inicio el despachador ve VERIFICAR PINES', async () => {
+    montar({ sesion: DESPACHADOR });
+    expect(await screen.findByRole('link', { name: 'VERIFICAR PINES' })).toBeInTheDocument();
+  });
+
+  it('la ficha dice quién verificó el pin', async () => {
+    const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'validado' as const, lat: -33.4, lng: -70.6, pinVerificado: true, pinVerificacion: 'entregas' as const };
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)) } });
+    expect(await screen.findByText('Lo verificaron las entregas: coinciden con el pin. No se mueve solo.')).toBeInTheDocument();
+  });
+});

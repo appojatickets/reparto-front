@@ -165,6 +165,7 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
       const r = await ejecutar(() => client.GET('/v1/pines/propuestas', { params: { query: { estado } }, signal: timeout() }), { repetible: true });
       return mapear(r, (d) => d.propuestas);
     },
+    pinesParaRevisar: (estado) => ejecutar(() => client.GET('/v1/pines/revision', { params: { query: { estado } }, signal: timeout() }), { repetible: true }),
     resolverPropuesta: async (id, accion) => sinCuerpo(await ejecutar(() => client.POST('/v1/pines/propuestas/{id}/resolver', { params: { path: { id } }, body: { accion }, signal: timeout() }))),
 
     async listarUsuarios() {

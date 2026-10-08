@@ -24,7 +24,7 @@ export type ResultadoBusqueda = {
 
 /** `pinVerificado`: una persona confirmó el pin y ya no se mueve solo; si no, está «por verificar» y cada entrega con buen GPS lo ajusta. */
 /** `pinRespaldo`: qué tan firme es el pin según las entregas (solo si el local tiene pin y el servidor pudo calcularlo). */
-export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean; readonly pinRespaldo?: PinRespaldo };
+export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean; readonly pinVerificacion?: QuienVerifico; readonly pinRespaldo?: PinRespaldo };
 
 export type ErrorFila = { readonly fila: number; readonly errores: readonly { readonly codigo: string; readonly mensaje: string }[] };
 export type ResumenImportacion = { readonly clientesCreados: number; readonly clientesActualizados: number; readonly localesCreados: number; readonly localesActualizados: number };
@@ -41,6 +41,21 @@ export type PropuestaPin = {
   readonly comuna?: string;
   readonly pinActual?: { readonly lat: number; readonly lng: number };
 };
+/** Quién dejó verificado un pin: una persona, o el sistema solo porque las entregas lo confirmaron (ADR 0032 del back). */
+export type QuienVerifico = 'persona' | 'entregas';
+/** Un pin en la pantalla de revisión: el local, su pin, qué tan firme es y, si está verificado, quién lo verificó. */
+export type PinParaRevisar = {
+  readonly id: string;
+  readonly razonSocial: string;
+  readonly direccion: string;
+  readonly comuna: string;
+  readonly lat: number;
+  readonly lng: number;
+  readonly pinVerificacion?: QuienVerifico;
+  readonly verificadoEn?: string;
+  readonly respaldo: PinRespaldo;
+};
+export type PinesParaRevisar = { readonly total: number; readonly pines: readonly PinParaRevisar[] };
 export type PinCrudo = { readonly rut?: string; readonly direccion?: string; readonly lat?: string; readonly lng?: string };
 export type ResultadoPines = { readonly recibidas: number; readonly pendientes: number; readonly sinLocal: number; readonly errores: readonly ErrorFila[] };
 

@@ -6,6 +6,7 @@ export type Accion =
   | 'buscar-clientes'
   | 'cliente-nuevo'
   | 'revisar-pines'
+  | 'verificar-pines'
   | 'importar-clientes'
   | 'usuarios'
   | 'facturas'
@@ -27,12 +28,12 @@ export const esDeCamion = (rol: Rol): boolean => rol === 'chofer' || rol === 'ay
 const ACCIONES: Readonly<Record<Rol, readonly Accion[]>> = {
   chofer: ['mi-ruta', 'cargar-facturas'],
   ayudante: ['mi-ruta', 'cargar-facturas'],
-  despachador: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines'],
-  admin: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'revisar-pines', 'importar-clientes', 'camiones', 'vendedores', 'exportar', 'fotos', 'analitica', 'configuracion', 'usuarios'],
+  despachador: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'verificar-pines', 'revisar-pines'],
+  admin: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'verificar-pines', 'revisar-pines', 'importar-clientes', 'camiones', 'vendedores', 'exportar', 'fotos', 'analitica', 'configuracion', 'usuarios'],
 };
 
-/** Lo que suma el permiso de editor (lo da el admin) a quien va en el camión: buscar una dirección para corregirla. */
-const ACCIONES_DE_EDITOR: readonly Accion[] = ['buscar-clientes'];
+/** Lo que suma el permiso de editor (lo da el admin) a quien va en el camión: buscar una dirección para corregirla y verificar pines. */
+const ACCIONES_DE_EDITOR: readonly Accion[] = ['buscar-clientes', 'verificar-pines'];
 
 export const accionesDe = (rol: Rol, editor = false): readonly Accion[] =>
   editor && esDeCamion(rol) ? [...ACCIONES[rol], ...ACCIONES_DE_EDITOR] : ACCIONES[rol];

@@ -16,6 +16,7 @@ import { PaginaLocal } from './paginas/PaginaLocal';
 import { PaginaLogin } from './paginas/PaginaLogin';
 import { PaginaMiRuta } from './paginas/PaginaMiRuta';
 import { PaginaPines } from './paginas/PaginaPines';
+import { PaginaVerificarPines } from './paginas/PaginaVerificarPines';
 import { PaginaRutas } from './paginas/PaginaRutas';
 import { PaginaUsuarios } from './paginas/PaginaUsuarios';
 import { AvisoServidorDespertando } from './despertando';
@@ -41,6 +42,7 @@ export const Aplicacion = () => (
             <Route path="clientes" element={<RutaProtegida accion="buscar-clientes"><PaginaClientes /></RutaProtegida>} />
             <Route path="clientes/nuevo" element={<RutaProtegida accion="cliente-nuevo"><PaginaClienteNuevo /></RutaProtegida>} />
             <Route path="clientes/:id" element={<RutaProtegida accion="buscar-clientes"><PaginaLocal /></RutaProtegida>} />
+            <Route path="pines/verificar" element={<RutaProtegida accion="verificar-pines"><PaginaVerificarPines /></RutaProtegida>} />
             <Route path="pines" element={<RutaProtegida accion="revisar-pines"><PaginaPines /></RutaProtegida>} />
             <Route path="admin/importar" element={<RutaProtegida accion="importar-clientes"><PaginaImportar /></RutaProtegida>} />
             <Route path="admin/configuracion" element={<RutaProtegida accion="configuracion"><PaginaConfiguracion /></RutaProtegida>} />

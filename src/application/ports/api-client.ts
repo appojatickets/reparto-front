@@ -1,7 +1,8 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
+  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin,
+  PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
@@ -49,6 +50,8 @@ export interface ApiClient extends SaludApi {
   importarPines(pines: readonly PinCrudo[]): R<ResultadoPines>;
   listarPropuestas(estado: PropuestaPin['estado']): R<readonly PropuestaPin[]>;
   resolverPropuesta(id: string, accion: 'aceptar' | 'rechazar'): R<void>;
+  /** La lista para verificar pines: «por verificar» (lo más seguro primero) o «verificados». Hasta 100; `total` dice cuántos hay. */
+  pinesParaRevisar(estado: 'por_verificar' | 'verificados'): R<PinesParaRevisar>;
 
   listarUsuarios(): R<readonly UsuarioAdmin[]>;
   crearUsuario(datos: NuevoUsuario): R<UsuarioAdmin>;

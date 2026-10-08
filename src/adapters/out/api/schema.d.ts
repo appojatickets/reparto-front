@@ -1785,6 +1785,8 @@ export interface paths {
                             /** @enum {string} */
                             pinFuente?: "geocodificador" | "manual" | "importado" | "aprendido" | "chofer" | "enlace";
                             pinVerificado: boolean;
+                            /** @enum {string} */
+                            pinVerificacion?: "persona" | "entregas";
                             pinRespaldo?: {
                                 /** @enum {string} */
                                 nivel: "verificado" | "respaldado" | "en_conflicto" | "sin_respaldo";
@@ -3520,6 +3522,170 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/pines/revision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pines para revisar: «por verificar» (con cuánto los respaldan las entregas; lo más seguro primero) o «verificados» (los más recientes primero). Hasta 100. */
+        get: {
+            parameters: {
+                query?: {
+                    estado?: "por_verificar" | "verificados";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            total: number;
+                            pines: {
+                                id: string;
+                                razonSocial: string;
+                                direccion: string;
+                                comuna: string;
+                                lat: number;
+                                lng: number;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
+                                /** Format: date-time */
+                                verificadoEn?: string;
+                                respaldo: {
+                                    /** @enum {string} */
+                                    nivel: "verificado" | "respaldado" | "en_conflicto" | "sin_respaldo";
+                                    entregas: number;
+                                    dias: number;
+                                    distanciaM?: number;
+                                };
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/locales/{id}/pin/verificacion": {
         parameters: {
             query?: never;
@@ -3528,7 +3694,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Verificar el pin de un local (admin o despachador): un pin verificado ya no se mueve solo con las entregas; con verificado=false vuelve a «por verificar» y se sigue ajustando */
+        /** Verificar el pin de un local (admin, despachador o chofer editor): un pin verificado ya no se mueve solo con las entregas; con verificado=false vuelve a «por verificar» y se sigue ajustando */
         put: {
             parameters: {
                 query?: never;

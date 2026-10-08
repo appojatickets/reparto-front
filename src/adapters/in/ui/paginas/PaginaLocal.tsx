@@ -2,7 +2,7 @@ import { useCallback, useState, type ChangeEvent, type SyntheticEvent } from 're
 import { useNavigate, useParams } from 'react-router';
 import { leerCoordenadas } from '../../../../domain/coordenadas';
 import { enlaceGoogleMaps, enlaceStreetView, enlaceWaze } from '../../../../domain/enlaces';
-import { describirRespaldo } from '../../../../domain/respaldo-pin';
+import { describirRespaldo, textoDeQuienVerifico } from '../../../../domain/respaldo-pin';
 import { puedeEditar, puedeHacer } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { LocalDetalle } from '../../../../application/modelos';
@@ -78,7 +78,7 @@ const VerificarPin = ({ local, alCambiar }: { readonly local: LocalDetalle; read
   const usuario = useUsuario();
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | undefined>();
-  const puede = puedeHacer(usuario.rol, 'revisar-pines');
+  const puede = puedeHacer(usuario.rol, 'verificar-pines', usuario.editor);
   const cambiar = async (verificado: boolean): Promise<void> => {
     setOcupado(true);
     setError(undefined);
@@ -89,7 +89,7 @@ const VerificarPin = ({ local, alCambiar }: { readonly local: LocalDetalle; read
   };
   return (
     <>
-      <p className="ayuda">{local.pinRespaldo ? describirRespaldo(local.pinRespaldo).ayuda : local.pinVerificado ? 'Este pin está verificado: no se mueve solo.' : 'Este pin se va ajustando con el lugar donde se entrega. Verifícalo cuando esté bien para dejarlo fijo.'}</p>
+      <p className="ayuda">{local.pinVerificado && local.pinVerificacion ? `${textoDeQuienVerifico(local.pinVerificacion)} No se mueve solo.` : local.pinRespaldo ? describirRespaldo(local.pinRespaldo).ayuda : local.pinVerificado ? 'Este pin está verificado: no se mueve solo.' : 'Este pin se va ajustando con el lugar donde se entrega. Verifícalo cuando esté bien para dejarlo fijo.'}</p>
       {puede ? (
         local.pinVerificado
           ? <Boton variante="secundario" disabled={ocupado} onClick={() => void cambiar(false)}>QUITAR VERIFICACIÓN</Boton>

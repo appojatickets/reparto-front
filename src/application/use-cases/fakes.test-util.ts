@@ -12,7 +12,7 @@ export const fakeApi = (extra: Partial<ApiClient> = {}): ApiClient => ({
   getHealth: sinImplementar, iniciarSesion: sinImplementar, yo: sinImplementar, buscarClientes: sinImplementar, crearCliente: sinImplementar,
   importarClientes: sinImplementar, obtenerLocal: sinImplementar, actualizarLocal: sinImplementar, solicitarUrlSubida: sinImplementar,
   registrarFoto: sinImplementar, urlFoto: sinImplementar, importarPines: sinImplementar, listarPropuestas: sinImplementar,
-  resolverPropuesta: sinImplementar, listarUsuarios: sinImplementar, crearUsuario: sinImplementar, resetearPin: sinImplementar,
+  resolverPropuesta: sinImplementar, pinesParaRevisar: sinImplementar, listarUsuarios: sinImplementar, crearUsuario: sinImplementar, resetearPin: sinImplementar,
   cambiarEstadoUsuario: sinImplementar, cambiarEditorUsuario: sinImplementar, cambiarRazonSocial: sinImplementar, eliminarLocal: sinImplementar, listarCamiones: () => Promise.resolve(ok([])), crearCamion: sinImplementar, actualizarCamion: sinImplementar,
   fijarPinDesdeEnlace: sinImplementar, buscarPinesPendientes: sinImplementar, exportarLocales: sinImplementar, quitarFoto: sinImplementar, verificarPin: sinImplementar, reportarFoto: sinImplementar, fotosParaRevision: sinImplementar, verificarFoto: sinImplementar, resolverReporteFoto: sinImplementar, estadoBusquedaPines: () => Promise.resolve(ok({ sinPin: 0, enCola: 0, enMarcha: false })), listarVendedores: () => Promise.resolve(ok([])), crearVendedor: sinImplementar, actualizarVendedor: sinImplementar,
   listarFacturas: sinImplementar, registrarFactura: sinImplementar, actualizarFactura: sinImplementar,

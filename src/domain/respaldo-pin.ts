@@ -11,6 +11,10 @@ export type PinRespaldo = {
 const plural = (n: number, uno: string, varios: string): string => `${n} ${n === 1 ? uno : varios}`;
 const distancia = (m: number): string => (m >= 1000 ? `${(m / 1000).toFixed(1).replace('.', ',')} km` : `${Math.round(m)} m`);
 
+/** Quién dejó verificado el pin, en palabras simples (para la ficha y la lista de revisión). */
+export const textoDeQuienVerifico = (quien: 'persona' | 'entregas' | undefined): string =>
+  quien === 'entregas' ? 'Lo verificaron las entregas: coinciden con el pin.' : quien === 'persona' ? 'Lo verificó una persona.' : 'Está verificado.';
+
 /** La etiqueta corta y la explicación, en lenguaje simple, de cómo está respaldado un pin. */
 export const describirRespaldo = (r: PinRespaldo): { readonly etiqueta: string; readonly ayuda: string } => {
   switch (r.nivel) {

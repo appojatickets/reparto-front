@@ -9,6 +9,7 @@ const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: str
   rutas: { a: '/rutas', texto: 'RUTAS DEL DÍA' },
   'buscar-clientes': { a: '/clientes', texto: 'BUSCAR CLIENTE' },
   'cliente-nuevo': { a: '/clientes/nuevo', texto: 'CLIENTE NUEVO' },
+  'verificar-pines': { a: '/pines/verificar', texto: 'VERIFICAR PINES' },
   'revisar-pines': { a: '/pines', texto: 'PINES DE LOCALES' },
   'importar-clientes': { a: '/admin/importar', texto: 'IMPORTAR CLIENTES' },
   configuracion: { a: '/admin/configuracion', texto: 'CONFIGURACIÓN' },
