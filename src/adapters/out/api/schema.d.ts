@@ -7102,6 +7102,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7127,6 +7128,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7144,6 +7146,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7163,6 +7166,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7180,6 +7184,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7198,6 +7203,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7391,6 +7397,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7416,6 +7423,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7433,6 +7441,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7452,6 +7461,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7469,6 +7479,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7487,6 +7498,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7697,6 +7709,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7722,6 +7735,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7739,6 +7753,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7758,6 +7773,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7775,6 +7791,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;
@@ -7793,6 +7810,7 @@ export interface paths {
                                 lat?: number;
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
+                                noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
                                 fotoVerificada?: boolean;

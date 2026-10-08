@@ -6,7 +6,7 @@ import { horaDeMinutos } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
 import { llegoAlDeposito } from '../../../../domain/deposito';
-import { esDeCamion, puedeEditar } from '../../../../domain/rol';
+import { esDeCamion, puedeEditar, puedeHacer } from '../../../../domain/rol';
 import { mismoTexto } from '../../../../domain/texto';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { ItemRuta, OperacionRuta, ParadaDeRuta, ResumenJornada, VistaRuta } from '../../../../application/modelos';
@@ -32,16 +32,47 @@ const Etiquetas = ({ i }: { readonly i: ItemRuta }) => (
 );
 
 /**
+ * Qué pasa con una parada que no tiene ubicación precisa y qué hacer: la ruta la ubica por estimación, así que conviene ajustarla. Se fija
+ * sola al marcar ENTREGADO con buen GPS, o antes si se pega la ubicación del vendedor.
+ */
+const AvisoUbicacion = ({ p, puedeAbrirFicha }: { readonly p: ParadaDeRuta; readonly puedeAbrirFicha: boolean }) => {
+  const sinPin = p.lat === undefined || p.lng === undefined;
+  const como = puedeAbrirFicha
+    ? <>Recomendado: ajústala con <Link to={`/clientes/${p.localId}`}>Fijar el pin</Link> o pega la ubicación del vendedor.</>
+    : <>Recomendado: pega la ubicación del vendedor con el botón UBICACIÓN DEL VENDEDOR.</>;
+  if (!sinPin) {
+    return <span className="ayuda">Ubicación aproximada: te guía por la dirección. Al llegar, tu GPS la mejora. {como}</span>;
+  }
+  return (
+    <span className="ayuda">
+      {p.noEncontradaEnMapa ? 'No se encontró esta dirección en el mapa y no tiene pin: ' : 'Todavía no tiene pin: se está buscando en el mapa. '}
+      la ruta la ubica por estimación, sin ubicación precisa. {como} Si no, el pin se fija solo al marcar ENTREGADO en la puerta.
+    </span>
+  );
+};
+
+/** Cuántas paradas de la ruta están ubicadas por estimación (sin pin o con pin aproximado), para que se note y se ajusten. */
+const AvisoAproximadas = ({ paradas }: { readonly paradas: readonly ParadaDeRuta[] }) => {
+  const n = paradas.filter((p) => p.ubicacionAproximada).length;
+  if (n === 0) return null;
+  return (
+    <Aviso>
+      {n === 1 ? '1 parada sin ubicación precisa' : `${n} paradas sin ubicación precisa`}: la ruta {n === 1 ? 'la ubica' : 'las ubica'} por estimación (van marcadas en naranja). Se ajustan al marcar ENTREGADO en la puerta, o antes pegando la ubicación del vendedor.
+    </Aviso>
+  );
+};
+
+/**
  * Una fila de la lista de paradas: número, nombre y comuna (y a qué hora llega). Al tocarla se despliega con el resto de los datos y las
  * acciones; así el chofer ve toda su ruta de un vistazo y solo abre la parada que le toca.
  */
-const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, abierta, alAbrir, esSiguiente }: {
+const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, alFijarPin, abierta, alAbrir, esSiguiente }: {
   readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void; readonly enCamion: boolean;
   /** Deja esta parada en la posición indicada (lo mismo que arrastrarla). */
   readonly mover: (posicion: number) => void;
   /** Eventos del asa para arrastrar y cómo se dibuja la fila mientras alguna se arrastra. */
   readonly asa: ReturnType<ReturnType<typeof useArrastre>['asa']>; readonly fila: { readonly clase: string; readonly estilo?: CSSProperties };
-  readonly alCambiar: () => void; readonly abierta: boolean; readonly alAbrir: () => void; readonly esSiguiente: boolean;
+  readonly alCambiar: () => void; readonly alFijarPin: (cliente: string) => void; readonly abierta: boolean; readonly alAbrir: () => void; readonly esSiguiente: boolean;
 }) => {
   const [mas, setMas] = useState(false);
   const usuario = useUsuario();
@@ -49,7 +80,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
   const n = p.posicion + 1;
   const idDetalle = `parada-${p.facturaId}`;
   return (
-    <li className={`parada${esSiguiente ? ' parada--siguiente' : ''}${fila.clase}`} style={fila.estilo} aria-label={`Parada ${n}`}>
+    <li className={`parada${esSiguiente ? ' parada--siguiente' : ''}${p.ubicacionAproximada ? ' parada--aproximada' : ''}${fila.clase}`} style={fila.estilo} aria-label={`Parada ${n}`}>
       <button type="button" className="parada-fila" aria-expanded={abierta} aria-controls={idDetalle} onClick={alAbrir}>
         <span className="parada-num" aria-hidden="true">{n}</span>
         <span className="parada-nombre">
@@ -57,6 +88,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           <span className="comuna">{p.comuna}</span>
           {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
+          {p.ubicacionAproximada ? <span className="parada-marca parada-marca--aproximada">SIN UBICACIÓN PRECISA</span> : null}
           <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} />
         </span>
       </button>
@@ -77,7 +109,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
         >
           <span aria-hidden="true">↕</span> MOVER
         </Boton>
-        {enCamion ? <AtajoEntregado p={p} alCambiar={alCambiar} /> : null}
+        {enCamion ? <AtajoEntregado p={p} alCambiar={alCambiar} alFijarPin={() => { alFijarPin(p.cliente); }} /> : null}
         {enCamion ? <AtajoCerrado p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
         {enCamion ? <AtajoIr p={p} /> : null}
       </div>
@@ -88,13 +120,11 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           {p.folio ? <span>Factura {p.folio}</span> : null}
           <Etiquetas i={p} />
           {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
-          {p.ubicacionAproximada ? (
-            <span className="ayuda">Ubicación aproximada: te guía por la dirección. Al llegar, tu GPS la mejora. <Link to={`/clientes/${p.localId}`}>Fijar el pin</Link></span>
-          ) : null}
+          {p.ubicacionAproximada ? <AvisoUbicacion p={p} puedeAbrirFicha={puedeHacer(usuario.rol, 'buscar-clientes', usuario.editor)} /> : null}
           {p.nota ? <span>Nota: {p.nota}</span> : null}
           {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
           {puedeEditar(usuario.rol, usuario.editor) ? <Link className="big-button big-button--secundario" to={`/clientes/${p.localId}`} aria-label={`CORREGIR ESTA DIRECCIÓN ${p.cliente}`}>CORREGIR ESTA DIRECCIÓN</Link> : null}
-          {enCamion ? <AccionesParada p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
+          {enCamion ? <AccionesParada p={p} alCambiar={alCambiar} alFijarPin={() => { alFijarPin(p.cliente); }} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
           <div className="fila-botones">
             <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES ${p.cliente}`} onClick={() => { setMas(!mas); }}>MÁS</Boton>
           </div>
@@ -437,6 +467,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           )}
 
           {vista.paradas.length === 0 ? <Aviso>Ninguna parada se pudo ubicar en la ruta.</Aviso> : null}
+          <AvisoAproximadas paradas={vista.paradas} />
           <p role="status" className="ayuda">Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar.</p>
           {anuncio ? <p role="status" className="ayuda">{anuncio}</p> : null}
           <ol ref={lista} className={`paradas${arrastre.arrastrando ? ' paradas--arrastrando' : ''}`} aria-label="Paradas en orden">
@@ -452,6 +483,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
                 fila={arrastre.fila(i)}
                 enCamion={enCamion}
                 alCambiar={recargarVista}
+                alFijarPin={(cliente) => { setAnuncio(`La ubicación de ${cliente} quedó guardada con tu GPS.`); }}
                 esSiguiente={i === 0}
                 abierta={(abierta ?? vista.paradas[0]?.facturaId) === p.facturaId}
                 alAbrir={() => { setAbierta((actual) => ((actual ?? vista.paradas[0]?.facturaId) === p.facturaId ? null : p.facturaId)); }}

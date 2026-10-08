@@ -185,6 +185,8 @@ export type ItemRuta = {
   readonly lng?: number;
   /** Sin pin exacto todavía: la ruta lo ubica por la comuna o por una búsqueda de la dirección (se afina con el GPS de la entrega). */
   readonly ubicacionAproximada?: boolean;
+  /** Sin pin y la dirección ya se buscó en el mapa sin éxito (si falta esto y no hay pin, aún se está buscando). */
+  readonly noEncontradaEnMapa?: boolean;
   /** El local tiene foto de la fachada (se pide aparte, con URL firmada). */
   readonly tieneFoto?: boolean;
   /** Insignias ✓: el pin del local está verificado y la foto de su fachada está verificada. */

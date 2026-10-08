@@ -80,7 +80,7 @@ test.describe('fase 4a: el chofer', () => {
   test('mi ruta con las acciones de la parada (navegar, llegué, entregado, cerrado) es accesible', async ({ page }) => {
     let evento: unknown;
     const parada = (n: string, pos: number) => ({ facturaId: `32${n}e4567-e89b-42d3-a456-426614174000`, localId: `42${n}e4567-e89b-42d3-a456-426614174000`, cliente: `Local ${n}`, direccion: `Calle ${n} 100`, comuna: 'San Bernardo', lat: -33.59, lng: -70.7, urgente: false, posicion: pos, llegada: 600 + pos * 20, inicioServicio: 600 + pos * 20, salida: 608 + pos * 20, espera: 0, atraso: 0, motivos: ['MENOR_DESVIO'], fijada: false });
-    const vista = { camionId: CAMION.id, fecha: '2026-10-05', planificada: true, modo: 'sugerida', version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, regreso: 800, regresoTardio: false, paradas: [parada('1', 0), parada('2', 1)], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] };
+    const vista = { camionId: CAMION.id, fecha: '2026-10-05', planificada: true, modo: 'sugerida', version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, regreso: 800, regresoTardio: false, paradas: [parada('1', 0), { ...parada('2', 1), ubicacionAproximada: true }], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] };
     await simularApi(page, rutas({
       'GET /v1/rutas': () => ({ status: 200, json: vista }),
       [`POST /v1/entregas/${parada('1', 0).facturaId}/eventos`]: (req) => { evento = req.postDataJSON(); return { status: 200, json: { estado: 'pendiente', pinFijado: false } }; },
@@ -92,6 +92,9 @@ test.describe('fase 4a: el chofer', () => {
     await page.goto('/mi-ruta');
     await expect(page.getByRole('listitem', { name: 'Parada 1' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'NAVEGAR CON WAZE a Local 1' })).toBeVisible();
+    await sinViolaciones(page);
+    await expect(page.getByText('SIN UBICACIÓN PRECISA', { exact: true })).toBeVisible();
+    await expect(page.getByText(/1 parada sin ubicación precisa/)).toBeVisible();
     await sinViolaciones(page);
     await page.getByRole('button', { name: 'ESTÁ CERRADO Local 1' }).click();
     await expect(page.getByRole('link', { name: 'AVISAR AL VENDEDOR POR WHATSAPP' })).toBeVisible();

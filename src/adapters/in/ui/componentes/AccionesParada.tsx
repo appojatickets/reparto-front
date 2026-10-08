@@ -98,11 +98,13 @@ const useEventosDeParada = (p: ParadaDeRuta) => {
 };
 
 /** Atajo de la fila de la ruta: ENTREGADO marca la entrega como hecha con un toque (queda en «Hechas hoy» y se puede deshacer). */
-export const AtajoEntregado = ({ p, alCambiar }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void }) => {
+export const AtajoEntregado = ({ p, alCambiar, alFijarPin }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alFijarPin?: () => void }) => {
   const { aviso, ocupado, avisar } = useEventosDeParada(p);
   const entregar = async (): Promise<void> => {
     const { r } = await avisar({ tipo: 'entregado' });
-    if (r.ok) alCambiar();
+    if (!r.ok) return;
+    if (r.value.pinFijado) alFijarPin?.();
+    alCambiar();
   };
   return (
     <>
@@ -166,7 +168,7 @@ export const AtajoIr = ({ p }: { readonly p: ParadaDeRuta }) => (
   <a className="big-button big-button--primario atajo" href={enlaceNavegar({ direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng }, 'google')} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON GOOGLE MAPS`}>IR</a>
 );
 
-export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void }) => {
+export const AccionesParada = ({ p, alCambiar, alPosponer, alFijarPin }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void; readonly alFijarPin?: () => void }) => {
   const { ahora } = useCasos();
   const [panel, setPanel] = useState<Panel>(undefined);
   const { aviso, setAviso, ocupado, avisar, esperar, volverMasTarde, noEntregado } = useEventosDeParada(p);
@@ -177,7 +179,9 @@ export const AccionesParada = ({ p, alCambiar, alPosponer }: { readonly p: Parad
 
   const entregado = async (): Promise<void> => {
     const { r } = await avisar({ tipo: 'entregado' });
-    if (r.ok) alCambiar();
+    if (!r.ok) return;
+    if (r.value.pinFijado) alFijarPin?.();
+    alCambiar();
   };
   const cerrado = async (): Promise<void> => {
     const { r, sinGps } = await avisar({ tipo: 'cerrado' });

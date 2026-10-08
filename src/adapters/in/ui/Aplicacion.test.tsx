@@ -1321,11 +1321,54 @@ describe('rutas del día', () => {
 
 
   it('una parada sin pin exacto avisa que es aproximada y lleva a fijar el pin', async () => {
-    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, { ubicacionAproximada: true, localId: 'lA' })] }))) }) });
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, { ubicacionAproximada: true, localId: 'lA', lat: -33.5, lng: -70.6 })] }))) }) });
     await elegirCamion();
     const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
     expect(within(fila).getByText(/Ubicación aproximada/)).toBeInTheDocument();
     expect(within(fila).getByRole('link', { name: 'Fijar el pin' })).toHaveAttribute('href', '/clientes/lA');
+  });
+
+  it('las paradas sin ubicación precisa se ven distintas (insignia y color) y la ruta avisa cuántas son', async () => {
+    const sinPin = { lat: undefined, lng: undefined, ubicacionAproximada: true };
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0), parada('B', 1, { ...sinPin, noEncontradaEnMapa: true }), parada('C', 2, { ubicacionAproximada: true })] }))) }) });
+    await elegirCamion();
+    expect(await screen.findByText(/2 paradas sin ubicación precisa/)).toBeInTheDocument();
+    const b = screen.getByRole('listitem', { name: 'Parada 2' });
+    expect(within(b).getByText('SIN UBICACIÓN PRECISA')).toBeInTheDocument();
+    expect(b).toHaveClass('parada--aproximada');
+    expect(screen.getByRole('listitem', { name: 'Parada 3' })).toHaveClass('parada--aproximada');
+    const a = screen.getByRole('listitem', { name: 'Parada 1' });
+    expect(a).not.toHaveClass('parada--aproximada');
+    expect(within(a).queryByText('SIN UBICACIÓN PRECISA')).toBeNull();
+  });
+
+  it('sin ninguna parada aproximada no hay aviso en la ruta', async () => {
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista())) }) });
+    await elegirCamion();
+    await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(screen.queryByText(/sin ubicación precisa/)).toBeNull();
+  });
+
+  it('el detalle dice si no se encontró en el mapa, si aún se busca o si el pin es solo aproximado, y recomienda cómo ajustarlo', async () => {
+    const sinPin = { lat: undefined, lng: undefined, ubicacionAproximada: true };
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, { ...sinPin, noEncontradaEnMapa: true }), parada('B', 1, sinPin), parada('C', 2, { ubicacionAproximada: true, lat: -33.5, lng: -70.6 })] }))) }) });
+    await elegirCamion();
+    const a = await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(within(a).getByText(/No se encontró esta dirección en el mapa y no tiene pin/)).toBeInTheDocument();
+    expect(within(a).getByText(/se fija solo al marcar ENTREGADO/)).toBeInTheDocument();
+    await userEvent.click(within(screen.getByRole('listitem', { name: 'Parada 2' })).getByRole('button', { expanded: false, name: /^Local B/ }));
+    expect(within(screen.getByRole('listitem', { name: 'Parada 2' })).getByText(/Todavía no tiene pin: se está buscando en el mapa/)).toBeInTheDocument();
+    await userEvent.click(within(screen.getByRole('listitem', { name: 'Parada 3' })).getByRole('button', { expanded: false, name: /^Local C/ }));
+    expect(within(screen.getByRole('listitem', { name: 'Parada 3' })).getByText(/Ubicación aproximada/)).toBeInTheDocument();
+  });
+
+  it('el chofer común no ve el enlace a la ficha (no puede entrar): se le indica el botón UBICACIÓN DEL VENDEDOR', async () => {
+    const sinPin = { lat: undefined, lng: undefined, ubicacionAproximada: true, noEncontradaEnMapa: true };
+    const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
+    montar({ ruta: '/mi-ruta', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, sinPin)] }))) } });
+    const a = await screen.findByRole('listitem', { name: 'Parada 1' });
+    expect(within(a).getByText(/botón UBICACIÓN DEL VENDEDOR/)).toBeInTheDocument();
+    expect(within(a).queryByRole('link', { name: 'Fijar el pin' })).toBeNull();
   });
 
   it('al volver a la app (por ejemplo desde Waze) la ruta se pide de nuevo para actualizar las horas', async () => {
@@ -1854,6 +1897,27 @@ describe('acciones en la parada (chofer)', () => {
     await userEvent.click(within(fila).getByRole('button', { name: 'MARCAR ENTREGADA Local A' }));
     expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'entregado', lat: -33.5901, lng: -70.7002, precisionM: 10 });
     expect(await screen.findByRole('region', { name: 'Hechas hoy' })).toBeInTheDocument();
+  });
+
+  const entregarYVer = async (pinFijado: boolean) => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'entregada' as const, pinFijado })));
+    const verRuta = vi.fn()
+      .mockResolvedValueOnce(ok(vistaBase()))
+      .mockResolvedValue(ok(vistaBase({ paradas: [paradaDe('B', 0)], hechas: [{ facturaId: 'fA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', estado: 'entregada' as const }] })));
+    abrir({ registrarEvento, verRuta }, { ubicacion: gps() });
+    const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
+    await userEvent.click(within(fila).getByRole('button', { name: 'MARCAR ENTREGADA Local A' }));
+    await screen.findByRole('region', { name: 'Hechas hoy' });
+  };
+
+  it('al marcar ENTREGADO, si el servidor fijó el pin con tu GPS, la ruta lo avisa', async () => {
+    await entregarYVer(true);
+    expect(await screen.findByText('La ubicación de Local A quedó guardada con tu GPS.')).toBeInTheDocument();
+  });
+
+  it('al marcar ENTREGADO sin que se fije un pin nuevo, no dice nada de la ubicación', async () => {
+    await entregarYVer(false);
+    expect(screen.queryByText(/quedó guardada con tu GPS/)).toBeNull();
   });
 
   it('si ENTREGADO falla, lo dice en la fila y la parada sigue en su lugar', async () => {
