@@ -2,6 +2,9 @@ import { useCallback, useState, type ChangeEvent, type SyntheticEvent } from 're
 import { useNavigate, useParams } from 'react-router';
 import { leerCoordenadas } from '../../../../domain/coordenadas';
 import { enlaceGoogleMaps, enlaceStreetView, enlaceWaze } from '../../../../domain/enlaces';
+import { InsigniasDeVerificacion } from '../componentes/InsigniasDeVerificacion';
+import { ReportarFoto } from '../componentes/ReportarFoto';
+import { ReportarLocal } from '../componentes/ReportarLocal';
 import { describirRespaldo, textoDeQuienVerifico } from '../../../../domain/respaldo-pin';
 import { puedeEditar, puedeHacer } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
@@ -205,6 +208,7 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
       <p>{local.direccion}, <strong>{local.comuna}</strong></p>
       {local.rut ? <p>RUT {local.rut}</p> : null}
       <Insignia>{tienePin ? (local.pinRespaldo ? describirRespaldo(local.pinRespaldo).etiqueta : local.pinVerificado ? 'PIN VERIFICADO ✓' : 'PIN POR VERIFICAR') : ETIQUETA_PIN.pendiente}</Insignia>
+      <InsigniasDeVerificacion pin={local.pinVerificado && tienePin} foto={local.fotoVerificada} />
       {tienePin ? <VerificarPin local={local} alCambiar={recargar} /> : null}
       {tienePin ? (
         <div className="fila-botones">
@@ -215,6 +219,8 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
       ) : <Aviso>Este local todavía no tiene pin.</Aviso>}
 
       {local.fotoPath ? <FotoLocal localId={local.id} version={versionFoto} /> : <Aviso>Sin foto de la fachada.</Aviso>}
+      {local.fotoPath ? <ReportarFoto localId={local.id} cliente={local.razonSocial} /> : null}
+      <ReportarLocal localId={local.id} cliente={local.razonSocial} conPin={tienePin} />
       <div className="campo">
         <label htmlFor="foto">Foto de la fachada (sin personas)</label>
         <input id="foto" type="file" accept="image/*" capture="environment" disabled={ocupado} onChange={(e) => void subir(e)} />

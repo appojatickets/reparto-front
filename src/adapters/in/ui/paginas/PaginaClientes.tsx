@@ -5,6 +5,7 @@ import { mensajeDeError } from '../../../../application/mensajes';
 import { LARGO_MINIMO_BUSQUEDA, puedeBuscar } from '../../../../application/use-cases/buscar';
 import { useCasos } from '../contexto';
 import { useDebounced } from '../hooks';
+import { InsigniasDeVerificacion } from '../componentes/InsigniasDeVerificacion';
 import { Aviso, Campo, Cargando, Insignia, Pagina } from '../componentes/ui';
 
 export const ETIQUETA_PIN = { pendiente: 'SIN PIN', sugerido: 'PIN POR REVISAR', validado: 'PIN VALIDADO' } as const;
@@ -49,6 +50,7 @@ export const PaginaClientes = () => {
                 <span>{r.direccion}</span>
                 <span><strong>{r.comuna}</strong></span>
                 <Insignia>{ETIQUETA_PIN[r.pinEstado]}</Insignia>
+                <InsigniasDeVerificacion pin={r.pinVerificado} foto={r.fotoVerificada} />
               </li>
             ))}
           </ul>

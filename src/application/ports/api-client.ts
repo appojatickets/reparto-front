@@ -1,7 +1,7 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin,
+  CambiosFactura, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PinCrudo, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
   PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, ResultadoPines, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
@@ -83,6 +83,11 @@ export interface ApiClient extends SaludApi {
   verificarFoto(localId: string, fotoPath: string, verificada: boolean): R<void>;
   /** Solo admin: eliminar la foto reportada o dejarla. */
   resolverReporteFoto(id: string, accion: 'eliminar' | 'descartar'): R<void>;
+  /** Reportar el nombre o la ubicación (pin) de un local; el admin lo revisa en REPORTES. */
+  reportarLocal(localId: string, reporte: { readonly tipo: TipoReporteLocal; readonly detalle?: string; readonly sugerido?: string }): R<void>;
+  /** Todo lo reportado y sin resolver: fotos, nombres y ubicaciones. */
+  verReportes(): R<ReportesDelLocal>;
+  resolverReporteLocal(id: string, accion: AccionReporteLocal): R<void>;
   listarVendedores(opciones?: { incluirInactivos?: boolean }): R<readonly Vendedor[]>;
   crearVendedor(datos: { codigo: string; nombre: string; celular?: string }): R<Vendedor>;
   actualizarVendedor(id: string, cambios: { nombre?: string; celular?: string | null; activo?: boolean }): R<Vendedor>;

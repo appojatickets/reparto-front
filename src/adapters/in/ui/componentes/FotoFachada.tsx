@@ -2,13 +2,14 @@ import { useRef, useState, type ChangeEvent } from 'react';
 import { useCasos } from '../contexto';
 import { ImagenFoto } from './ImagenFoto';
 import { ReportarFoto } from './ReportarFoto';
+import { ReportarLocal } from './ReportarLocal';
 import { Aviso, Boton } from './ui';
 
 /**
  * La foto de la fachada que subió alguien del equipo, para reconocer el local al llegar. Si no hay, un solo botón: al llegar el chofer toma
  * la foto (sin personas) y queda para todos y para los días siguientes. No se usan imágenes de Google: solo fotos propias.
  */
-export const FotoFachada = ({ localId, cliente, tieneFoto }: { readonly localId: string; readonly cliente: string; readonly tieneFoto: boolean }) => {
+export const FotoFachada = ({ localId, cliente, tieneFoto, conPin = false }: { readonly localId: string; readonly cliente: string; readonly tieneFoto: boolean; readonly conPin?: boolean }) => {
   const { subirFotoLocal } = useCasos();
   const [hay, setHay] = useState(tieneFoto);
   const [version, setVersion] = useState(0);
@@ -39,6 +40,7 @@ export const FotoFachada = ({ localId, cliente, tieneFoto }: { readonly localId:
         {subiendo ? 'SUBIENDO FOTO…' : hay ? 'CAMBIAR LA FOTO' : 'TOMAR FOTO DE LA FACHADA'}
       </Boton>
       {hay ? <ReportarFoto localId={localId} cliente={cliente} /> : null}
+      <ReportarLocal localId={localId} cliente={cliente} conPin={conPin} />
       {mensaje ? <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
     </div>
   );

@@ -17,14 +17,17 @@ export type ResultadoBusqueda = {
   readonly lat?: number;
   readonly lng?: number;
   readonly pinEstado: EstadoPin;
+  /** Alguien verificó el pin / el admin dio por buena la foto: se muestran como insignias ✓. */
+  readonly pinVerificado?: boolean;
   readonly fotoPath?: string;
+  readonly fotoVerificada?: boolean;
   readonly streetviewRumbo?: number;
   readonly nota?: string;
 };
 
 /** `pinVerificado`: una persona confirmó el pin y ya no se mueve solo; si no, está «por verificar» y cada entrega con buen GPS lo ajusta. */
 /** `pinRespaldo`: qué tan firme es el pin según las entregas (solo si el local tiene pin y el servidor pudo calcularlo). */
-export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean; readonly pinVerificacion?: QuienVerifico; readonly pinRespaldo?: PinRespaldo };
+export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean; readonly pinVerificacion?: QuienVerifico; readonly fotoVerificada?: boolean; readonly pinRespaldo?: PinRespaldo };
 
 export type ErrorFila = { readonly fila: number; readonly errores: readonly { readonly codigo: string; readonly mensaje: string }[] };
 export type ResumenImportacion = { readonly clientesCreados: number; readonly clientesActualizados: number; readonly localesCreados: number; readonly localesActualizados: number };
@@ -56,6 +59,30 @@ export type PinParaRevisar = {
   readonly respaldo: PinRespaldo;
 };
 export type PinesParaRevisar = { readonly total: number; readonly pines: readonly PinParaRevisar[] };
+/** Lo que se puede reportar de un local además de su foto. */
+export type TipoReporteLocal = 'nombre' | 'ubicacion';
+/** Un reporte abierto, de lo que sea (foto, nombre o ubicación): el admin los ve juntos. */
+export type ReporteDelLocal = {
+  readonly id: string;
+  readonly tipo: 'foto' | TipoReporteLocal;
+  readonly localId: string;
+  readonly razonSocial: string;
+  readonly direccion: string;
+  readonly comuna: string;
+  readonly lat?: number;
+  readonly lng?: number;
+  readonly motivo?: string;
+  readonly detalle?: string;
+  readonly sugerido?: string;
+  readonly reportadoPor?: string;
+  readonly reportadoEn: string;
+  /** Foto: ya no es la reportada. Nombre o ubicación: ya cambió desde el reporte. */
+  readonly yaCambio: boolean;
+  readonly subidaPor?: string;
+  readonly subidaEn?: string;
+};
+export type ReportesDelLocal = { readonly total: number; readonly reportes: readonly ReporteDelLocal[] };
+export type AccionReporteLocal = 'verificar_pin' | 'corregido' | 'descartar';
 export type PinCrudo = { readonly rut?: string; readonly direccion?: string; readonly lat?: string; readonly lng?: string };
 export type ResultadoPines = { readonly recibidas: number; readonly pendientes: number; readonly sinLocal: number; readonly errores: readonly ErrorFila[] };
 
@@ -160,6 +187,9 @@ export type ItemRuta = {
   readonly ubicacionAproximada?: boolean;
   /** El local tiene foto de la fachada (se pide aparte, con URL firmada). */
   readonly tieneFoto?: boolean;
+  /** Insignias ✓: el pin del local está verificado y la foto de su fachada está verificada. */
+  readonly pinVerificado?: boolean;
+  readonly fotoVerificada?: boolean;
   readonly urgente: boolean;
   readonly antesDeMin?: number;
   readonly nota?: string;

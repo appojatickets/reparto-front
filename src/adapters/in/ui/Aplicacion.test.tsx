@@ -2232,3 +2232,85 @@ describe('verificar pines (lista como la de fotos)', () => {
     expect(await screen.findByText('Lo verificaron las entregas: coinciden con el pin. No se mueve solo.')).toBeInTheDocument();
   });
 });
+
+describe('reportes del local y insignias de verificación', () => {
+  const reporte = (id: string, tipo: 'foto' | 'nombre' | 'ubicacion', extra: Record<string, unknown> = {}) => ({ id, tipo, localId: `l-${id}`, razonSocial: `Local ${id}`, direccion: `Calle ${id} 10`, comuna: 'Maipú', reportadoPor: 'Juan Pérez', reportadoEn: '2026-10-08T15:00:00.000Z', yaCambio: false, ...extra });
+
+  it('REPORTES junta fotos, nombres y ubicaciones; cada uno con sus acciones, y al resolver se recarga la lista', async () => {
+    const verReportes = vi.fn()
+      .mockResolvedValueOnce(ok({ total: 3, reportes: [reporte('n', 'nombre', { sugerido: 'Bazar Sol', detalle: 'se llama otro' }), reporte('u', 'ubicacion', { lat: -33.5, lng: -70.7 }), reporte('f', 'foto', { motivo: 'no_es_la_fachada' })] }))
+      .mockResolvedValue(ok({ total: 2, reportes: [reporte('u', 'ubicacion', { lat: -33.5, lng: -70.7 }), reporte('f', 'foto', { motivo: 'no_es_la_fachada' })] }));
+    const resolverReporteLocal = vi.fn(() => Promise.resolve(ok(undefined)));
+    const resolverReporteFoto = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/admin/reportes', sesion: ADMIN, api: { verReportes, resolverReporteLocal, resolverReporteFoto, urlFoto: () => Promise.resolve(ok({ url: 'https://x/f.jpg', expiraEnSegundos: 300 })) } });
+    expect(await screen.findByText('REPORTE DE NOMBRE')).toBeInTheDocument();
+    expect(screen.getByText('REPORTE DE UBICACIÓN')).toBeInTheDocument();
+    expect(screen.getByText('REPORTE DE FOTO')).toBeInTheDocument();
+    expect(screen.getByText('Bazar Sol')).toBeInTheDocument();
+    expect(screen.getByText('«se llama otro»')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'YA CORREGÍ EL NOMBRE DE Local n' }));
+    expect(resolverReporteLocal).toHaveBeenCalledWith('n', 'corregido');
+    await waitFor(() => { expect(screen.queryByText('REPORTE DE NOMBRE')).toBeNull(); });
+    await userEvent.click(screen.getByRole('button', { name: 'EL PIN DE Local u ESTÁ BIEN' }));
+    expect(resolverReporteLocal).toHaveBeenCalledWith('u', 'verificar_pin');
+    await userEvent.click(screen.getByRole('button', { name: 'LA FOTO DE Local f ESTÁ BIEN' }));
+    expect(resolverReporteFoto).toHaveBeenCalledWith('f', 'descartar');
+  });
+
+  it('un reporte que ya cambió lo dice; una foto reemplazada solo se puede cerrar', async () => {
+    const verReportes = () => Promise.resolve(ok({ total: 2, reportes: [reporte('f', 'foto', { motivo: 'borrosa', yaCambio: true }), reporte('u', 'ubicacion', { lat: -33.5, lng: -70.7, yaCambio: true })] }));
+    montar({ ruta: '/admin/reportes', sesion: ADMIN, api: { verReportes } });
+    expect(await screen.findByText(/Esta foto ya fue reemplazada o eliminada/)).toBeInTheDocument();
+    expect(screen.getByText(/El pin ya se movió desde que lo reportaron/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'CERRAR EL REPORTE' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ELIMINAR LA FOTO/ })).toBeNull();
+  });
+
+  it('sin reportes dice que no hay pendientes, y el chofer no entra', async () => {
+    montar({ ruta: '/admin/reportes', sesion: ADMIN, api: { verReportes: () => Promise.resolve(ok({ total: 0, reportes: [] })) } });
+    expect(await screen.findByText('No hay reportes pendientes.')).toBeInTheDocument();
+  });
+
+  it('en el inicio del admin, REPORTES muestra cuántos hay sin resolver', async () => {
+    montar({ sesion: ADMIN, api: { verReportes: () => Promise.resolve(ok({ total: 4, reportes: [] })) } });
+    expect(await screen.findByRole('link', { name: 'REPORTES (4)' })).toBeInTheDocument();
+  });
+
+  it('si no se puede leer la cuenta, el inicio igual muestra REPORTES', async () => {
+    montar({ sesion: ADMIN });
+    expect(await screen.findByRole('link', { name: 'REPORTES' })).toBeInTheDocument();
+  });
+
+  it('la ficha deja reportar el nombre o la ubicación; el aviso va con el tipo y lo escrito', async () => {
+    const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'sugerido' as const, lat: -33.4, lng: -70.6, pinVerificado: false };
+    const reportarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), reportarLocal } });
+    await userEvent.click(await screen.findByRole('button', { name: 'REPORTAR EL NOMBRE DE Rabelo' }));
+    await userEvent.type(screen.getByLabelText('Cómo debería llamarse (opcional)'), 'Bazar Sol');
+    await userEvent.click(screen.getByRole('button', { name: 'ENVIAR REPORTE' }));
+    expect(reportarLocal).toHaveBeenCalledWith('l1', { tipo: 'nombre', sugerido: 'Bazar Sol' });
+    expect(await screen.findByText('Gracias. El administrador va a revisar el nombre.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'REPORTAR LA UBICACIÓN DE Rabelo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'ENVIAR REPORTE' }));
+    expect(reportarLocal).toHaveBeenLastCalledWith('l1', { tipo: 'ubicacion' });
+  });
+
+  it('un local sin pin no ofrece reportar la ubicación', async () => {
+    const sinPin = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'pendiente' as const, pinVerificado: false };
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(sinPin)) } });
+    expect(await screen.findByRole('button', { name: 'REPORTAR EL NOMBRE DE Rabelo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /REPORTAR LA UBICACIÓN/ })).toBeNull();
+  });
+
+  it('la búsqueda y la ficha muestran ✓ PIN y ✓ FOTO cuando están verificados, y nada cuando no', async () => {
+    const buscarClientes = () => Promise.resolve(ok([
+      { localId: 'a', clienteId: 'ca', razonSocial: 'Con todo', direccion: 'Calle A 1', comuna: 'Maipú', pinEstado: 'validado' as const, pinVerificado: true, fotoVerificada: true },
+      { localId: 'b', clienteId: 'cb', razonSocial: 'Sin nada', direccion: 'Calle B 1', comuna: 'Maipú', pinEstado: 'sugerido' as const },
+    ]));
+    montar({ ruta: '/clientes', sesion: DESPACHADOR, api: { buscarClientes } });
+    await userEvent.type(await screen.findByLabelText('Nombre o dirección'), 'calle');
+    expect(await screen.findByText('Con todo')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Pin verificado')).toHaveLength(1);
+    expect(screen.getAllByLabelText('Foto verificada')).toHaveLength(1);
+  });
+});

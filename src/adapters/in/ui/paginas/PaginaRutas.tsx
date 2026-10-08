@@ -15,6 +15,7 @@ import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { AccionesParada, AtajoCerrado, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
 import { FotoFachada } from '../componentes/FotoFachada';
+import { InsigniasDeVerificacion } from '../componentes/InsigniasDeVerificacion';
 import { useDiaDeReparto } from '../componentes/dia';
 import { useUsuario } from '../sesion';
 import { Aviso, Boton, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
@@ -56,6 +57,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           <span className="comuna">{p.comuna}</span>
           {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
+          <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} />
         </span>
       </button>
       <div className="parada-atajos">
@@ -82,7 +84,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
       {abierta ? (
         <div className="parada-detalle" id={idDetalle}>
           {!mismoTexto(p.cliente, p.direccion) ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
-          <FotoFachada localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} />
+          <FotoFachada localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} conPin={p.lat !== undefined && p.lng !== undefined && p.ubicacionAproximada !== true} />
           {p.folio ? <span>Factura {p.folio}</span> : null}
           <Etiquetas i={p} />
           {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}

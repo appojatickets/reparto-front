@@ -1296,7 +1296,9 @@ export interface paths {
                                 lng?: number;
                                 /** @enum {string} */
                                 pinEstado: "pendiente" | "sugerido" | "validado";
+                                pinVerificado?: boolean;
                                 fotoPath?: string;
+                                fotoVerificada?: boolean;
                                 streetviewRumbo?: number;
                                 nota?: string;
                                 score: number;
@@ -1795,6 +1797,7 @@ export interface paths {
                                 distanciaM?: number;
                             };
                             fotoPath?: string;
+                            fotoVerificada?: boolean;
                             streetviewRumbo?: number;
                             nota?: string;
                         };
@@ -6291,6 +6294,469 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/locales/{id}/reportes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reportar el nombre o la ubicación (pin) de un local; el admin lo revisa. Reportar la ubicación saca al pin de «verificado». (La foto se reporta aparte.) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        tipo: "nombre" | "ubicacion";
+                        detalle?: string;
+                        sugerido?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": null;
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reportes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Todo lo reportado y sin resolver (fotos, nombres y ubicaciones), del más nuevo al más antiguo */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            total: number;
+                            reportes: {
+                                id: string;
+                                /** @enum {string} */
+                                tipo: "foto" | "nombre" | "ubicacion";
+                                localId: string;
+                                razonSocial: string;
+                                direccion: string;
+                                comuna: string;
+                                lat?: number;
+                                lng?: number;
+                                motivo?: string;
+                                detalle?: string;
+                                sugerido?: string;
+                                reportadoPor?: string;
+                                /** Format: date-time */
+                                reportadoEn: string;
+                                yaCambio: boolean;
+                                subidaPor?: string;
+                                /** Format: date-time */
+                                subidaEn?: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reportes/{id}/resolver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cerrar un reporte de nombre o ubicación: corregido, descartar o (ubicación) el pin está bien y queda verificado. Los de foto se cierran en /v1/fotos/reportes/:id/resolver */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        accion: "verificar_pin" | "corregido" | "descartar";
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": null;
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/empresa/config": {
         parameters: {
             query?: never;
@@ -6637,6 +7103,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6660,6 +7128,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6675,6 +7145,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6692,6 +7164,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6707,6 +7181,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6723,6 +7199,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6914,6 +7392,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6937,6 +7417,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6952,6 +7434,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6969,6 +7453,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -6984,6 +7470,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -7000,6 +7488,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -7208,6 +7698,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -7231,6 +7723,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -7246,6 +7740,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -7263,6 +7759,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -7278,6 +7776,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;
@@ -7294,6 +7794,8 @@ export interface paths {
                                 lng?: number;
                                 ubicacionAproximada?: boolean;
                                 tieneFoto?: boolean;
+                                pinVerificado?: boolean;
+                                fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
                                 nota?: string;

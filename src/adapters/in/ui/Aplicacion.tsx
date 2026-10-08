@@ -4,6 +4,7 @@ import { PaginaAnalitica } from './paginas/PaginaAnalitica';
 import { PaginaCamiones } from './paginas/PaginaCamiones';
 import { PaginaExportar } from './paginas/PaginaExportar';
 import { PaginaFotos } from './paginas/PaginaFotos';
+import { PaginaReportes } from './paginas/PaginaReportes';
 import { PaginaVendedores } from './paginas/PaginaVendedores';
 import { PaginaConfiguracion } from './paginas/PaginaConfiguracion';
 import { PaginaCargar } from './paginas/PaginaCargar';
@@ -47,6 +48,7 @@ export const Aplicacion = () => (
             <Route path="admin/importar" element={<RutaProtegida accion="importar-clientes"><PaginaImportar /></RutaProtegida>} />
             <Route path="admin/configuracion" element={<RutaProtegida accion="configuracion"><PaginaConfiguracion /></RutaProtegida>} />
             <Route path="admin/camiones" element={<RutaProtegida accion="camiones"><PaginaCamiones /></RutaProtegida>} />
+            <Route path="admin/reportes" element={<RutaProtegida accion="reportes"><PaginaReportes /></RutaProtegida>} />
             <Route path="admin/fotos" element={<RutaProtegida accion="fotos"><PaginaFotos /></RutaProtegida>} />
             <Route path="admin/analitica" element={<RutaProtegida accion="analitica"><PaginaAnalitica /></RutaProtegida>} />
             <Route path="admin/exportar" element={<RutaProtegida accion="exportar"><PaginaExportar /></RutaProtegida>} />
