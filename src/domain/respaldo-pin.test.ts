@@ -13,7 +13,7 @@ describe('describirRespaldo', () => {
     const r = describirRespaldo({ nivel: 'sin_respaldo', entregas: 1, dias: 1 });
     expect(r.etiqueta).toBe('PIN SIN RESPALDO');
     expect(r.ayuda).toContain('1 entrega');
-    expect(r.ayuda).toContain('otro día');
+    expect(r.ayuda).toContain('con otra que coincida');
   });
 
   it('respaldado dice cuántas entregas coinciden y en cuántos días (singular y plural)', () => {

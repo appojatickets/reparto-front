@@ -30,7 +30,7 @@ export const describirRespaldo = (r: PinRespaldo): { readonly etiqueta: string; 
     case 'sin_respaldo':
       return {
         etiqueta: 'PIN SIN RESPALDO',
-        ayuda: r.entregas === 0 ? 'Todavía no hay entregas que lo confirmen. Se va ajustando con el lugar donde se entrega.' : `Hay ${plural(r.entregas, 'entrega', 'entregas')} con GPS; con otra, en otro día, queda respaldado.`,
+        ayuda: r.entregas === 0 ? 'Todavía no hay entregas que lo confirmen. Se va ajustando con el lugar donde se entrega.' : `Hay ${plural(r.entregas, 'entrega', 'entregas')} con GPS; con otra que coincida, queda respaldado.`,
       };
   }
 };
