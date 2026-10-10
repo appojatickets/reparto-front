@@ -189,7 +189,7 @@ const DeshacerHecha = ({ h, alCambiar }: { readonly h: { readonly facturaId: str
 const Resumen = ({ v }: { readonly v: VistaRuta }) => (
   <div className="tarjeta" aria-label="Resumen de la ruta">
     <span>Paradas: <strong>{v.paradas.length}</strong></span>
-    <Insignia>{v.modo === 'manual' ? 'ACOMODADA A MANO' : v.modo === 'carga' ? 'EN TU ORDEN DE CARGA' : 'ORDEN SUGERIDO'}</Insignia>
+    <Insignia>{v.modo === 'manual' ? 'AUTOMÁTICO · ACOMODADA A MANO' : v.modo === 'carga' ? 'ORDEN MANUAL' : 'ORDEN AUTOMÁTICO'}</Insignia>
   </div>
 );
 
@@ -314,12 +314,17 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     if (version === undefined) return;
     void aplicar(() => api.operarRuta(camionId, fecha, version, operacion));
   };
-  /** El chofer elige cómo armar su ruta: se recuerda y, si ya hay ruta, se rehace de esa forma. */
-  const cambiarArmado = (a: Armado): void => {
-    elegirPreferencia(a);
-    if (!vista?.planificada) return;
-    if (a === 'carga') void planificar('carga');
-    else operar({ tipo: 'ordenar' });
+  /** PASAR A MANUAL: se congela el orden que se ve; desde ahí nada se reordena solo. Es lo que el chofer prefiere desde entonces. */
+  const pasarAManual = (): void => {
+    elegirPreferencia('carga');
+    operar({ tipo: 'fijar' });
+  };
+  /** Volver a AUTOMÁTICO: el sistema ordena lo que queda (se pide confirmar porque cambia el orden que la persona dejó). */
+  const [confirmarAutomatico, setConfirmarAutomatico] = useState(false);
+  const pasarAAutomatico = (): void => {
+    setConfirmarAutomatico(false);
+    elegirPreferencia('calcular');
+    operar({ tipo: 'ordenar' });
   };
   /** Aviso de lo último que se movió, para quien no ve la lista (lector de pantalla) y como confirmación. */
   const [anuncio, setAnuncio] = useState<string | undefined>();
@@ -496,9 +501,9 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               <strong>¿Cómo armo tu ruta?</strong>
               <span>Lo recuerdo para la próxima vez y lo puedes cambiar cuando quieras.</span>
               <Boton disabled={ocupado} onClick={() => { elegirPreferencia('calcular'); void planificar('calcular'); }}>CALCULAR MI RUTA</Boton>
-              <p className="ayuda">El sistema la ordena según cercanía, horarios y prioridades.</p>
+              <p className="ayuda">Ruta automática: el sistema la ordena según cercanía, horarios y prioridades.</p>
               <Boton variante="secundario" disabled={ocupado} onClick={() => { elegirPreferencia('carga'); void planificar('carga'); }}>LAS AGREGO EN ORDEN</Boton>
-              <p className="ayuda">Si te sabes el recorrido: va en el orden en que cargues las facturas.</p>
+              <p className="ayuda">Ruta manual: si te sabes el recorrido, va en el orden en que cargues las facturas y nada se mueve solo. Lo que haces queda guardado para que el sistema aprenda de tu experiencia.</p>
             </div>
           ) : (
             <>
@@ -517,18 +522,32 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               {vista.paradas.map((p) => <option key={p.facturaId} value={p.facturaId}>{`${p.posicion + 1}. ${p.cliente} · ${p.comuna}`}</option>)}
             </Selector>
           ) : null}
-          <div className="tarjeta" role="group" aria-label="Cómo se arma la ruta">
-            <strong>Cómo se arma la ruta</strong>
+          <div className="tarjeta" role="group" aria-label="Orden de la ruta">
+            <strong>Orden de la ruta</strong>
             <div className="fila-botones">
-              <Boton variante={vista.modo === 'carga' ? 'secundario' : 'primario'} aria-pressed={vista.modo !== 'carga'} disabled={ocupado} onClick={() => { if (vista.modo === 'carga') cambiarArmado('calcular'); else elegirPreferencia('calcular'); }}>CALCULAR MI RUTA</Boton>
-              <Boton variante={vista.modo === 'carga' ? 'primario' : 'secundario'} aria-pressed={vista.modo === 'carga'} disabled={ocupado} onClick={() => { if (vista.modo === 'carga') return; if (vista.modo === 'manual') setConfirmarCarga(true); else cambiarArmado('carga'); }}>LAS AGREGO EN ORDEN</Boton>
+              <Boton variante={vista.modo === 'carga' ? 'secundario' : 'primario'} aria-pressed={vista.modo !== 'carga'} disabled={ocupado} onClick={() => { if (vista.modo === 'carga') setConfirmarAutomatico(true); }}>AUTOMÁTICO</Boton>
+              <Boton variante={vista.modo === 'carga' ? 'primario' : 'secundario'} aria-pressed={vista.modo === 'carga'} disabled={ocupado} onClick={() => { if (vista.modo !== 'carga') pasarAManual(); }}>MANUAL</Boton>
             </div>
-            {vista.modo === 'carga' ? <span className="ayuda">Va en el orden en que cargaste las facturas; lo nuevo entra al final y nada se mueve solo.</span> : null}
+            <span className="ayuda">
+              {vista.modo === 'carga'
+                ? 'Manual: la ruta va como tú la dejaste y nada se mueve solo. Lo que cargues después entra al final. Si un local está cerrado y lo dejas para más tarde, baja de lugar.'
+                : 'Automático: el sistema ordena lo que queda cada vez que algo cambia. Toca MANUAL para congelar el orden que ves y moverlo tú.'}
+            </span>
+            {confirmarAutomatico ? (
+              <>
+                <Aviso tipo="error">El sistema volverá a ordenar lo que queda y puede cambiar el orden que dejaste.</Aviso>
+                <div className="fila-botones">
+                  <Boton variante="peligro" disabled={ocupado} onClick={pasarAAutomatico}>SÍ, ORDENAR AUTOMÁTICO</Boton>
+                  <Boton variante="secundario" onClick={() => { setConfirmarAutomatico(false); }}>NO, DEJARLA MANUAL</Boton>
+                </div>
+              </>
+            ) : null}
+            {vista.modo === 'carga' ? <Boton variante="secundario" disabled={ocupado} onClick={() => { setConfirmarCarga(true); }}>VOLVER AL ORDEN EN QUE CARGUÉ</Boton> : null}
             {confirmarCarga ? (
               <>
-                <Aviso tipo="error">Esto descarta lo que acomodaste a mano y deja la ruta en el orden en que cargaste las facturas.</Aviso>
+                <Aviso tipo="error">Esto descarta lo que acomodaste y deja la ruta en el orden en que cargaste las facturas.</Aviso>
                 <div className="fila-botones">
-                  <Boton variante="peligro" disabled={ocupado} onClick={() => { cambiarArmado('carga'); }}>SÍ, EN MI ORDEN DE CARGA</Boton>
+                  <Boton variante="peligro" disabled={ocupado} onClick={() => { elegirPreferencia('carga'); void planificar('carga'); }}>SÍ, EN MI ORDEN DE CARGA</Boton>
                   <Boton variante="secundario" onClick={() => { setConfirmarCarga(false); }}>NO, DEJARLA</Boton>
                 </div>
               </>

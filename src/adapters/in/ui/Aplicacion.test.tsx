@@ -1464,7 +1464,7 @@ describe('rutas del día', () => {
     await teclaEnAsa('Local B', 'ArrowUp');
     expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'mover', facturaId: 'fB', posicion: 0 });
     expect(within(await screen.findByRole('listitem', { name: 'Parada 1' })).getByText('Local B')).toBeInTheDocument();
-    expect(screen.getByText('ACOMODADA A MANO')).toBeInTheDocument();
+    expect(screen.getByText('AUTOMÁTICO · ACOMODADA A MANO')).toBeInTheDocument();
   });
 
   it('en los extremos las flechas no hacen nada: la primera no sube y la última no baja', async () => {
@@ -2107,6 +2107,22 @@ describe('acciones en la parada (chofer)', () => {
     expect(verRuta).toHaveBeenCalledTimes(2);
   });
 
+  it('ENTREGADO, SIN FIJAR EL PIN: la entrega queda hecha sin leer el GPS ni mandar posición, y la parada sale de la lista', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'entregada' as const, pinFijado: false })));
+    const verRuta = vi.fn()
+      .mockResolvedValueOnce(ok(vistaBase()))
+      .mockResolvedValueOnce(ok(vistaBase({ paradas: [paradaDe('B', 0)], hechas: [{ facturaId: 'fA', localId: 'lA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', urgente: false, estado: 'entregada' }] })));
+    const ubicacion = gps();
+    abrir({ registrarEvento, verRuta }, { ubicacion });
+    const boton = await screen.findByRole('button', { name: 'ENTREGADO SIN FIJAR EL PIN Local A' });
+    const lecturasAntes = ubicacion.actual.mock.calls.length; // el seguimiento del camión también lee el GPS por su cuenta
+    await userEvent.click(boton);
+    expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'entregado', sinPin: true });
+    expect(ubicacion.actual.mock.calls.length).toBe(lecturasAntes);
+    const hechas = await screen.findByRole('region', { name: 'Hechas hoy' });
+    expect(within(hechas).getByText('ENTREGADA')).toBeInTheDocument();
+  });
+
   it('una entrega hecha se puede deshacer (vuelve a pendiente)', async () => {
     const actualizarFactura = vi.fn(() => Promise.resolve(ok({ id: 'fA', fecha: '2026-10-05', estado: 'pendiente' as const, urgente: false, local: { id: 'lA', razonSocial: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', tienePin: true } })));
     abrir({ actualizarFactura, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [], hechas: [{ facturaId: 'fA', localId: 'lA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', urgente: false, estado: 'no_entregada' }] }))) });
@@ -2485,7 +2501,7 @@ describe('acciones en la parada (chofer)', () => {
       await userEvent.click(within(pregunta).getByRole('button', { name: 'LAS AGREGO EN ORDEN' }));
       expect(a.guardar).toHaveBeenCalledWith('carga');
       expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05', undefined, 'carga');
-      expect(await screen.findByText('EN TU ORDEN DE CARGA')).toBeInTheDocument();
+      expect(await screen.findByText('ORDEN MANUAL')).toBeInTheDocument();
     });
 
     it('elegir «calcular mi ruta» la calcula como siempre y lo recuerda', async () => {
@@ -2504,44 +2520,63 @@ describe('acciones en la parada (chofer)', () => {
       expect(screen.queryByRole('group', { name: 'Cómo armar tu ruta' })).toBeNull();
     });
 
-    it('en el orden de carga muestra qué pasa, deja «las agrego en orden» marcado y no ofrece reordenar solo', async () => {
+    it('en manual muestra qué pasa, deja MANUAL marcado y no ofrece reordenar solo', async () => {
       abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'carga' as const }))) }, { armado: armado('carga').store });
-      const selector = await screen.findByRole('group', { name: 'Cómo se arma la ruta' });
-      expect(within(selector).getByRole('button', { name: 'LAS AGREGO EN ORDEN' })).toHaveAttribute('aria-pressed', 'true');
-      expect(within(selector).getByRole('button', { name: 'CALCULAR MI RUTA' })).toHaveAttribute('aria-pressed', 'false');
-      expect(within(selector).getByText(/lo nuevo entra al final/)).toBeInTheDocument();
+      const selector = await screen.findByRole('group', { name: 'Orden de la ruta' });
+      expect(within(selector).getByRole('button', { name: 'MANUAL' })).toHaveAttribute('aria-pressed', 'true');
+      expect(within(selector).getByRole('button', { name: 'AUTOMÁTICO' })).toHaveAttribute('aria-pressed', 'false');
+      expect(within(selector).getByText(/nada se mueve solo/)).toBeInTheDocument();
+      expect(screen.getByText('ORDEN MANUAL')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'ORDENAR LO QUE QUEDA' })).toBeNull();
       expect(screen.queryByRole('button', { name: 'VOLVER A CALCULAR DESDE CERO' })).toBeNull();
       expect(screen.queryByLabelText('Primera entrega (el resto se ordena desde ahí)')).toBeNull();
     });
 
-    it('desde el orden de carga, «calcular mi ruta» la ordena el sistema y se recuerda', async () => {
+    it('de manual a AUTOMÁTICO pide confirmar; al confirmar el sistema ordena lo que queda y se recuerda', async () => {
       const a = armado('carga');
       const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ version: 2 }))));
       abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'carga' as const }))), operarRuta }, { armado: a.store });
-      await userEvent.click(await screen.findByRole('button', { name: 'CALCULAR MI RUTA' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'AUTOMÁTICO' }));
+      expect(operarRuta).not.toHaveBeenCalled();
+      expect(screen.getByText(/puede cambiar el orden que dejaste/)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'NO, DEJARLA MANUAL' }));
+      expect(operarRuta).not.toHaveBeenCalled();
+      await userEvent.click(screen.getByRole('button', { name: 'AUTOMÁTICO' }));
+      await userEvent.click(screen.getByRole('button', { name: 'SÍ, ORDENAR AUTOMÁTICO' }));
       expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'ordenar' });
       expect(a.guardar).toHaveBeenCalledWith('calcular');
     });
 
-    it('desde una ruta calculada, «las agrego en orden» la rehace en el orden de carga', async () => {
+    it('de automático a MANUAL basta un toque: se congela el orden que se ve (sin recalcular) y se recuerda', async () => {
       const a = armado('calcular');
-      const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga' as const, version: 2 }))));
-      abrir({ planificarRuta }, { armado: a.store });
-      await userEvent.click(await screen.findByRole('button', { name: 'LAS AGREGO EN ORDEN' }));
-      expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05', undefined, 'carga');
+      const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga' as const, version: 2 }))));
+      const planificarRuta = vi.fn();
+      abrir({ operarRuta, planificarRuta }, { armado: a.store });
+      const selector = await screen.findByRole('group', { name: 'Orden de la ruta' });
+      expect(within(selector).getByRole('button', { name: 'AUTOMÁTICO' })).toHaveAttribute('aria-pressed', 'true');
+      await userEvent.click(within(selector).getByRole('button', { name: 'MANUAL' }));
+      expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'fijar' });
+      expect(planificarRuta).not.toHaveBeenCalled();
       expect(a.guardar).toHaveBeenCalledWith('carga');
+      expect(await screen.findByText('ORDEN MANUAL')).toBeInTheDocument();
     });
 
-    it('si la ruta estaba acomodada a mano, pide confirmar antes de pasarla al orden de carga', async () => {
+    it('también una ruta acomodada a mano (automática) pasa a manual con un toque', async () => {
+      const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga' as const, version: 2 }))));
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'manual' as const }))), operarRuta }, { armado: armado('calcular').store });
+      await userEvent.click(await screen.findByRole('button', { name: 'MANUAL' }));
+      expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'fijar' });
+    });
+
+    it('en manual, VOLVER AL ORDEN EN QUE CARGUÉ pide confirmar y rehace la ruta en el orden de carga', async () => {
       const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga' as const, version: 2 }))));
-      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'manual' as const }))), planificarRuta }, { armado: armado('calcular').store });
-      await userEvent.click(await screen.findByRole('button', { name: 'LAS AGREGO EN ORDEN' }));
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'carga' as const }))), planificarRuta }, { armado: armado('carga').store });
+      await userEvent.click(await screen.findByRole('button', { name: 'VOLVER AL ORDEN EN QUE CARGUÉ' }));
       expect(planificarRuta).not.toHaveBeenCalled();
-      expect(screen.getByText(/descarta lo que acomodaste a mano/)).toBeInTheDocument();
+      expect(screen.getByText(/descarta lo que acomodaste/)).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'NO, DEJARLA' }));
       expect(planificarRuta).not.toHaveBeenCalled();
-      await userEvent.click(screen.getByRole('button', { name: 'LAS AGREGO EN ORDEN' }));
+      await userEvent.click(screen.getByRole('button', { name: 'VOLVER AL ORDEN EN QUE CARGUÉ' }));
       await userEvent.click(screen.getByRole('button', { name: 'SÍ, EN MI ORDEN DE CARGA' }));
       expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05', undefined, 'carga');
     });
@@ -2576,7 +2611,11 @@ describe('analítica del admin', () => {
     cobertura: { jornadas: 6, jornadasTerminadas: 5, avisos: 80, avisosConGps: 76, avisosAutomaticos: 9, paradasConLlegada: 30, paradasResueltas: 50, puntosGps: 640, ultimoPuntoGps: '2026-10-05T20:00:00.000Z', operacionesRuta: 21, correccionesManuales: 8 },
     pines: { verificados: 12, porVerificar: 140, sinPin: 590 },
     porDia: [{ fecha: '2026-10-05', jornadas: 2, atendidas: 60, sinHacer: 3 }],
-    calidad: [{ fecha: '2026-10-05', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 40_000, distRealM: 44_000, inversiones: 3 }],
+    calidad: [
+      { fecha: '2026-10-05', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 40_000, distRealM: 44_000, inversiones: 3, origen: 'sistema' as const, cambios: 2 },
+      { fecha: '2026-10-09', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 30_000, distRealM: 27_000, inversiones: 5, origen: 'chofer' as const, cambios: 0 },
+      { fecha: '2026-10-08', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 20_000, distRealM: 22_000, inversiones: 2, origen: 'chofer' as const, cambios: 3 },
+    ],
     aprendido: {
       ritmo: [{ clave: 'ritmo' as const, ambito: 'camion:c1', camion: 'LRST·81', valor: 1.2, muestras: 40, confianza: 1 }],
       capacidad: [{ clave: 'capacidad_paradas' as const, ambito: 'global', valor: 32, muestras: 6, confianza: 0.5 }],
@@ -2604,6 +2643,17 @@ describe('analítica del admin', () => {
     expect(screen.getByText('a 1,6 km del pin')).toBeInTheDocument();
     expect(screen.getByText(/el pin vino de: la búsqueda por dirección/)).toBeInTheDocument();
     expect(screen.getByText(/Otras 35 las dedujo del recorrido/)).toBeInTheDocument();
+  });
+
+  it('los días en orden manual se muestran aparte, como experiencia del chofer, contra lo que habría sugerido el sistema', async () => {
+    montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(panel)) } });
+    expect(await screen.findByRole('heading', { name: 'Días en orden manual: la experiencia del chofer' })).toBeInTheDocument();
+    expect(screen.getByText(/2 días en orden manual \(1 sin mover nada a mano\)\. En 1 recorrió igual o menos que lo que habría sugerido el sistema/)).toBeInTheDocument();
+    expect(screen.getByText('27,0 km manejado · 30,0 km habría sugerido el sistema')).toBeInTheDocument();
+    expect(screen.getByText('Nadie movió nada a mano: orden puro del chofer.')).toBeInTheDocument();
+    expect(screen.getByText('3 paradas movidas a mano.')).toBeInTheDocument();
+    // la comparación de siempre solo cuenta los días que ordenó el sistema
+    expect(screen.getByText('Lo manejado fue 10 % más largo que lo sugerido.')).toBeInTheDocument();
   });
 
   it('ANALIZAR AHORA corre el análisis y vuelve a cargar el panel', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aQuienAplica, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, textoDeDiferencia, textoDeFuentePin, textoDeHoras, textoDeRitmo } from './analitica';
+import { aQuienAplica, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, resumenDeExperiencia, textoDeDiferencia, textoDeFuentePin, textoDeHoras, textoDeRitmo } from './analitica';
 
 describe('lectura de la analítica', () => {
   it('proporción con porcentaje y guion si no hay base', () => {
@@ -34,6 +34,14 @@ describe('lectura de la analítica', () => {
     expect(textoDeDiferencia(0.05)).toBe('Lo manejado fue 5 % más largo que lo sugerido.');
     expect(textoDeDiferencia(-0.1)).toBe('Lo manejado fue 10 % más corto que lo sugerido.');
     expect(textoDeDiferencia(0)).toBe('Lo manejado fue igual de largo que lo sugerido.');
+  });
+
+  it('los días en orden manual: cuántos hubo, cuántos sin ningún cambio a mano y en cuántos el chofer recorrió menos que el sistema', () => {
+    const q = (origen: 'sistema' | 'chofer', cambios: number, sugerida: number, real: number) => ({ origen, cambios, distSugeridaM: sugerida, distRealM: real });
+    expect(resumenDeExperiencia([])).toEqual({ dias: 0, sinCambios: 0, mejores: 0, diferencia: undefined });
+    const r = resumenDeExperiencia([q('sistema', 2, 10_000, 12_000), q('chofer', 0, 20_000, 18_000), q('chofer', 3, 10_000, 11_000), q('chofer', 0, 10_000, 10_000)]);
+    expect(r).toMatchObject({ dias: 3, sinCambios: 2, mejores: 2 });
+    expect(r.diferencia).toBeCloseTo((-0.1 + 0.1 + 0) / 3, 5);
   });
 
   it('de dónde vino el pin', () => {

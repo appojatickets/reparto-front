@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { aQuienAplica, textoDeFuentePin, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, textoDeDiferencia, textoDeHoras, textoDeRitmo } from '../../../../domain/analitica';
+import { aQuienAplica, textoDeFuentePin, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, resumenDeExperiencia, textoDeDiferencia, textoDeHoras, textoDeRitmo } from '../../../../domain/analitica';
 import { fechaYHoraEnChile } from '../../../../domain/foto-reporte';
 import { mensajeDeError } from '../../../../application/mensajes';
 import { useCasos } from '../contexto';
@@ -44,7 +44,10 @@ export const PaginaAnalitica = () => {
       {estado.tipo === 'ok' ? (() => {
         const p = estado.datos;
         const c = p.cobertura;
-        const dif = diferenciaPromedio(p.calidad);
+        const delSistema = p.calidad.filter((q) => q.origen === 'sistema');
+        const delChofer = p.calidad.filter((q) => q.origen === 'chofer');
+        const dif = diferenciaPromedio(delSistema);
+        const exp = resumenDeExperiencia(p.calidad);
         return (
           <>
             <h2>Qué datos se están guardando</h2>
@@ -117,14 +120,30 @@ export const PaginaAnalitica = () => {
               <Aviso>Se compara cuando hay jornadas terminadas con al menos 3 entregas avisadas desde la parada.</Aviso>
             ) : (
               <>
+                {delSistema.length === 0 ? <Aviso>Aún no hay jornadas con el orden calculado por el sistema para comparar.</Aviso> : null}
                 {dif !== undefined ? <Aviso tipo={dif > 0.05 ? 'error' : 'exito'}>{textoDeDiferencia(dif)}</Aviso> : null}
                 <ul className="tarjetas">
-                  {p.calidad.map((q) => (
+                  {delSistema.map((q) => (
                     <Dato key={`${q.fecha}-${q.camionId}`} titulo={`${q.fecha} · ${q.camion ?? 'camión'}`} valor={`${kilometros(q.distSugeridaM)} sugerido · ${kilometros(q.distRealM)} manejado`} ayuda={`${q.inversiones} cambios de orden respecto de lo sugerido`} />
                   ))}
                 </ul>
               </>
             )}
+
+            {delChofer.length > 0 ? (
+              <>
+                <h2>Días en orden manual: la experiencia del chofer</h2>
+                <p>Cuando el chofer carga «en orden», el recorrido lo decide su experiencia. Cada uno de esos días queda guardado y se mide contra lo que el sistema habría sugerido con las mismas paradas: es lo que sirve para afinar la ruta automática.</p>
+                <Aviso tipo="exito">
+                  {`${exp.dias} ${exp.dias === 1 ? 'día' : 'días'} en orden manual (${exp.sinCambios} sin mover nada a mano). En ${exp.mejores} ${exp.mejores === 1 ? 'recorrió' : 'recorrieron'} igual o menos que lo que habría sugerido el sistema.${exp.diferencia !== undefined ? ` ${textoDeDiferencia(exp.diferencia).replace('Lo manejado', 'En promedio lo manejado').replace('lo sugerido', 'lo que habría sugerido el sistema')}` : ''}`}
+                </Aviso>
+                <ul className="tarjetas">
+                  {delChofer.map((q) => (
+                    <Dato key={`${q.fecha}-${q.camionId}`} titulo={`${q.fecha} · ${q.camion ?? 'camión'}`} valor={`${kilometros(q.distRealM)} manejado · ${kilometros(q.distSugeridaM)} habría sugerido el sistema`} ayuda={q.cambios === 0 ? 'Nadie movió nada a mano: orden puro del chofer.' : `${q.cambios} ${q.cambios === 1 ? 'parada movida' : 'paradas movidas'} a mano.`} />
+                  ))}
+                </ul>
+              </>
+            ) : null}
 
             {p.pinesDudosos.length > 0 ? (
               <>

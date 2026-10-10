@@ -191,6 +191,8 @@ export type EventoEntrega = {
   readonly precisionM?: number;
   readonly motivo?: 'cerrado' | 'no_recibe' | 'direccion' | 'otro';
   readonly minutos?: number;
+  /** Solo al entregar: queda entregada pero la posición no se usa ni se toca el pin del local. */
+  readonly sinPin?: boolean;
 };
 export type ResultadoEvento = { readonly estado: EstadoEntrega; readonly pinFijado: boolean };
 
@@ -262,6 +264,8 @@ export type OperacionRuta =
   /** Arrastrar y soltar: la parada queda en `posicion` (0 = la primera) de la lista de paradas en orden. */
   | { readonly tipo: 'mover'; readonly facturaId: string; readonly posicion: number }
   | { readonly tipo: 'ordenar' | 'insertar' }
+  /** PASAR A MANUAL: se congela el orden que se ve y desde ahí nada se reordena solo. */
+  | { readonly tipo: 'fijar' }
   | { readonly tipo: 'salida'; readonly salidaMin: number };
 
 /** Lo que quedó del día al terminar la ruta (las pendientes no se alcanzaron a entregar y quedan en su día). */
@@ -321,7 +325,7 @@ export type PanelAnalitica = {
   /** Locales con el pin verificado (fijo), por verificar (se ajusta con las entregas) y sin pin. */
   readonly pines: { readonly verificados: number; readonly porVerificar: number; readonly sinPin: number };
   readonly porDia: readonly { readonly fecha: string; readonly jornadas: number; readonly atendidas: number; readonly sinHacer: number }[];
-  readonly calidad: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly distSugeridaM: number; readonly distRealM: number; readonly inversiones: number }[];
+  readonly calidad: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly distSugeridaM: number; readonly distRealM: number; readonly inversiones: number; readonly origen: 'sistema' | 'chofer'; readonly cambios: number }[];
   readonly aprendido: {
     readonly ritmo: readonly ParametroAprendido[];
     readonly capacidad: readonly ParametroAprendido[];

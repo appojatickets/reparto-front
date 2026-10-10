@@ -195,6 +195,11 @@ export const AccionesParada = ({ p, alCambiar, alPosponer, alFijarPin }: { reado
     if (r.value.pinFijado) alFijarPin?.();
     alCambiar();
   };
+  /** Ya te alejaste de la puerta: queda entregada y en su lugar de la ruta, pero tu posición no se usa y el pin no se toca. */
+  const entregadoSinPin = async (): Promise<void> => {
+    const { r } = await avisar({ tipo: 'entregado', sinPin: true }, false);
+    if (r.ok) alCambiar();
+  };
   const cerrado = async (): Promise<void> => {
     const { r, sinGps } = await avisar({ tipo: 'cerrado' });
     if (r.ok) {
@@ -210,8 +215,10 @@ export const AccionesParada = ({ p, alCambiar, alPosponer, alFijarPin }: { reado
       </div>
       <div className="fila-botones">
         <Boton disabled={ocupado} aria-label={`ENTREGADO ${p.cliente}`} onClick={() => void entregado()}>ENTREGADO</Boton>
+        <Boton variante="secundario" disabled={ocupado} aria-label={`ENTREGADO SIN FIJAR EL PIN ${p.cliente}`} onClick={() => void entregadoSinPin()}>ENTREGADO, SIN FIJAR EL PIN</Boton>
         <Boton variante="secundario" aria-expanded={panel === 'ubicacion'} aria-label={`UBICACIÓN DEL VENDEDOR ${p.cliente}`} onClick={() => { setPanel(panel === 'ubicacion' ? undefined : 'ubicacion'); }}>UBICACIÓN DEL VENDEDOR</Boton>
       </div>
+      <span className="ayuda">Si ya te alejaste de la puerta, usa «sin fijar el pin»: queda entregada en su lugar de la ruta, pero no se guarda tu posición ni se mueve el pin del local.</span>
       <div className="fila-botones">
         <Boton variante="secundario" disabled={ocupado} aria-label={`ESTÁ CERRADO ${p.cliente}`} onClick={() => void cerrado()}>ESTÁ CERRADO</Boton>
         <Boton variante="secundario" disabled={ocupado} aria-label={`NO LA ENCUENTRO ${p.cliente}`} onClick={() => { setPanel(panel === 'direccion' ? undefined : 'direccion'); }}>NO LA ENCUENTRO</Boton>

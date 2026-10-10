@@ -8728,7 +8728,7 @@ export interface paths {
                             posicion: number;
                         } | {
                             /** @enum {string} */
-                            tipo: "ordenar" | "insertar";
+                            tipo: "ordenar" | "insertar" | "fijar";
                         } | {
                             /** @enum {string} */
                             tipo: "salida";
@@ -10128,6 +10128,9 @@ export interface paths {
                                 distSugeridaM: number;
                                 distRealM: number;
                                 inversiones: number;
+                                /** @enum {string} */
+                                origen: "sistema" | "chofer";
+                                cambios: number;
                             }[];
                             aprendido: {
                                 ritmo: {
@@ -10507,7 +10510,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Avisar desde la parada: llegué, entregué, está cerrado, espero, no se entregó o vuelvo más tarde (con la posición si hay) */
+        /** Avisar desde la parada: llegué, entregué, está cerrado, espero, no se entregó o vuelvo más tarde (con la posición si hay). Con `sinPin` la entrega queda hecha sin usar la posición ni tocar el pin */
         post: {
             parameters: {
                 query?: never;
@@ -10528,6 +10531,7 @@ export interface paths {
                         /** @enum {string} */
                         motivo?: "cerrado" | "no_recibe" | "direccion" | "otro";
                         minutos?: number;
+                        sinPin?: boolean;
                     };
                 };
             };
