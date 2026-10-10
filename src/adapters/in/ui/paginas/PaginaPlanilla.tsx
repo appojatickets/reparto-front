@@ -77,7 +77,8 @@ export const PaginaPlanilla = () => {
         rows={8}
       />
       {hayTexto && leida.faltantes.length > 0 ? <Aviso tipo="error">Falta la columna del camión: ponle CAMIÓN o PATENTE al título.</Aviso> : null}
-      {hayTexto && leida.faltantes.length === 0 && leida.filas.length === 0 ? <Aviso tipo="error">No se encontraron filas con patente.</Aviso> : null}
+      {hayTexto && leida.faltantes.length === 0 && leida.filas.length === 0 && leida.omitidas.length === 0 ? <Aviso tipo="error">No se encontraron filas con patente.</Aviso> : null}
+      {leida.omitidas.length > 0 ? <Aviso>Se omite {leida.omitidas.join(', ')}: entrega las máquinas, no los helados.</Aviso> : null}
       {hayTexto && leida.ignoradas.length > 0 ? <Aviso>No se usan estas columnas: {leida.ignoradas.join(', ')}.</Aviso> : null}
       {leida.filas.length > 0 ? (
         <>

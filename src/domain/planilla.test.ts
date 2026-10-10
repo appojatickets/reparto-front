@@ -57,9 +57,16 @@ describe('planilla pegada desde Excel', () => {
     expect(r.filas).toEqual([{ patente: 'ABCD12', chofer: 'Luis Rojas', vendedores: [] }]);
   });
 
-  it('un vehículo que no es patente se manda igual: la API avisa que no es una patente', () => {
-    const r = leerPlanilla(['Chofer\tCamión', 'Juan\tCABINET'].join('\n'));
-    expect(r.filas[0]?.patente).toBe('CABINET');
+  it('CABINET entrega las máquinas, no los helados: se omite y se informa, sin tratarlo como camión', () => {
+    const r = leerPlanilla(['Chofer\tCamión\tVendedor', 'Juan\tCABINET\tV01', 'Luis Rojas\tABCD12\tV02', 'Ana\tcabinet \t'].join('\n'));
+    expect(r.filas.map((f) => f.patente)).toEqual(['ABCD12']);
+    expect(r.omitidas).toEqual(['CABINET']);
+  });
+
+  it('un vehículo que no es patente ni CABINET se manda igual: la API avisa que no es una patente', () => {
+    const r = leerPlanilla(['Chofer\tCamión', 'Juan\tXYZ'].join('\n'));
+    expect(r.filas[0]?.patente).toBe('XYZ');
+    expect(r.omitidas).toEqual([]);
   });
 
   it('sin columna de camión o patente avisa qué falta; las columnas que no usa se informan', () => {

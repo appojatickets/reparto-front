@@ -58,6 +58,8 @@ const SINONIMOS: Readonly<Record<Columna, readonly string[]>> = {
 
 export type PlanillaLeida = {
   readonly filas: readonly FilaPlanillaEnviada[];
+  /** Filas que no son camiones de helados (CABINET entrega las máquinas): no se cargan. */
+  readonly omitidas: readonly string[];
   /** Columnas obligatorias que no se encontraron (hoy solo el camión). */
   readonly faltantes: readonly 'camion'[];
   /** Encabezados que no se usan. */
@@ -68,6 +70,9 @@ const limpio = (t: string | undefined): string | undefined => {
   const l = t?.replace(/\s+/g, ' ').trim();
   return l === undefined || l === '' || l === '-' ? undefined : l;
 };
+
+/** Lo que la planilla pone en la columna del camión pero no es un camión de reparto: quien entrega las máquinas (freezers), no los helados. */
+const NO_ES_CAMION = ['cabinet', 'cabinets'];
 
 /** «ab 12-34», «LZYS·23» → AB1234, LZYS23. */
 const patenteDe = (t: string): string => t.replace(/[\s.\-·]/g, '').toUpperCase();
@@ -84,16 +89,21 @@ export const leerPlanilla = (texto: string): PlanillaLeida => {
     else if (k !== '') ignoradas.push(nombre);
   });
   const iCamion = columna.get('camion');
-  if (iCamion === undefined) return { filas: [], faltantes: tabla.encabezados.length === 0 ? [] : ['camion'], ignoradas };
+  if (iCamion === undefined) return { filas: [], omitidas: [], faltantes: tabla.encabezados.length === 0 ? [] : ['camion'], ignoradas };
 
   const celda = (f: readonly string[], c: Columna): string | undefined => {
     const i = columna.get(c);
     return i === undefined ? undefined : f[i];
   };
   const filas: FilaPlanillaEnviada[] = [];
+  const omitidas: string[] = [];
   for (const f of tabla.filas) {
     const patente = patenteDe(f[iCamion] ?? '');
     if (patente === '') continue;
+    if (NO_ES_CAMION.includes(clave(patente))) {
+      if (!omitidas.includes(patente)) omitidas.push(patente);
+      continue;
+    }
     const chofer = limpio(celda(f, 'chofer'));
     const ayudante = limpio(celda(f, 'ayudante'));
     const vendedores = columna.has('vendedor') ? leerCeldaVendedores(celda(f, 'vendedor') ?? '') : undefined;
@@ -106,5 +116,5 @@ export const leerPlanilla = (texto: string): PlanillaLeida => {
       ...(comunas.length > 0 ? { comunas } : {}),
     });
   }
-  return { filas, faltantes: [], ignoradas };
+  return { filas, omitidas, faltantes: [], ignoradas };
 };

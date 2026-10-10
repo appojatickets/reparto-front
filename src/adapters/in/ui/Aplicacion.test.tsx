@@ -2896,6 +2896,16 @@ describe('planilla del día', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/Algo salió mal/);
   });
 
+  it('CABINET (entrega las máquinas, no los helados) no es un camión: se avisa que se omite y no se manda', async () => {
+    const aplicarPlanilla = vi.fn(() => Promise.resolve(ok([resultado({ patente: 'ABCD12' })])));
+    montar({ ruta: '/planilla', sesion: DESPACHADOR, api: { aplicarPlanilla, obtenerPlanilla: () => Promise.resolve(ok([])) } });
+    await pegar(['Chofer\tCamión\tVendedor', 'Juan\tCABINET\tV01', 'Luis Rojas\tABCD12\tV02'].join('\n'));
+    expect(await screen.findByText('Se omite CABINET: entrega las máquinas, no los helados.')).toBeInTheDocument();
+    expect(screen.getByText('Se van a cargar 1 camión')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'APLICAR LA PLANILLA' }));
+    expect(aplicarPlanilla).toHaveBeenCalledWith('2026-10-05', [{ patente: 'ABCD12', chofer: 'Luis Rojas', vendedores: [{ codigo: 'V02' }] }]);
+  });
+
   it('muestra lo que ya está cargado para el día', async () => {
     const obtenerPlanilla = vi.fn(() => Promise.resolve(ok([{ fecha: '2026-10-05', camion: { id: 'c1', patente: 'SDTS23', alias: '23' }, chofer: { nombre: 'Juan Pérez' }, comunas: ['Maipú'], vendedores: [] }])));
     montar({ ruta: '/planilla', sesion: DESPACHADOR, api: { obtenerPlanilla } });
