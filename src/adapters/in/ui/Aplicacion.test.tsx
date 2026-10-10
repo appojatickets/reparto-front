@@ -7,6 +7,7 @@ import type { ApiClient } from '../../../application/ports/api-client';
 import type { EstadoSesion } from '../../../application/use-cases/sesion';
 import { fakeApi, http } from '../../../application/use-cases/fakes.test-util';
 import { Aplicacion } from './Aplicacion';
+import { olvidarFotosDePerfil } from './componentes/Avatar';
 import { EVENTO_SERVIDOR_DESPERTANDO } from './despertando';
 import { ProveedorCasos, type Casos } from './contexto';
 
@@ -28,6 +29,8 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     buscarDireccion: vi.fn(() => Promise.resolve(err('SIN_RESULTADO' as const))),
     completarComunas: vi.fn(() => Promise.resolve({ comunas: {}, sinRespuesta: 0, detenido: false })),
     subirFotoLocal: vi.fn(),
+    subirFotoPerfil: vi.fn(),
+    quitarFotoPerfil: vi.fn(),
     descarga: { guardarTexto: vi.fn() },
     exportacion: { cargar: () => undefined, guardar: vi.fn() },
     ahora: () => new Date('2026-10-05T15:00:00Z'),
@@ -74,7 +77,8 @@ describe('entrada y protección por rol', () => {
   it('el chofer ve solo su ruta: sin enlaces de clientes, pines, importación ni usuarios', async () => {
     montar({ sesion: CHOFER });
     expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
-    expect(screen.queryByRole('link')).toBeNull();
+    // Lo único que enlaza es «mi perfil» (la cabecera y el saludo): ningún enlace a clientes, pines, importación ni usuarios.
+    for (const enlace of screen.getAllByRole('link')) expect(enlace).toHaveAttribute('href', '/perfil');
   });
 
   it('el despachador ve clientes y pines, no importación ni usuarios', async () => {
@@ -2915,3 +2919,90 @@ describe('planilla del día', () => {
     expect(obtenerPlanilla).toHaveBeenCalledWith('2026-10-05');
   });
 });
+
+describe('foto de perfil', () => {
+  const CON_FOTO: UsuarioSesion = { ...CHOFER, fotoEn: '2026-10-10T12:00:00.000Z' };
+  const urlFotoUsuario = () => Promise.resolve(ok({ url: 'https://alm.test/perfil.webp', expiraEnSegundos: 300 }));
+
+  it('sin foto, la cabecera y el inicio muestran las iniciales y ofrecen ponerla', async () => {
+    montar({ sesion: CHOFER });
+    await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' });
+    expect(screen.getAllByText('JP').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole('link', { name: 'PONER MI FOTO' })).toHaveAttribute('href', '/perfil');
+    expect(document.querySelector('.avatar img')).toBeNull();
+  });
+
+  it('con foto, la cabecera y el inicio la muestran (una sola consulta para las dos)', async () => {
+    olvidarFotosDePerfil();
+    const pedir = vi.fn(urlFotoUsuario);
+    montar({ sesion: CON_FOTO, api: { urlFotoUsuario: pedir } });
+    await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' });
+    await waitFor(() => { expect(document.querySelectorAll('.avatar img')).toHaveLength(2); });
+    expect(document.querySelector('.avatar img')).toHaveAttribute('src', 'https://alm.test/perfil.webp');
+    expect(pedir).toHaveBeenCalledTimes(1);
+    expect(pedir).toHaveBeenCalledWith('u1');
+    expect(screen.getByRole('link', { name: 'MI PERFIL' })).toBeInTheDocument();
+  });
+
+  it('si la foto no carga, quedan las iniciales', async () => {
+    olvidarFotosDePerfil();
+    montar({ sesion: CON_FOTO, api: { urlFotoUsuario: () => Promise.resolve(http(404)) } });
+    await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' });
+    expect(screen.getAllByText('JP').length).toBeGreaterThanOrEqual(2);
+    expect(document.querySelector('.avatar img')).toBeNull();
+  });
+
+  it('el perfil muestra quién soy y permite subir la foto: se ve enseguida en la cabecera', async () => {
+    olvidarFotosDePerfil();
+    const subirFotoPerfil = vi.fn(() => Promise.resolve(ok('2026-10-10T13:00:00.000Z')));
+    montar({ ruta: '/perfil', sesion: CHOFER, api: { urlFotoUsuario }, casos: { subirFotoPerfil } });
+    expect(await screen.findByRole('heading', { name: 'Mi perfil' })).toBeInTheDocument();
+    expect(screen.getByText('Usuario: jperez')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'QUITAR MI FOTO' })).toBeNull();
+    const archivo = new File(['x'], 'yo.jpg', { type: 'image/jpeg' });
+    await userEvent.upload(screen.getByLabelText('Elegir mi foto'), archivo);
+    expect(subirFotoPerfil).toHaveBeenCalledWith(archivo);
+    expect(await screen.findByText('Listo: tu foto ya se ve junto a tu nombre.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'CAMBIAR MI FOTO' })).toBeInTheDocument();
+    await waitFor(() => { expect(document.querySelectorAll('.avatar img').length).toBeGreaterThanOrEqual(2); });
+  });
+
+  it('si no se puede subir, avisa y no cambia nada', async () => {
+    montar({ ruta: '/perfil', sesion: CHOFER, casos: { subirFotoPerfil: vi.fn(() => Promise.resolve(err('No se pudo subir la foto. Revisa tu señal e intenta de nuevo.'))) } });
+    await screen.findByRole('heading', { name: 'Mi perfil' });
+    await userEvent.upload(screen.getByLabelText('Elegir mi foto'), new File(['x'], 'yo.jpg', { type: 'image/jpeg' }));
+    expect(await screen.findByText(/No se pudo subir la foto/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'SUBIR MI FOTO' })).toBeInTheDocument();
+  });
+
+  it('quitar la foto pide confirmar; al confirmar vuelven las iniciales', async () => {
+    olvidarFotosDePerfil();
+    const quitarFotoPerfil = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/perfil', sesion: CON_FOTO, api: { urlFotoUsuario }, casos: { quitarFotoPerfil } });
+    await userEvent.click(await screen.findByRole('button', { name: 'QUITAR MI FOTO' }));
+    await userEvent.click(screen.getByRole('button', { name: 'NO, DEJARLA' }));
+    expect(quitarFotoPerfil).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'QUITAR MI FOTO' }));
+    await userEvent.click(screen.getByRole('button', { name: 'SÍ, QUITARLA' }));
+    expect(quitarFotoPerfil).toHaveBeenCalledOnce();
+    expect(await screen.findByText('Tu foto se quitó.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'SUBIR MI FOTO' })).toBeInTheDocument();
+    expect(document.querySelector('.avatar img')).toBeNull();
+  });
+
+  it('en USUARIOS, cada persona muestra su foto o sus iniciales', async () => {
+    olvidarFotosDePerfil();
+    const listarUsuarios = vi.fn(() => Promise.resolve(ok([
+      { id: 'u1', username: 'jperez', nombre: 'Juan Pérez', rol: 'chofer' as const, editor: false, activo: true, fotoEn: '2026-10-10T12:00:00.000Z' },
+      { id: 'u2', username: 'mrojas', nombre: 'María Rojas', rol: 'ayudante' as const, editor: false, activo: true },
+    ])));
+    montar({ ruta: '/admin/usuarios', sesion: ADMIN, api: { listarUsuarios, urlFotoUsuario } });
+    const filas = await screen.findAllByRole('listitem');
+    const juan = filas.find((f) => within(f).queryByText('Usuario: jperez · Chofer'));
+    const maria = filas.find((f) => within(f).queryByText('Usuario: mrojas · Ayudante'));
+    await waitFor(() => { expect(juan?.querySelector('.avatar img')).not.toBeNull(); });
+    expect(maria?.querySelector('.avatar img')).toBeNull();
+    expect(within(maria as HTMLElement).getByText('MR')).toBeInTheDocument();
+  });
+});
+

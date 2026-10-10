@@ -48,6 +48,12 @@ describe('restaurarSesion', () => {
     expect(await crearRestaurarSesion({ api, store: fakeStore(TOKENS) })()).toEqual({ tipo: 'sesion', usuario: USUARIO });
   });
 
+  it('trae la foto de perfil de la persona, si la tiene', async () => {
+    const fotoEn = '2026-10-10T12:00:00.000Z';
+    const api = fakeApi({ yo: () => Promise.resolve(ok({ ...yo, fotoEn })) });
+    expect(await crearRestaurarSesion({ api, store: fakeStore(TOKENS) })()).toEqual({ tipo: 'sesion', usuario: { ...USUARIO, fotoEn } });
+  });
+
   it.each([401, 403])('un %i del servidor descarta la sesión guardada', async (status) => {
     const store = fakeStore(TOKENS);
     const api = fakeApi({ yo: () => Promise.resolve(http(status)) });

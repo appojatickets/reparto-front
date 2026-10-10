@@ -6,6 +6,8 @@ export type FotoComprimida = { readonly blob: Blob; readonly tipo: TipoFoto };
 export interface Imagenes {
   /** Reduce la foto de fachada a ~120 KB (la cuota de Storage y la salida de datos son limitadas). */
   comprimir(archivo: Blob): Promise<Result<FotoComprimida, { readonly detalle: string }>>;
+  /** Foto de perfil: recorta un cuadrado del centro y lo reduce a 256 px (~30 KB). */
+  recortarAvatar(archivo: Blob): Promise<Result<FotoComprimida, { readonly detalle: string }>>;
 }
 
 export interface SubidaDeArchivos {

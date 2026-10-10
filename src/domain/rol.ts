@@ -21,6 +21,8 @@ export type Accion =
   | 'analitica'
   | 'configuracion';
 
+export const ETIQUETA_ROL: Readonly<Record<Rol, string>> = { admin: 'Administración', despachador: 'Despacho', chofer: 'Chofer', ayudante: 'Ayudante' };
+
 /** Chofer y ayudante van en el camión: ven su ruta, cargan entregas y avisan desde la parada. */
 export const esDeCamion = (rol: Rol): boolean => rol === 'chofer' || rol === 'ayudante';
 

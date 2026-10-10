@@ -52,6 +52,13 @@ export interface ApiClient extends SaludApi {
   registrarFoto(localId: string, path: string): R<void>;
   urlFoto(localId: string): R<{ url: string; expiraEnSegundos: number }>;
 
+  /** Mi foto de perfil: pedir la URL de subida, registrar la foto ya subida o quitarla. Cualquiera con sesión puede. */
+  solicitarUrlSubidaPerfil(tipo: TipoFoto): R<{ path: string; url: string }>;
+  registrarFotoPerfil(path: string): R<void>;
+  quitarFotoPerfil(): R<void>;
+  /** La foto de perfil de una persona de la empresa (URL firmada de pocos minutos). 404 si no tiene. */
+  urlFotoUsuario(usuarioId: string): R<{ url: string; expiraEnSegundos: number }>;
+
   listarPropuestas(estado: PropuestaPin['estado']): R<readonly PropuestaPin[]>;
   resolverPropuesta(id: string, accion: 'aceptar' | 'rechazar'): R<void>;
   /** La lista para verificar pines: «por verificar» (lo más seguro primero) o «verificados». Hasta 100; `total` dice cuántos hay. */

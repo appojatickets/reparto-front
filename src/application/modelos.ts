@@ -3,7 +3,13 @@ import type { Motivo } from '../domain/motivos';
 import type { Rol } from '../domain/rol';
 import type { FilaClienteCruda } from '../domain/tabla';
 
-export type UsuarioSesion = { readonly id: string; readonly username: string; readonly nombre: string; readonly rol: Rol; readonly editor: boolean };
+/** `fotoEn` dice cuándo puso su foto de perfil (no viene si no tiene); también sirve para saber si cambió. */
+export type UsuarioSesion = { readonly id: string; readonly username: string; readonly nombre: string; readonly rol: Rol; readonly editor: boolean; readonly fotoEn?: string };
+
+/** Lo que la API cuenta de una persona, sin los campos que la interfaz no usa. */
+export const usuarioSesionDe = (d: { readonly id: string; readonly username: string; readonly nombre: string; readonly rol: Rol; readonly editor: boolean; readonly fotoEn?: string | undefined }): UsuarioSesion => ({
+  id: d.id, username: d.username, nombre: d.nombre, rol: d.rol, editor: d.editor, ...(d.fotoEn !== undefined ? { fotoEn: d.fotoEn } : {}),
+});
 export type Tokens = { readonly accessToken: string; readonly refreshToken: string };
 
 export type EstadoPin = 'pendiente' | 'sugerido' | 'validado';

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { accionesDe, type Accion } from '../../../../domain/rol';
+import { Avatar } from '../componentes/Avatar';
 import { Pagina } from '../componentes/ui';
 import { useCasos } from '../contexto';
 import { useUsuario } from '../sesion';
@@ -56,6 +57,10 @@ export const PaginaInicio = () => {
   });
   return (
     <Pagina titulo={`Hola, ${usuario.nombre.split(' ')[0] ?? usuario.nombre}`}>
+      <Link className="saludo" to="/perfil">
+        <Avatar usuarioId={usuario.id} nombre={usuario.nombre} fotoEn={usuario.fotoEn} tamano="mediano" />
+        <span>{usuario.fotoEn !== undefined ? 'MI PERFIL' : 'PONER MI FOTO'}</span>
+      </Link>
       {acciones.includes('mi-ruta') ? <InicioChofer /> : null}
       {enlaces.length > 0 ? (
         <ul className="menu">

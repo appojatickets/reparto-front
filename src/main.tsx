@@ -10,6 +10,7 @@ import { crearImportarEnlaces } from './application/use-cases/importar-enlaces';
 import { crearImportarClientesEnLotes } from './application/use-cases/importar-clientes';
 import { crearCerrarSesion, crearIniciarSesion, crearRestaurarSesion } from './application/use-cases/sesion';
 import { crearSubirFotoLocal } from './application/use-cases/subir-foto';
+import { crearQuitarFotoPerfil, crearSubirFotoPerfil } from './application/use-cases/subir-foto-perfil';
 import { createHttpApiClient } from './adapters/out/api/http-api-client';
 import { subidaHttp } from './adapters/out/almacen/subida-http';
 import { imagenesCanvas } from './adapters/out/imagen/comprimir-canvas';
@@ -54,6 +55,8 @@ const casos: Casos = {
   completarComunas: crearCompletarComunas({ geocodificador: crearNominatim(), timer: browserTimer }),
   buscarDireccion: crearBuscarDireccion({ geocodificador: crearNominatim() }),
   subirFotoLocal: crearSubirFotoLocal({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),
+  subirFotoPerfil: crearSubirFotoPerfil({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),
+  quitarFotoPerfil: crearQuitarFotoPerfil({ api }),
   descarga: crearDescargaNavegador(),
   exportacion: crearExportacionStore(),
   ahora: () => new Date(),

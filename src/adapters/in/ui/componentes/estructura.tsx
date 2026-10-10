@@ -1,14 +1,13 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import type { ReactNode } from 'react';
-import { puedeHacer, type Accion } from '../../../../domain/rol';
+import { ETIQUETA_ROL, puedeHacer, type Accion } from '../../../../domain/rol';
 import { useSesion } from '../sesion';
 import { CambiarTema } from '../tema';
 import { CambiarVista } from '../vista';
+import { Avatar } from './Avatar';
 import { PermisosAlAbrir } from './PermisosAlAbrir';
 import { SeguimientoDelCamion } from './SeguimientoDelCamion';
 import { Boton, Cargando, Pagina, Aviso } from './ui';
-
-const ETIQUETA_ROL = { admin: 'Administración', despachador: 'Despacho', chofer: 'Chofer', ayudante: 'Ayudante' } as const;
 
 /** Cabecera común: quién eres y SALIR siempre a mano. */
 export const Marco = () => {
@@ -18,10 +17,13 @@ export const Marco = () => {
   return (
     <>
       <header className="cabecera">
-        <div>
-          <strong>{estado.usuario.nombre}</strong>
-          <span className="rol"> · {ETIQUETA_ROL[estado.usuario.rol]}</span>
-        </div>
+        <Link className="quien" to="/perfil" aria-label={`Mi perfil: ${estado.usuario.nombre}, ${ETIQUETA_ROL[estado.usuario.rol]}`}>
+          <Avatar usuarioId={estado.usuario.id} nombre={estado.usuario.nombre} fotoEn={estado.usuario.fotoEn} />
+          <span>
+            <strong>{estado.usuario.nombre}</strong>
+            <span className="rol"> · {ETIQUETA_ROL[estado.usuario.rol]}</span>
+          </span>
+        </Link>
         <div className="fila-botones">
           <CambiarVista />
           <CambiarTema />

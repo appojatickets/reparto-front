@@ -2,6 +2,7 @@ import { useCallback, useState, type SyntheticEvent } from 'react';
 import { esDeCamion, type Rol } from '../../../../domain/rol';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { UsuarioAdmin } from '../../../../application/modelos';
+import { Avatar } from '../componentes/Avatar';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { useUsuario } from '../sesion';
@@ -86,7 +87,10 @@ const Fila = ({ u, esYo, alCambiar }: { readonly u: UsuarioAdmin; readonly esYo:
 
   return (
     <li className="tarjeta">
-      <strong>{u.nombre}</strong>
+      <div className="quien">
+        <Avatar usuarioId={u.id} nombre={u.nombre} fotoEn={u.fotoEn} />
+        <strong>{u.nombre}</strong>
+      </div>
       <span>Usuario: {u.username} · {ROLES.find((r) => r.valor === u.rol)?.texto}</span>
       <Insignia>{u.activo ? 'ACTIVO' : 'DESACTIVADO'}</Insignia>
       {u.editor ? <Insignia>EDITOR</Insignia> : null}

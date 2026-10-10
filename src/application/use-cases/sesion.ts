@@ -1,6 +1,6 @@
 import { err, ok, type Result } from '../../domain/result';
 import { mensajeDeError } from '../mensajes';
-import type { UsuarioSesion } from '../modelos';
+import { usuarioSesionDe, type UsuarioSesion } from '../modelos';
 import type { ApiClient } from '../ports/api-client';
 import type { SesionStore } from '../ports/sesion-store';
 
@@ -30,7 +30,7 @@ export const crearRestaurarSesion = ({ api, store }: Deps) =>
   async (): Promise<EstadoSesion> => {
     if (!store.cargar()) return { tipo: 'sin_sesion' };
     const r = await api.yo();
-    if (r.ok) return { tipo: 'sesion', usuario: { id: r.value.id, username: r.value.username, nombre: r.value.nombre, rol: r.value.rol, editor: r.value.editor } };
+    if (r.ok) return { tipo: 'sesion', usuario: usuarioSesionDe(r.value) };
     if (r.error.kind === 'HTTP' && (r.error.status === 401 || r.error.status === 403)) {
       store.borrar();
       return { tipo: 'sin_sesion' };

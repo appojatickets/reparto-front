@@ -55,6 +55,30 @@ describe('sesión', () => {
     expect(store.cargar()).toBeUndefined();
   });
 
+  it('el login trae cuándo puso su foto de perfil, si la tiene', async () => {
+    const fotoEn = '2026-10-10T12:00:00.000Z';
+    const { api } = montar(() => json(200, { accessToken: 'a', refreshToken: 'r', expiraEnSegundos: 3600, usuario: { ...USUARIO, activo: true, fotoEn } }));
+    const r = await api.iniciarSesion('jperez', '482915');
+    expect(r.ok && r.value.usuario).toEqual({ ...USUARIO, fotoEn });
+  });
+
+  it('foto de perfil: pide la URL de subida, registra, quita y lee la de otra persona', async () => {
+    const { api, llamadas } = montar((req) => {
+      const { pathname } = new URL(req.url);
+      if (pathname === '/v1/me/foto/url-subida') return json(200, { path: 'e1/perfil/u1/a.webp', url: 'https://alm.test/subir' });
+      if (pathname === '/v1/usuarios/123e4567-e89b-12d3-a456-426614174000/foto-url') return json(200, { url: 'https://alm.test/leer', expiraEnSegundos: 300 });
+      return new Response(null, { status: 204 });
+    }, TOK);
+    expect(await api.solicitarUrlSubidaPerfil('webp')).toEqual({ ok: true, value: { path: 'e1/perfil/u1/a.webp', url: 'https://alm.test/subir' } });
+    expect(await llamadas[0]?.json()).toEqual({ tipo: 'webp' });
+    expect((await api.registrarFotoPerfil('e1/perfil/u1/a.webp')).ok).toBe(true);
+    expect(llamadas[1]?.method).toBe('PUT');
+    expect(await llamadas[1]?.json()).toEqual({ path: 'e1/perfil/u1/a.webp' });
+    expect((await api.quitarFotoPerfil()).ok).toBe(true);
+    expect(llamadas[2]?.method).toBe('DELETE');
+    expect(await api.urlFotoUsuario('123e4567-e89b-12d3-a456-426614174000')).toEqual({ ok: true, value: { url: 'https://alm.test/leer', expiraEnSegundos: 300 } });
+  });
+
   it('un error de negocio llega con status, código y mensaje en español', async () => {
     const { api } = montar(() => json(401, { codigo: 'CREDENCIALES_INVALIDAS', mensaje: 'Usuario o clave incorrectos. Te quedan 4 intentos.', detalle: { intentosRestantes: 4 } }));
     expect(await api.iniciarSesion('x', 'y')).toEqual({ ok: false, error: { kind: 'HTTP', status: 401, codigo: 'CREDENCIALES_INVALIDAS', mensaje: 'Usuario o clave incorrectos. Te quedan 4 intentos.', detalle: { intentosRestantes: 4 } } });

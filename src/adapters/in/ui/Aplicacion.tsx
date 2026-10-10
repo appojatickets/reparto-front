@@ -13,6 +13,7 @@ import { PaginaClientes } from './paginas/PaginaClientes';
 import { PaginaFacturas } from './paginas/PaginaFacturas';
 import { PaginaImportar } from './paginas/PaginaImportar';
 import { PaginaInicio } from './paginas/PaginaInicio';
+import { PaginaPerfil } from './paginas/PaginaPerfil';
 import { PaginaLocal } from './paginas/PaginaLocal';
 import { PaginaLogin } from './paginas/PaginaLogin';
 import { PaginaMiRuta } from './paginas/PaginaMiRuta';
@@ -38,6 +39,7 @@ export const Aplicacion = () => (
           <Route path="/entrar" element={<PaginaLogin />} />
           <Route element={<RutaProtegida><Marco /></RutaProtegida>}>
             <Route index element={<PaginaInicio />} />
+            <Route path="perfil" element={<PaginaPerfil />} />
             <Route path="cargar" element={<RutaProtegida accion="cargar-facturas"><PaginaCargar /></RutaProtegida>} />
             <Route path="mi-ruta" element={<RutaProtegida accion="mi-ruta"><PaginaMiRuta /></RutaProtegida>} />
             <Route path="facturas" element={<RutaProtegida accion="facturas"><PaginaFacturas /></RutaProtegida>} />

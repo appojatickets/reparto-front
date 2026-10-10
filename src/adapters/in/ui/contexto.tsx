@@ -15,6 +15,7 @@ import type { crearImportarEnlaces } from '../../../application/use-cases/import
 import type { crearImportarClientesEnLotes } from '../../../application/use-cases/importar-clientes';
 import type { crearCerrarSesion, crearIniciarSesion, crearRestaurarSesion } from '../../../application/use-cases/sesion';
 import type { crearSubirFotoLocal } from '../../../application/use-cases/subir-foto';
+import type { crearQuitarFotoPerfil, crearSubirFotoPerfil } from '../../../application/use-cases/subir-foto-perfil';
 
 /** Lo que la interfaz recibe de `main`: la API (para consultas simples) y los casos de uso con lógica propia. */
 export type Casos = {
@@ -32,6 +33,9 @@ export type Casos = {
   readonly buscarDireccion: ReturnType<typeof crearBuscarDireccion>;
   readonly completarComunas: ReturnType<typeof crearCompletarComunas>;
   readonly subirFotoLocal: ReturnType<typeof crearSubirFotoLocal>;
+  /** Mi foto de perfil: subir una nueva (devuelve cuándo quedó puesta) o quitarla. */
+  readonly subirFotoPerfil: ReturnType<typeof crearSubirFotoPerfil>;
+  readonly quitarFotoPerfil: ReturnType<typeof crearQuitarFotoPerfil>;
   /** Guarda un archivo de texto en el dispositivo (la exportación de datos). */
   readonly descarga: Descarga;
   /** Columnas y formato de la última exportación, recordados en el dispositivo. */

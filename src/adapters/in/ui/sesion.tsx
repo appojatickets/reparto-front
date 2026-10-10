@@ -15,6 +15,8 @@ type ValorSesion = {
   readonly estado: EstadoSesionUI;
   readonly entrar: (username: string, pin: string) => Promise<Result<UsuarioSesion, string>>;
   readonly salir: () => void;
+  /** Mi foto de perfil cambió (o se quitó con `undefined`): la cabecera y el inicio la muestran enseguida. */
+  readonly cambiarFoto: (fotoEn: string | undefined) => void;
   readonly reintentar: () => void;
 };
 
@@ -58,12 +60,19 @@ export const ProveedorSesion = ({ children }: { readonly children: ReactNode }) 
     cerrarSesion();
     setEstado({ tipo: 'sin_sesion' });
   }, [cerrarSesion]);
+  const cambiarFoto = useCallback((fotoEn: string | undefined) => {
+    setEstado((e) => {
+      if (e.tipo !== 'sesion') return e;
+      const { id, username, nombre, rol, editor } = e.usuario;
+      return { tipo: 'sesion', usuario: { id, username, nombre, rol, editor, ...(fotoEn !== undefined ? { fotoEn } : {}) } };
+    });
+  }, []);
   const reintentar = useCallback(() => {
     setEstado({ tipo: 'cargando' });
     setIntento((n) => n + 1);
   }, []);
 
-  const valor = useMemo(() => ({ estado, entrar, salir, reintentar }), [estado, entrar, salir, reintentar]);
+  const valor = useMemo(() => ({ estado, entrar, salir, cambiarFoto, reintentar }), [estado, entrar, salir, cambiarFoto, reintentar]);
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 };
 

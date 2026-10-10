@@ -1,6 +1,7 @@
 import createClient from 'openapi-fetch';
 import { err, ok, type Result } from '../../../domain/result';
 import type { ApiClient, ApiError, HealthReport } from '../../../application/ports/api-client';
+import { usuarioSesionDe } from '../../../application/modelos';
 import type { SesionStore } from '../../../application/ports/sesion-store';
 import type { paths } from './schema';
 
@@ -141,7 +142,7 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
 
     async iniciarSesion(username, pin) {
       const r = await ejecutar(() => client.POST('/v1/auth/login', { body: { username, pin }, signal: timeout() }), { renovar: false, repetible: true });
-      return mapear(r, (d) => ({ tokens: { accessToken: d.accessToken, refreshToken: d.refreshToken }, usuario: { id: d.usuario.id, username: d.usuario.username, nombre: d.usuario.nombre, rol: d.usuario.rol, editor: d.usuario.editor } }));
+      return mapear(r, (d) => ({ tokens: { accessToken: d.accessToken, refreshToken: d.refreshToken }, usuario: usuarioSesionDe(d.usuario) }));
     },
     yo: () => ejecutar(() => client.GET('/v1/me', { signal: timeout() }), { repetible: true }),
 
@@ -163,6 +164,10 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
 
     solicitarUrlSubida: (localId, tipo) => ejecutar(() => client.POST('/v1/archivos/url-subida', { body: { localId, tipo }, signal: timeout() }), { repetible: true }),
     registrarFoto: async (id, path) => sinCuerpo(await ejecutar(() => client.PUT('/v1/locales/{id}/foto', { params: { path: { id } }, body: { path }, signal: timeout() }), { repetible: true })),
+    solicitarUrlSubidaPerfil: (tipo) => ejecutar(() => client.POST('/v1/me/foto/url-subida', { body: { tipo }, signal: timeout() }), { repetible: true }),
+    registrarFotoPerfil: async (path) => sinCuerpo(await ejecutar(() => client.PUT('/v1/me/foto', { body: { path }, signal: timeout() }), { repetible: true })),
+    quitarFotoPerfil: async () => sinCuerpo(await ejecutar(() => client.DELETE('/v1/me/foto', { signal: timeout() }))),
+    urlFotoUsuario: (id) => ejecutar(() => client.GET('/v1/usuarios/{id}/foto-url', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
     urlFoto: (id) => ejecutar(() => client.GET('/v1/locales/{id}/foto-url', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
 
     async listarPropuestas(estado) {
