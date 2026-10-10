@@ -22,6 +22,7 @@ import { crearUbicacionWeb } from './adapters/out/ubicacion/geolocalizacion';
 import { crearDescargaNavegador } from './adapters/out/descarga/descarga-navegador';
 import { crearExportacionStore } from './adapters/out/exportacion/local-storage-exportacion';
 import { crearTemaStore } from './adapters/out/tema/local-storage-tema';
+import { crearArmadoStore } from './adapters/out/armado/local-storage-armado';
 import { crearVistaStore } from './adapters/out/vista/local-storage-vista';
 import { crearVozWeb } from './adapters/out/voz/voz-web';
 import { ProveedorCasos, type Casos } from './adapters/in/ui/contexto';
@@ -60,6 +61,7 @@ const casos: Casos = {
   ubicacion: crearUbicacionWeb(),
   permisos: crearPermisosWeb(),
   vista: crearVistaStore(),
+  armado: crearArmadoStore(),
   tema: crearTemaStore(),
 };
 const deps = { api, timer: browserTimer, wakingAfterMs: 3000 };

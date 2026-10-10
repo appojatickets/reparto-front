@@ -33,6 +33,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     ahora: () => new Date('2026-10-05T15:00:00Z'),
     voz: { disponible: false, escuchar: () => ({ detener: () => undefined }) },
     vista: { cargar: () => 'grande' as const, guardar: () => undefined },
+    armado: { cargar: () => 'calcular' as const, guardar: () => undefined },
     tema: { cargar: () => 'claro' as const, guardar: () => undefined },
     ubicacion: { disponible: false, actual: () => Promise.resolve(err('NO_DISPONIBLE' as const)) },
     permisos: { estado: () => Promise.resolve({ ubicacion: 'concedido' as const, microfono: 'concedido' as const }), pedir: () => Promise.resolve({ ubicacion: 'concedido' as const, microfono: 'concedido' as const }) },
@@ -1422,6 +1423,16 @@ describe('rutas del día', () => {
     expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05');
   });
 
+  it('sin ruta calculada, el despachador también puede armarla en el orden de carga', async () => {
+    const planificarRuta = vi.fn(() => Promise.resolve(ok(vista({ modo: 'carga' as const }))));
+    const guardar = vi.fn();
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, casos: { armado: { cargar: () => undefined, guardar } }, api: base({ verRuta: () => Promise.resolve(ok(vista({ planificada: false, paradas: [], nuevas: [item('A'), item('B')], version: undefined, modo: undefined, regreso: undefined }))), planificarRuta }) });
+    await elegirCamion();
+    await userEvent.click(await screen.findByRole('button', { name: 'ARMARLA EN EL ORDEN DE CARGA' }));
+    expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05', undefined, 'carga');
+    expect(guardar).not.toHaveBeenCalled();
+  });
+
   /** Pone el foco en el asa MOVER de una parada y pulsa una tecla (el teclado es la alternativa al arrastre con el dedo). */
   const teclaEnAsa = async (cliente: string, tecla: string): Promise<void> => {
     const asa = screen.getByRole('button', { name: `MOVER ${cliente}` });
@@ -2361,6 +2372,91 @@ describe('acciones en la parada (chofer)', () => {
     await userEvent.selectOptions(await screen.findByLabelText('Primera entrega (el resto se ordena desde ahí)'), 'fB');
     expect(operarRuta).toHaveBeenCalledTimes(1);
     expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'primero', facturaId: 'fB' });
+  });
+
+  describe('cómo se arma la ruta: calcularla o «las agrego en orden»', () => {
+    const nueva = { facturaId: 'fN', localId: 'lN', cliente: 'Local N', direccion: 'Calle N 1', comuna: 'San Bernardo', urgente: false };
+    const sinRuta = () => Promise.resolve(ok(vistaBase({ planificada: false, paradas: [], nuevas: [nueva], version: undefined, modo: undefined, regreso: undefined })));
+    const armado = (inicial?: 'calcular' | 'carga') => {
+      const guardar = vi.fn();
+      return { guardar, store: { cargar: () => inicial, guardar } };
+    };
+
+    it('la primera vez el chofer elige cómo armar su ruta, sin que se calcule sola, y la elección se recuerda', async () => {
+      const a = armado();
+      const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga' as const }))));
+      abrir({ verRuta: sinRuta, planificarRuta }, { armado: a.store });
+      const pregunta = await screen.findByRole('group', { name: 'Cómo armar tu ruta' });
+      expect(planificarRuta).not.toHaveBeenCalled();
+      await userEvent.click(within(pregunta).getByRole('button', { name: 'LAS AGREGO EN ORDEN' }));
+      expect(a.guardar).toHaveBeenCalledWith('carga');
+      expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05', undefined, 'carga');
+      expect(await screen.findByText('EN TU ORDEN DE CARGA')).toBeInTheDocument();
+    });
+
+    it('elegir «calcular mi ruta» la calcula como siempre y lo recuerda', async () => {
+      const a = armado();
+      const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase())));
+      abrir({ verRuta: sinRuta, planificarRuta }, { armado: a.store });
+      await userEvent.click(await screen.findByRole('button', { name: 'CALCULAR MI RUTA' }));
+      expect(a.guardar).toHaveBeenCalledWith('calcular');
+      expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05');
+    });
+
+    it('con la preferencia ya elegida no vuelve a preguntar: la ruta se arma sola a su manera', async () => {
+      const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga' as const }))));
+      abrir({ verRuta: sinRuta, planificarRuta }, { armado: armado('carga').store });
+      await waitFor(() => { expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05', undefined, 'carga'); });
+      expect(screen.queryByRole('group', { name: 'Cómo armar tu ruta' })).toBeNull();
+    });
+
+    it('en el orden de carga muestra qué pasa, deja «las agrego en orden» marcado y no ofrece reordenar solo', async () => {
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'carga' as const }))) }, { armado: armado('carga').store });
+      const selector = await screen.findByRole('group', { name: 'Cómo se arma la ruta' });
+      expect(within(selector).getByRole('button', { name: 'LAS AGREGO EN ORDEN' })).toHaveAttribute('aria-pressed', 'true');
+      expect(within(selector).getByRole('button', { name: 'CALCULAR MI RUTA' })).toHaveAttribute('aria-pressed', 'false');
+      expect(within(selector).getByText(/lo nuevo entra al final/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'ORDENAR LO QUE QUEDA' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'VOLVER A CALCULAR DESDE CERO' })).toBeNull();
+      expect(screen.queryByLabelText('Primera entrega (el resto se ordena desde ahí)')).toBeNull();
+    });
+
+    it('desde el orden de carga, «calcular mi ruta» la ordena el sistema y se recuerda', async () => {
+      const a = armado('carga');
+      const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ version: 2 }))));
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'carga' as const }))), operarRuta }, { armado: a.store });
+      await userEvent.click(await screen.findByRole('button', { name: 'CALCULAR MI RUTA' }));
+      expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'ordenar' });
+      expect(a.guardar).toHaveBeenCalledWith('calcular');
+    });
+
+    it('desde una ruta calculada, «las agrego en orden» la rehace en el orden de carga', async () => {
+      const a = armado('calcular');
+      const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga' as const, version: 2 }))));
+      abrir({ planificarRuta }, { armado: a.store });
+      await userEvent.click(await screen.findByRole('button', { name: 'LAS AGREGO EN ORDEN' }));
+      expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05', undefined, 'carga');
+      expect(a.guardar).toHaveBeenCalledWith('carga');
+    });
+
+    it('si la ruta estaba acomodada a mano, pide confirmar antes de pasarla al orden de carga', async () => {
+      const planificarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga' as const, version: 2 }))));
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'manual' as const }))), planificarRuta }, { armado: armado('calcular').store });
+      await userEvent.click(await screen.findByRole('button', { name: 'LAS AGREGO EN ORDEN' }));
+      expect(planificarRuta).not.toHaveBeenCalled();
+      expect(screen.getByText(/descarta lo que acomodaste a mano/)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'NO, DEJARLA' }));
+      expect(planificarRuta).not.toHaveBeenCalled();
+      await userEvent.click(screen.getByRole('button', { name: 'LAS AGREGO EN ORDEN' }));
+      await userEvent.click(screen.getByRole('button', { name: 'SÍ, EN MI ORDEN DE CARGA' }));
+      expect(planificarRuta).toHaveBeenCalledWith('c1', '2026-10-05', undefined, 'carga');
+    });
+
+    it('las facturas que el chofer sigue cargando entran al final sin mover nada: se pide insertar', async () => {
+      const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga' as const, version: 2 }))));
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'carga' as const, nuevas: [nueva] }))), operarRuta }, { armado: armado('carga').store });
+      await waitFor(() => { expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'insertar' }); });
+    });
   });
 
   it('si la ruta estaba acomodada a mano, basta un solo pedido: el servidor ordena lo de abajo', async () => {

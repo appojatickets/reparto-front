@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { Ubicacion } from '../../../application/ports/ubicacion';
 import type { TemaStore } from '../../../application/ports/tema-store';
+import type { ArmadoStore } from '../../../application/ports/armado-store';
 import type { VistaStore } from '../../../application/ports/vista-store';
 import type { Permisos } from '../../../application/ports/permisos';
 import type { Voz } from '../../../application/ports/voz';
@@ -45,6 +46,8 @@ export type Casos = {
   readonly permisos: Permisos;
   /** Vista elegida (grande o normal), recordada en el teléfono. */
   readonly vista: VistaStore;
+  /** Cómo prefiere armar su ruta el chofer (calcularla o agregarla en orden), recordado en el teléfono. */
+  readonly armado: ArmadoStore;
   /** Colores elegidos (claro u oscuro), recordados en el teléfono. */
   readonly tema: TemaStore;
 };

@@ -20,6 +20,8 @@ export const simularApi = async (page: Page, rutas: Rutas, retrasoSaludMs = 0): 
   await page.addInitScript(() => {
     try {
       if (!localStorage.getItem('reparto.vista.v1')) localStorage.setItem('reparto.vista.v1', 'grande');
+      // Y con su forma de armar la ruta ya elegida (si no, la primera vez la app lo pregunta).
+      if (!localStorage.getItem('reparto.armado.v1')) localStorage.setItem('reparto.armado.v1', 'calcular');
     } catch { /* sin almacenamiento */ }
   });
   await page.route('http://api.test/**', async (route) => {

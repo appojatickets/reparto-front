@@ -121,6 +121,7 @@ export interface ApiClient extends SaludApi {
   guardarHorario(localId: string, dias: readonly DiaApi[]): R<readonly DiaApi[]>;
 
   verRuta(camionId: string, fecha: string): R<VistaRuta>;
-  planificarRuta(camionId: string, fecha: string, salidaMin?: number): R<VistaRuta>;
+  /** `orden: 'carga'` arma la ruta en el orden en que se cargaron las facturas (sin calcularla). */
+  planificarRuta(camionId: string, fecha: string, salidaMin?: number, orden?: 'calcular' | 'carga'): R<VistaRuta>;
   operarRuta(camionId: string, fecha: string, version: number, operacion: OperacionRuta): R<VistaRuta>;
 }

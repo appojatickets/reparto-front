@@ -110,4 +110,32 @@ test.describe('fase 4a: el chofer', () => {
     for (const b of await page.getByRole('button').all()) expect((await b.boundingBox())?.height ?? 64).toBeGreaterThanOrEqual(63);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
+
+  test('elegir cómo armar la ruta: la primera vez se pregunta, «las agrego en orden» queda marcado y todo es accesible', async ({ page }) => {
+    let pedido: unknown;
+    const parada = (n: string, pos: number) => ({ facturaId: `32${n}e4567-e89b-42d3-a456-426614174000`, localId: `42${n}e4567-e89b-42d3-a456-426614174000`, cliente: `Local ${n}`, direccion: `Calle ${n} 100`, comuna: 'San Bernardo', lat: -33.59, lng: -70.7, urgente: false, posicion: pos, llegada: 600 + pos * 20, inicioServicio: 600 + pos * 20, salida: 608 + pos * 20, espera: 0, atraso: 0, motivos: [], fijada: false });
+    const base = { camionId: CAMION.id, fecha: '2026-10-05', salidaMin: 480, horaLimiteRegresoMin: 1260, hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] };
+    const sinRuta = { ...base, planificada: false, paradas: [], nuevas: [{ facturaId: parada('1', 0).facturaId, localId: parada('1', 0).localId, cliente: 'Local 1', direccion: 'Calle 1 100', comuna: 'San Bernardo', urgente: false }] };
+    const enOrden = { ...base, planificada: true, modo: 'carga', version: 1, regreso: 800, regresoTardio: false, paradas: [parada('1', 0), parada('2', 1)], nuevas: [] };
+    let planificada = false;
+    await simularApi(page, rutas({
+      'GET /v1/rutas': () => ({ status: 200, json: planificada ? enOrden : sinRuta }),
+      'POST /v1/rutas/planificar': (req) => { pedido = req.postDataJSON(); planificada = true; return { status: 200, json: enOrden }; },
+    }));
+    await conSesionGuardada(page);
+    await page.addInitScript(() => { try { localStorage.removeItem('reparto.armado.v1'); } catch { /* sin almacenamiento */ } });
+    await page.goto('/mi-ruta');
+    const pregunta = page.getByRole('group', { name: 'Cómo armar tu ruta' });
+    await expect(pregunta.getByRole('button', { name: 'CALCULAR MI RUTA' })).toBeVisible();
+    await sinViolaciones(page);
+    await pregunta.getByRole('button', { name: 'LAS AGREGO EN ORDEN' }).click();
+    await expect(page.getByRole('listitem', { name: 'Parada 2' })).toBeVisible();
+    expect(pedido).toMatchObject({ camionId: CAMION.id, orden: 'carga' });
+    const selector = page.getByRole('group', { name: 'Cómo se arma la ruta' });
+    await expect(selector.getByRole('button', { name: 'LAS AGREGO EN ORDEN' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText('EN TU ORDEN DE CARGA')).toBeVisible();
+    await sinViolaciones(page);
+    for (const b of await page.getByRole('button').all()) expect((await b.boundingBox())?.height ?? 64).toBeGreaterThanOrEqual(63);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  });
 });

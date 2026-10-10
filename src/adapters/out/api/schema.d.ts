@@ -5656,6 +5656,333 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/planilla": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Qué lleva cada camión un día (chofer, ayudante, vendedores y comunas); hoy si no se indica */
+        get: {
+            parameters: {
+                query?: {
+                    fecha?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            readonly asignaciones: {
+                                fecha: string;
+                                camion: {
+                                    id: string;
+                                    patente: string;
+                                    alias?: string;
+                                };
+                                chofer?: {
+                                    nombre: string;
+                                    usuarioId?: string;
+                                };
+                                ayudante?: {
+                                    nombre: string;
+                                    usuarioId?: string;
+                                };
+                                readonly comunas: string[];
+                                readonly vendedores: {
+                                    id: string;
+                                    codigo: string;
+                                    nombre: string;
+                                    celular?: string;
+                                    activo: boolean;
+                                }[];
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Aplicar la planilla de la mañana: crea camiones y vendedores que falten, enlaza chofer y ayudante y, si es de hoy, deja a cada uno con su camión elegido */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        fecha: string;
+                        filas: {
+                            patente: string;
+                            chofer?: string;
+                            ayudante?: string;
+                            vendedores?: {
+                                codigo: string;
+                                nombre?: string;
+                            }[];
+                            comunas?: string[];
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            readonly filas: {
+                                patente: string;
+                                valida: boolean;
+                                readonly errores: string[];
+                                camionCreado: boolean;
+                                alias?: string;
+                                vendedoresCreados: number;
+                                chofer?: {
+                                    nombre: string;
+                                    /** @enum {string} */
+                                    estado: "enlazada" | "sin_usuario";
+                                };
+                                ayudante?: {
+                                    nombre: string;
+                                    /** @enum {string} */
+                                    estado: "enlazada" | "sin_usuario";
+                                };
+                                jornadasAbiertas: number;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/exportaciones/locales": {
         parameters: {
             query?: never;
@@ -7234,7 +7561,7 @@ export interface paths {
                             fecha: string;
                             planificada: boolean;
                             /** @enum {string} */
-                            modo?: "sugerida" | "manual";
+                            modo?: "sugerida" | "manual" | "carga";
                             version?: number;
                             salidaMin: number;
                             calculadaDesdeMin?: number;
@@ -7499,7 +7826,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Calcular la ruta sugerida desde cero (reemplaza la actual) */
+        /** Armar la ruta desde cero (reemplaza la actual): `calcular` (por defecto) la ordena el sistema; `carga` respeta el orden en que se cargaron las facturas («las agrego en orden») */
         post: {
             parameters: {
                 query?: never;
@@ -7514,6 +7841,8 @@ export interface paths {
                         camionId: string;
                         fecha: string;
                         salidaMin?: number;
+                        /** @enum {string} */
+                        orden?: "calcular" | "carga";
                     };
                 };
             };
@@ -7529,7 +7858,7 @@ export interface paths {
                             fecha: string;
                             planificada: boolean;
                             /** @enum {string} */
-                            modo?: "sugerida" | "manual";
+                            modo?: "sugerida" | "manual" | "carga";
                             version?: number;
                             salidaMin: number;
                             calculadaDesdeMin?: number;
@@ -7841,7 +8170,7 @@ export interface paths {
                             fecha: string;
                             planificada: boolean;
                             /** @enum {string} */
-                            modo?: "sugerida" | "manual";
+                            modo?: "sugerida" | "manual" | "carga";
                             version?: number;
                             salidaMin: number;
                             calculadaDesdeMin?: number;
@@ -8427,6 +8756,30 @@ export interface paths {
                                     patente: string;
                                     alias?: string;
                                 };
+                                asignacion?: {
+                                    fecha: string;
+                                    camion: {
+                                        id: string;
+                                        patente: string;
+                                        alias?: string;
+                                    };
+                                    chofer?: {
+                                        nombre: string;
+                                        usuarioId?: string;
+                                    };
+                                    ayudante?: {
+                                        nombre: string;
+                                        usuarioId?: string;
+                                    };
+                                    readonly comunas: string[];
+                                    readonly vendedores: {
+                                        id: string;
+                                        codigo: string;
+                                        nombre: string;
+                                        celular?: string;
+                                        activo: boolean;
+                                    }[];
+                                };
                             } | null;
                         };
                     };
@@ -8569,6 +8922,30 @@ export interface paths {
                                 id: string;
                                 patente: string;
                                 alias?: string;
+                            };
+                            asignacion?: {
+                                fecha: string;
+                                camion: {
+                                    id: string;
+                                    patente: string;
+                                    alias?: string;
+                                };
+                                chofer?: {
+                                    nombre: string;
+                                    usuarioId?: string;
+                                };
+                                ayudante?: {
+                                    nombre: string;
+                                    usuarioId?: string;
+                                };
+                                readonly comunas: string[];
+                                readonly vendedores: {
+                                    id: string;
+                                    codigo: string;
+                                    nombre: string;
+                                    celular?: string;
+                                    activo: boolean;
+                                }[];
                             };
                         };
                     };

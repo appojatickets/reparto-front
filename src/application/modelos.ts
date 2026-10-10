@@ -231,7 +231,8 @@ export type VistaRuta = {
   readonly camionId: string;
   readonly fecha: string;
   readonly planificada: boolean;
-  readonly modo?: 'sugerida' | 'manual';
+  /** `carga`: «las agrego en orden», la ruta es el orden en que el chofer cargó las facturas. */
+  readonly modo?: 'sugerida' | 'manual' | 'carga';
   readonly version?: number;
   readonly salidaMin: number;
   readonly calculadaDesdeMin?: number;

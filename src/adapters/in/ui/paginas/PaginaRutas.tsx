@@ -9,6 +9,7 @@ import { llegoAlDeposito } from '../../../../domain/deposito';
 import { esDeCamion, puedeEditar, puedeHacer } from '../../../../domain/rol';
 import { mismoTexto } from '../../../../domain/texto';
 import { mensajeDeError } from '../../../../application/mensajes';
+import type { Armado } from '../../../../application/ports/armado-store';
 import type { ItemRuta, OperacionRuta, ParadaDeRuta, ResumenJornada, VistaRuta } from '../../../../application/modelos';
 import { useArrastre } from '../arrastre';
 import { useCasos } from '../contexto';
@@ -188,7 +189,7 @@ const DeshacerHecha = ({ h, alCambiar }: { readonly h: { readonly facturaId: str
 const Resumen = ({ v }: { readonly v: VistaRuta }) => (
   <div className="tarjeta" aria-label="Resumen de la ruta">
     <span>Paradas: <strong>{v.paradas.length}</strong></span>
-    <Insignia>{v.modo === 'manual' ? 'ACOMODADA A MANO' : 'ORDEN SUGERIDO'}</Insignia>
+    <Insignia>{v.modo === 'manual' ? 'ACOMODADA A MANO' : v.modo === 'carga' ? 'EN TU ORDEN DE CARGA' : 'ORDEN SUGERIDO'}</Insignia>
   </div>
 );
 
@@ -259,17 +260,25 @@ const FilaDeposito = ({ v, enCamion }: { readonly v: VistaRuta; readonly enCamio
 
 /** Todo el estado de UN camión y día vive aquí: al cambiar de camión o de día se vuelve a montar y parte limpio. */
 export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; readonly fecha: string }) => {
-  const { api, ubicacion } = useCasos();
+  const { api, ubicacion, armado: armadoStore } = useCasos();
   const cargar = useCallback(() => api.verRuta(camionId, fecha), [api, camionId, fecha]);
   const { estado, recargar, refrescar } = useCarga(cargar);
   const [actualizada, setActualizada] = useState<VistaRuta | undefined>();
   const [aviso, setAviso] = useState<string | undefined>();
   const [ocupado, setOcupado] = useState(false);
   const [confirmar, setConfirmar] = useState(false);
+  /** Pidió pasar a «las agrego en orden» con una ruta que acomodó a mano: se le avisa antes de descartarla. */
+  const [confirmarCarga, setConfirmarCarga] = useState(false);
   /** Parada desplegada: sin elegir, la siguiente; `null` = todas cerradas. */
   const [abierta, setAbierta] = useState<string | null | undefined>(undefined);
   const { rol } = useUsuario();
   const enCamion = esDeCamion(rol);
+  /** Cómo prefiere armar su ruta el chofer (se recuerda en el teléfono); sin elegir, la primera vez se le pregunta. */
+  const [preferencia, setPreferencia] = useState<Armado | undefined>(() => armadoStore.cargar());
+  const elegirPreferencia = (a: Armado): void => {
+    armadoStore.guardar(a);
+    setPreferencia(a);
+  };
   /** Después de entregar o avisar: se vuelve a pedir la ruta (la parada hecha sale de la lista y las horas se corren). */
   const recargarVista = (): void => {
     setActualizada(undefined);
@@ -282,6 +291,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     setOcupado(true);
     setAviso(undefined);
     setConfirmar(false);
+    setConfirmarCarga(false);
     const r = await llamada();
     setOcupado(false);
     if (r.ok) {
@@ -296,11 +306,20 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     }
   };
 
-  const planificar = (): Promise<void> => aplicar(() => api.planificarRuta(camionId, fecha));
+  /** `carga` arma la ruta en el orden en que se cargaron las facturas; sin indicar, el chofer usa su preferencia y los demás la calculan. */
+  const planificar = (armado: Armado | undefined = enCamion ? preferencia : undefined): Promise<void> =>
+    aplicar(() => (armado === 'carga' ? api.planificarRuta(camionId, fecha, undefined, 'carga') : api.planificarRuta(camionId, fecha)));
   const operar = (operacion: OperacionRuta): void => {
     const version = vista?.version;
     if (version === undefined) return;
     void aplicar(() => api.operarRuta(camionId, fecha, version, operacion));
+  };
+  /** El chofer elige cómo armar su ruta: se recuerda y, si ya hay ruta, se rehace de esa forma. */
+  const cambiarArmado = (a: Armado): void => {
+    elegirPreferencia(a);
+    if (!vista?.planificada) return;
+    if (a === 'carga') void planificar('carga');
+    else operar({ tipo: 'ordenar' });
   };
   /** Aviso de lo último que se movió, para quien no ve la lista (lector de pantalla) y como confirmación. */
   const [anuncio, setAnuncio] = useState<string | undefined>();
@@ -394,7 +413,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
 
   /** El chofer no arma su ruta: apenas tiene facturas cargadas y sin ordenar, el sistema la calcula solo (una vez por visita). */
   const calculadaSola = useRef(false);
-  const hayQueOrdenar = enCamion && vista !== undefined && !vista.planificada && vista.nuevas.length > 0;
+  const hayQueOrdenar = enCamion && preferencia !== undefined && vista !== undefined && !vista.planificada && vista.nuevas.length > 0;
   useEffect(() => {
     if (!hayQueOrdenar || calculadaSola.current || ocupado) return;
     calculadaSola.current = true;
@@ -411,7 +430,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   useEffect(() => {
     if (nuevasSinIntegrar === '' || nuevasSinIntegrar === integrada.current || ocupado) return;
     integrada.current = nuevasSinIntegrar;
-    operar({ tipo: vista?.modo === 'manual' ? 'insertar' : 'ordenar' });
+    // En una ruta acomodada a mano o en el orden de carga, lo nuevo entra sin mover lo demás.
+    operar({ tipo: vista?.modo === 'manual' || vista?.modo === 'carga' ? 'insertar' : 'ordenar' });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- se integra una vez por cada grupo de entregas nuevas
   }, [nuevasSinIntegrar, ocupado]);
 
@@ -471,26 +491,57 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               )
             ) : enCamion ? `Calculando tu ruta con ${vista.nuevas.length} facturas…` : `Hay ${vista.nuevas.length} facturas por ordenar.`}
           </Aviso>
-          <Boton disabled={ocupado || vista.nuevas.length === 0} onClick={() => void planificar()}>{ocupado ? 'CALCULANDO…' : 'CALCULAR RUTA SUGERIDA'}</Boton>
+          {enCamion && preferencia === undefined && vista.nuevas.length > 0 ? (
+            <div className="tarjeta" role="group" aria-label="Cómo armar tu ruta">
+              <strong>¿Cómo armo tu ruta?</strong>
+              <span>Lo recuerdo para la próxima vez y lo puedes cambiar cuando quieras.</span>
+              <Boton disabled={ocupado} onClick={() => { elegirPreferencia('calcular'); void planificar('calcular'); }}>CALCULAR MI RUTA</Boton>
+              <p className="ayuda">El sistema la ordena según cercanía, horarios y prioridades.</p>
+              <Boton variante="secundario" disabled={ocupado} onClick={() => { elegirPreferencia('carga'); void planificar('carga'); }}>LAS AGREGO EN ORDEN</Boton>
+              <p className="ayuda">Si te sabes el recorrido: va en el orden en que cargues las facturas.</p>
+            </div>
+          ) : (
+            <>
+              <Boton disabled={ocupado || vista.nuevas.length === 0} onClick={() => void planificar(enCamion ? undefined : 'calcular')}>{ocupado ? 'CALCULANDO…' : 'CALCULAR RUTA SUGERIDA'}</Boton>
+              {enCamion ? null : <Boton variante="secundario" disabled={ocupado || vista.nuevas.length === 0} onClick={() => void planificar('carga')}>ARMARLA EN EL ORDEN DE CARGA</Boton>}
+            </>
+          )}
         </>
       ) : (
         <>
           <Resumen v={vista} />
           {enCamion && vista.paradas.length > 0 ? <a className="big-button big-button--secundario" href={enlaceRutaGoogleMaps(vista.paradas.map((x) => ({ direccion: x.direccion, comuna: x.comuna, lat: x.lat, lng: x.lng }))) ?? '#'} target="_blank" rel="noreferrer">LAS PRÓXIMAS {Math.min(vista.paradas.length, 9)} EN GOOGLE MAPS</a> : null}
-          {vista.paradas.length >= 2 ? (
+          {vista.paradas.length >= 2 && vista.modo !== 'carga' ? (
             <Selector etiqueta="Primera entrega (el resto se ordena desde ahí)" value="" disabled={ocupado} onChange={(e) => { elegirPrimera(e.target.value); }}>
               <option value="">Elige por cuál empiezas…</option>
               {vista.paradas.map((p) => <option key={p.facturaId} value={p.facturaId}>{`${p.posicion + 1}. ${p.cliente} · ${p.comuna}`}</option>)}
             </Selector>
           ) : null}
-          <Boton variante="secundario" disabled={ocupado || vista.paradas.length < 2} onClick={() => { operar({ tipo: 'ordenar' }); }}>ORDENAR LO QUE QUEDA</Boton>
-          {!confirmar ? (
+          <div className="tarjeta" role="group" aria-label="Cómo se arma la ruta">
+            <strong>Cómo se arma la ruta</strong>
+            <div className="fila-botones">
+              <Boton variante={vista.modo === 'carga' ? 'secundario' : 'primario'} aria-pressed={vista.modo !== 'carga'} disabled={ocupado} onClick={() => { if (vista.modo === 'carga') cambiarArmado('calcular'); else elegirPreferencia('calcular'); }}>CALCULAR MI RUTA</Boton>
+              <Boton variante={vista.modo === 'carga' ? 'primario' : 'secundario'} aria-pressed={vista.modo === 'carga'} disabled={ocupado} onClick={() => { if (vista.modo === 'carga') return; if (vista.modo === 'manual') setConfirmarCarga(true); else cambiarArmado('carga'); }}>LAS AGREGO EN ORDEN</Boton>
+            </div>
+            {vista.modo === 'carga' ? <span className="ayuda">Va en el orden en que cargaste las facturas; lo nuevo entra al final y nada se mueve solo.</span> : null}
+            {confirmarCarga ? (
+              <>
+                <Aviso tipo="error">Esto descarta lo que acomodaste a mano y deja la ruta en el orden en que cargaste las facturas.</Aviso>
+                <div className="fila-botones">
+                  <Boton variante="peligro" disabled={ocupado} onClick={() => { cambiarArmado('carga'); }}>SÍ, EN MI ORDEN DE CARGA</Boton>
+                  <Boton variante="secundario" onClick={() => { setConfirmarCarga(false); }}>NO, DEJARLA</Boton>
+                </div>
+              </>
+            ) : null}
+          </div>
+          {vista.modo !== 'carga' ? <Boton variante="secundario" disabled={ocupado || vista.paradas.length < 2} onClick={() => { elegirPreferencia('calcular'); operar({ tipo: 'ordenar' }); }}>ORDENAR LO QUE QUEDA</Boton> : null}
+          {vista.modo === 'carga' ? null : !confirmar ? (
             <Boton variante="secundario" disabled={ocupado} onClick={() => { setConfirmar(true); }}>VOLVER A CALCULAR DESDE CERO</Boton>
           ) : (
             <div className="tarjeta">
               <Aviso tipo="error">Esto descarta el orden actual{vista.modo === 'manual' ? ', incluido lo que acomodaste a mano' : ''} y calcula uno nuevo.</Aviso>
               <div className="fila-botones">
-                <Boton variante="peligro" disabled={ocupado} onClick={() => void planificar()}>SÍ, RECALCULAR</Boton>
+                <Boton variante="peligro" disabled={ocupado} onClick={() => void planificar('calcular')}>SÍ, RECALCULAR</Boton>
                 <Boton variante="secundario" onClick={() => { setConfirmar(false); }}>NO, DEJARLA</Boton>
               </div>
             </div>
