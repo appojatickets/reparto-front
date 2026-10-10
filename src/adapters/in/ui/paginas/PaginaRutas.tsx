@@ -15,6 +15,7 @@ import { useArrastre } from '../arrastre';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { AccionesParada, AtajoCerrado, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
+import { Contribuyentes } from '../componentes/Contribuyentes';
 import { FotoFachada } from '../componentes/FotoFachada';
 import { InsigniasDeVerificacion } from '../componentes/InsigniasDeVerificacion';
 import { useDiaDeReparto } from '../componentes/dia';
@@ -118,6 +119,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
         <div className="parada-detalle" id={idDetalle}>
           {!mismoTexto(p.cliente, p.direccion) ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
           <FotoFachada localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} conPin={p.lat !== undefined && p.lng !== undefined} />
+          {p.tieneFoto === true && p.lat !== undefined ? <Contribuyentes localId={p.localId} /> : null}
           {p.folio ? <span>Factura {p.folio}</span> : null}
           <Etiquetas i={p} />
           {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}

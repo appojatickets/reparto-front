@@ -2,7 +2,7 @@ import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
   AsignacionDia, CambiosFactura, FilaPlanillaEnviada, LocalDeLista, ResultadoFilaPlanilla, ResumenComuna, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
-  PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
+  Contribuyente, PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
@@ -58,6 +58,8 @@ export interface ApiClient extends SaludApi {
   quitarFotoPerfil(): R<void>;
   /** La foto de perfil de una persona de la empresa (URL firmada de pocos minutos). 404 si no tiene. */
   urlFotoUsuario(usuarioId: string): R<{ url: string; expiraEnSegundos: number }>;
+  /** Quiénes aportaron a un local con foto y pin (más de una entrega, o pin verificado). Vacío si el local aún no cumple. */
+  contribuyentesDeLocal(localId: string): R<readonly Contribuyente[]>;
 
   listarPropuestas(estado: PropuestaPin['estado']): R<readonly PropuestaPin[]>;
   resolverPropuesta(id: string, accion: 'aceptar' | 'rechazar'): R<void>;

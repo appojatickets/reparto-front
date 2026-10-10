@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ApiClient } from '../../../../application/ports/api-client';
 import { useCasos } from '../contexto';
 
-type Tamano = 'chico' | 'mediano' | 'grande';
+type Tamano = 'mini' | 'chico' | 'mediano' | 'grande';
 
 /** Las iniciales para cuando no hay foto: «Juan Pérez» → «JP», «Ana» → «A». */
 export const inicialesDe = (nombre: string): string =>

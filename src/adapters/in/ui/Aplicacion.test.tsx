@@ -237,6 +237,18 @@ describe('detalle del local', () => {
     expect(screen.getByRole('link', { name: /VER CALLE/ })).toHaveAttribute('href', expect.stringContaining('heading=120'));
   });
 
+  it('la ficha de un local con foto y pin muestra quiénes aportaron; sin foto no los pide', async () => {
+    const contribuyentesDeLocal = vi.fn(() => Promise.resolve(ok([{ usuarioId: 'u9', nombre: 'María Rojas', aportes: ['foto' as const], entregas: 0 }])));
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { contribuyentesDeLocal, obtenerLocal: () => Promise.resolve(ok({ ...local, fotoPath: 'e/l1/f.webp' })), urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 600 })) } });
+    expect(await screen.findByRole('button', { name: /Aportaron: María Rojas/ })).toBeInTheDocument();
+    expect(contribuyentesDeLocal).toHaveBeenCalledWith('l1');
+    cleanup();
+    const sinFoto = vi.fn(() => Promise.resolve(ok([])));
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { contribuyentesDeLocal: sinFoto, obtenerLocal: () => Promise.resolve(ok(local)) } });
+    await screen.findByText('Sin foto de la fachada.');
+    expect(sinFoto).not.toHaveBeenCalled();
+  });
+
   it('un local sin pin no ofrece navegación y avisa', async () => {
     const sinPin = { id: 'l1', clienteId: 'c1', razonSocial: 'X', direccion: 'Y', comuna: 'Maipú', pinEstado: 'pendiente' as const, pinVerificado: false };
     montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(sinPin)) } });
@@ -2121,6 +2133,38 @@ describe('acciones en la parada (chofer)', () => {
     expect(ubicacion.actual.mock.calls.length).toBe(lecturasAntes);
     const hechas = await screen.findByRole('region', { name: 'Hechas hoy' });
     expect(within(hechas).getByText('ENTREGADA')).toBeInTheDocument();
+  });
+
+  describe('quiénes aportaron al local (reconocimiento, discreto)', () => {
+    const gente = [
+      { usuarioId: 'u9', nombre: 'María Rojas', fotoEn: '2026-10-10T12:00:00.000Z', aportes: ['foto' as const, 'entregas' as const], entregas: 2 },
+      { usuarioId: 'u8', nombre: 'Pedro Gómez', aportes: ['pin' as const], entregas: 0 },
+      { usuarioId: 'u7', nombre: 'Luis Soto', aportes: ['entregas' as const], entregas: 1 },
+    ];
+
+    it('en la parada con foto y pin: una fila chica con quiénes aportaron que, al tocarla, detalla lo de cada uno', async () => {
+      const contribuyentesDeLocal = vi.fn(() => Promise.resolve(ok(gente)));
+      abrir({ contribuyentesDeLocal, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [paradaDe('A', 0, { tieneFoto: true })] }))), urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 300 })), urlFotoUsuario: () => Promise.resolve(ok({ url: 'https://alm.test/p.webp', expiraEnSegundos: 300 })) });
+      const fila = await screen.findByRole('button', { name: /Aportaron: María Rojas y 2 más/ });
+      expect(contribuyentesDeLocal).toHaveBeenCalledWith('lA');
+      expect(fila).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.queryByRole('list', { name: 'Quiénes aportaron a este local' })).toBeNull();
+      await userEvent.click(fila);
+      const lista = screen.getByRole('list', { name: 'Quiénes aportaron a este local' });
+      expect(within(lista).getByText('Subió la foto · 2 entregas')).toBeInTheDocument();
+      expect(within(lista).getByText('Verificó el pin')).toBeInTheDocument();
+      expect(within(lista).getByText('1 entrega')).toBeInTheDocument();
+      await userEvent.click(fila);
+      expect(screen.queryByRole('list', { name: 'Quiénes aportaron a este local' })).toBeNull();
+    });
+
+    it('si el local aún no cumple (lista vacía) o la parada no tiene foto, no se muestra nada ni se pide', async () => {
+      const contribuyentesDeLocal = vi.fn(() => Promise.resolve(ok([])));
+      abrir({ contribuyentesDeLocal, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [paradaDe('A', 0, { tieneFoto: true }), paradaDe('B', 1, { tieneFoto: false })] }))), urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 300 })) });
+      await screen.findByRole('img', { name: 'Fachada de Local A' });
+      await waitFor(() => { expect(contribuyentesDeLocal).toHaveBeenCalledTimes(1); });
+      expect(screen.queryByText(/Aportaron:/)).toBeNull();
+    });
   });
 
   it('una entrega hecha se puede deshacer (vuelve a pendiente)', async () => {

@@ -718,3 +718,55 @@ html[data-vista='normal'] .parada-num {
   flex-direction: column;
   gap: 0.25rem;
 }
+
+/* ---- Quiénes aportaron a un local: fila chica que se despliega al tocarla ---- */
+.avatar--mini {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-width: 2px;
+  font-size: 0.7rem;
+}
+.aportes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9em;
+}
+.aportes-fila {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  align-self: flex-start;
+  min-height: 4rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.aportes-caras {
+  display: inline-flex;
+}
+.aportes-caras .avatar + .avatar {
+  margin-left: -0.5rem;
+}
+.aportes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.5rem 0 0.5rem 0.75rem;
+  list-style: none;
+  border-left: 4px solid var(--fg);
+}
+.aportes-lista li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.aportes-lista li > span {
+  display: flex;
+  flex-direction: column;
+}

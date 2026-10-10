@@ -71,3 +71,30 @@ test.describe('foto de perfil', () => {
     await expect(page.locator('.avatar--grande')).toHaveText('JP');
   });
 });
+
+test.describe('quiénes aportaron al local', () => {
+  test('una fila chica que se despliega: accesible, con objetivos grandes, y el detalle muestra qué aportó cada uno', async ({ page }) => {
+    await simularApi(page, rutas({ ...CHOFER, editor: true, fotoEn: FOTO_EN }, {
+      'GET /v1/clientes/l1': () => ({ status: 200, json: { id: 'l1', clienteId: 'c1', razonSocial: 'Bazar Luz', direccion: 'Calle 1 100', comuna: 'Maipú', lat: -33.5, lng: -70.7, pinEstado: 'validado', pinVerificado: true, fotoPath: 'e1/l1/f.webp' } }),
+      'GET /v1/locales/l1': () => ({ status: 200, json: { id: 'l1', clienteId: 'c1', razonSocial: 'Bazar Luz', direccion: 'Calle 1 100', comuna: 'Maipú', lat: -33.5, lng: -70.7, pinEstado: 'validado', pinVerificado: true, fotoPath: 'e1/l1/f.webp' } }),
+      'GET /v1/locales/l1/foto-url': () => ({ status: 200, json: { url: 'https://alm.test/perfil.png', expiraEnSegundos: 300 } }),
+      'GET /v1/locales/l1/contribuyentes': () => ({ status: 200, json: { contribuyentes: [
+        { usuarioId: 'u2', nombre: 'Juan Pérez', fotoEn: FOTO_EN, aportes: ['foto', 'entregas'], entregas: 3 },
+        { usuarioId: 'u3', nombre: 'María Rojas', aportes: ['pin'], entregas: 0 },
+      ] } }),
+      'GET /v1/usuarios/u2/foto-url': () => ({ status: 200, json: { url: 'https://alm.test/perfil.png', expiraEnSegundos: 300 } }),
+    }));
+    await conAlmacen(page);
+    await conSesionGuardada(page);
+    await page.goto('/clientes/l1');
+    const fila = page.getByRole('button', { name: /Aportaron: Juan Pérez y María Rojas/ });
+    await expect(fila).toBeVisible();
+    expect((await fila.boundingBox())?.height ?? 64).toBeGreaterThanOrEqual(63);
+    await sinViolaciones(page);
+    await fila.click();
+    const lista = page.getByRole('list', { name: 'Quiénes aportaron a este local' });
+    await expect(lista.getByText('Subió la foto · 3 entregas')).toBeVisible();
+    await expect(lista.getByText('Verificó el pin')).toBeVisible();
+    await sinViolaciones(page);
+  });
+});

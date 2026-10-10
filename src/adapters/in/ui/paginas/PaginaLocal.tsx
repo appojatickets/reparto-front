@@ -2,6 +2,7 @@ import { useCallback, useState, type ChangeEvent, type SyntheticEvent } from 're
 import { useNavigate, useParams } from 'react-router';
 import { leerCoordenadas } from '../../../../domain/coordenadas';
 import { enlaceGoogleMaps, enlaceStreetView, enlaceWaze } from '../../../../domain/enlaces';
+import { Contribuyentes } from '../componentes/Contribuyentes';
 import { InsigniasDeVerificacion } from '../componentes/InsigniasDeVerificacion';
 import { ReportarFoto } from '../componentes/ReportarFoto';
 import { ReportarLocal } from '../componentes/ReportarLocal';
@@ -209,6 +210,7 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
       {local.rut ? <p>RUT {local.rut}</p> : null}
       <Insignia>{tienePin ? (local.pinRespaldo ? describirRespaldo(local.pinRespaldo).etiqueta : local.pinVerificado ? 'PIN VERIFICADO ✓' : 'PIN POR VERIFICAR') : ETIQUETA_PIN.pendiente}</Insignia>
       <InsigniasDeVerificacion pin={local.pinVerificado && tienePin} foto={local.fotoVerificada} />
+      {tienePin && local.fotoPath ? <Contribuyentes localId={local.id} /> : null}
       {tienePin ? <VerificarPin local={local} alCambiar={recargar} /> : null}
       {tienePin ? (
         <div className="fila-botones">

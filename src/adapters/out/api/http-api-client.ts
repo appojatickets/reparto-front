@@ -167,6 +167,10 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     solicitarUrlSubidaPerfil: (tipo) => ejecutar(() => client.POST('/v1/me/foto/url-subida', { body: { tipo }, signal: timeout() }), { repetible: true }),
     registrarFotoPerfil: async (path) => sinCuerpo(await ejecutar(() => client.PUT('/v1/me/foto', { body: { path }, signal: timeout() }), { repetible: true })),
     quitarFotoPerfil: async () => sinCuerpo(await ejecutar(() => client.DELETE('/v1/me/foto', { signal: timeout() }))),
+    async contribuyentesDeLocal(id) {
+      const r = await ejecutar(() => client.GET('/v1/locales/{id}/contribuyentes', { params: { path: { id } }, signal: timeout() }), { repetible: true });
+      return mapear(r, (d) => d.contribuyentes);
+    },
     urlFotoUsuario: (id) => ejecutar(() => client.GET('/v1/usuarios/{id}/foto-url', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
     urlFoto: (id) => ejecutar(() => client.GET('/v1/locales/{id}/foto-url', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
 

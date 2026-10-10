@@ -1,3 +1,4 @@
+import type { AporteAlLocal } from '../domain/aportes';
 import type { PinRespaldo } from '../domain/respaldo-pin';
 import type { Motivo } from '../domain/motivos';
 import type { Rol } from '../domain/rol';
@@ -111,6 +112,9 @@ export type ReporteDelLocal = {
 };
 export type ReportesDelLocal = { readonly total: number; readonly reportes: readonly ReporteDelLocal[] };
 export type AccionReporteLocal = 'verificar_pin' | 'corregido' | 'descartar';
+
+/** Alguien que aportó a un local con foto y pin: su nombre, su foto de perfil (si tiene) y qué aportó. */
+export type Contribuyente = { readonly usuarioId: string; readonly nombre: string; readonly fotoEn?: string; readonly aportes: readonly AporteAlLocal[]; readonly entregas: number };
 
 export type UsuarioAdmin = UsuarioSesion & { readonly activo: boolean };
 export type NuevoUsuario = { readonly nombre: string; readonly apellidoPaterno: string; readonly apellidoMaterno?: string; readonly rol: Rol; readonly pin: string };
