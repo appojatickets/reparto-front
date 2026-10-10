@@ -69,6 +69,20 @@ export const comunaDelPin = (lat: number, lng: number): { readonly comuna?: stri
   return { ...(segura ? { comuna: primera.nombre } : {}), sugerencias: [primera.nombre, segunda.nombre] };
 };
 
+/** Desde cuántos km del centro de la comuna escrita el pin se considera «lejos» (las comunas grandes tienen su centro a varios km del borde). */
+const LEJOS_DE_LA_COMUNA_KM = 8;
+
+/**
+ * Si el pin cae claramente en otra comuna que la escrita, devuelve la que le corresponde al punto. Es un aviso para que la persona revise:
+ * se compara con el centro de cada comuna, así que solo habla cuando el punto está lejos de la escrita y la otra es clara.
+ */
+export const comunaDistintaDelPin = (comuna: string, lat: number, lng: number): string | undefined => {
+  const centro = CENTROS[comuna];
+  const otra = comunaDelPin(lat, lng).comuna;
+  if (centro === undefined || otra === undefined || otra === comuna) return undefined;
+  return kmEntre([lat, lng], centro) > LEJOS_DE_LA_COMUNA_KM ? otra : undefined;
+};
+
 /**
  * La comuna dentro de la dirección que devuelve OpenStreetMap para un punto. En Chile la comuna viene como «municipality» (o «city»,
  * «town»); las demás claves son localidades o la provincia, y solo valen si coinciden con el nombre de una comuna de la Región Metropolitana.

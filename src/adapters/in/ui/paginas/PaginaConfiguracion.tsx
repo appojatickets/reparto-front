@@ -1,15 +1,16 @@
 import { useCallback, useState, type SyntheticEvent } from 'react';
 import { leerCoordenadas, textoCoordenadas } from '../../../../domain/coordenadas';
 import { mensajeDeError } from '../../../../application/mensajes';
-import type { ConfigEmpresa } from '../../../../application/modelos';
+import type { ConfigEmpresa, OrdenInicio } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
-import { Aviso, Boton, Campo, Cargando, ErrorCarga, Pagina } from '../componentes/ui';
+import { Aviso, Boton, Campo, Cargando, ErrorCarga, Pagina, Selector } from '../componentes/ui';
 
 const Formulario = ({ config }: { readonly config: ConfigEmpresa }) => {
   const { api } = useCasos();
   const [coordenadas, setCoordenadas] = useState(config.deposito ? textoCoordenadas(config.deposito) : '');
   const [nombre, setNombre] = useState(config.deposito?.nombre ?? '');
+  const [ordenInicio, setOrdenInicio] = useState<OrdenInicio>(config.ordenInicio ?? 'automatico');
   const [error, setError] = useState<string | undefined>();
   const [guardado, setGuardado] = useState(false);
   const [ocupado, setOcupado] = useState(false);
@@ -29,6 +30,7 @@ const Formulario = ({ config }: { readonly config: ConfigEmpresa }) => {
       // Las horas ya no se muestran ni se editan (las estimaciones no eran confiables): se conservan tal como estaban.
       salidaPorDefectoMin: config.salidaPorDefectoMin,
       horaLimiteRegresoMin: config.horaLimiteRegresoMin,
+      ordenInicio,
     });
     setOcupado(false);
     if (r.ok) setGuardado(true);
@@ -46,6 +48,12 @@ const Formulario = ({ config }: { readonly config: ConfigEmpresa }) => {
         autoComplete="off"
       />
       <Campo etiqueta="Nombre del depósito (opcional)" value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />
+      <Selector etiqueta="Por dónde parte la ruta" value={ordenInicio} onChange={(e) => { setOrdenInicio(e.target.value as OrdenInicio); }}>
+        <option value="automatico">Lo decide el sistema</option>
+        <option value="lejano">Por lo más lejano del depósito</option>
+        <option value="cercano">Por lo más cercano al depósito</option>
+      </Selector>
+      <p className="ayuda">Es una preferencia: un local que cierra temprano se atiende antes aunque quede cerca.</p>
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
       <Boton type="submit" disabled={ocupado}>{ocupado ? 'GUARDANDO…' : 'GUARDAR'}</Boton>
       {guardado ? <Aviso tipo="exito">Configuración guardada.</Aviso> : null}

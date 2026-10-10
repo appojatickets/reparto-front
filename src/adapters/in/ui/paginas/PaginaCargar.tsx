@@ -1,7 +1,8 @@
 import { mismoTexto } from '../../../../domain/texto';
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { Link } from 'react-router';
-import { COMUNAS_RM, separarComuna } from '../../../../domain/comunas';
+import { COMUNAS_RM, comunaDistintaDelPin, separarComuna } from '../../../../domain/comunas';
+import { leerCoordenadas } from '../../../../domain/coordenadas';
 import { horaDeMinutos, minutosDeHora } from '../../../../domain/hora';
 import { completarRut, formatearRut } from '../../../../domain/rut';
 import { mensajeDeError, mensajesDeDetalle } from '../../../../application/mensajes';
@@ -143,6 +144,9 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
   const dictarNombre = useDictado(setNombre, (m) => { setErrores([m]); });
 
   const puedeBuscar = direccion.trim() !== '' && comuna !== '';
+  /** El punto elegido en el mapa (o pegado como coordenadas): si cae en otra comuna que la escrita, se avisa para que la corrijan. */
+  const punto = elegido ?? leerCoordenadas(enlace);
+  const otraComuna = punto !== undefined && comuna !== '' ? comunaDistintaDelPin(comuna, punto.lat, punto.lng) : undefined;
 
   const buscarEnElMapa = async (): Promise<void> => {
     setBuscando(true);
@@ -237,6 +241,13 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
             <Boton variante="secundario" onClick={() => void pegar()}>PEGAR LO QUE COPIÉ</Boton>
           </>
         )}
+        {otraComuna !== undefined ? (
+          <div className="tarjeta" role="status" aria-label="La ubicación parece de otra comuna">
+            <strong>La ubicación queda en {otraComuna}, no en {comuna}.</strong>
+            <span>Revisa cuál es la comuna correcta: la ruta y los avisos usan la comuna.</span>
+            <Boton variante="secundario" onClick={() => { setComuna(otraComuna); }}>CAMBIAR A {otraComuna.toUpperCase()}</Boton>
+          </div>
+        ) : null}
       </section>
 
       <Campo etiqueta="Razón social" ayuda="Como sale en la guía. Si no la sabes, déjala vacía y se guarda con la dirección; un editor la corrige después." value={nombre} onChange={(e) => { setNombre(e.target.value); }} autoComplete="off" />

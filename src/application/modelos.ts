@@ -192,7 +192,10 @@ export type ConfigEmpresa = {
   readonly deposito?: { readonly lat: number; readonly lng: number; readonly nombre?: string };
   readonly salidaPorDefectoMin: number;
   readonly horaLimiteRegresoMin: number;
+  /** Por dónde parte la ruta (ADR 0038 del back); sin indicar, lo decide el sistema. */
+  readonly ordenInicio?: OrdenInicio;
 };
+export type OrdenInicio = 'automatico' | 'lejano' | 'cercano';
 
 export type ItemRuta = {
   readonly facturaId: string;

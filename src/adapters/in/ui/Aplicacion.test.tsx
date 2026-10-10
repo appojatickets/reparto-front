@@ -1335,7 +1335,7 @@ describe('configuración del reparto', () => {
     await userEvent.type(screen.getByLabelText('Nombre del depósito (opcional)'), 'Bodega Central');
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
     expect(await screen.findByText('Configuración guardada.')).toBeInTheDocument();
-    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5123, lng: -70.7001, nombre: 'Bodega Central' }, salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260 });
+    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5123, lng: -70.7001, nombre: 'Bodega Central' }, salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260, ordenInicio: 'automatico' });
   });
 
   it('coordenadas que no se entienden o fuera de la RM no se envían', async () => {
@@ -1355,7 +1355,19 @@ describe('configuración del reparto', () => {
     expect(screen.queryByLabelText('Avisar si el regreso pasa de las')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
     expect(await screen.findByText('Configuración guardada.')).toBeInTheDocument();
-    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5, lng: -70.7, nombre: 'Bodega' }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230 });
+    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5, lng: -70.7, nombre: 'Bodega' }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230, ordenInicio: 'automatico' });
+  });
+
+  it('por dónde parte la ruta: muestra lo guardado, deja elegir entre las tres opciones y lo manda al guardar', async () => {
+    const guardarConfig = vi.fn((c: ConfigEmpresa) => Promise.resolve(ok(c)));
+    montar({ ruta: '/admin/configuracion', sesion: ADMIN, api: { obtenerConfig: () => Promise.resolve(ok({ deposito: { lat: -33.5, lng: -70.7 }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230, ordenInicio: 'lejano' as const })), guardarConfig } });
+    const selector = await screen.findByLabelText('Por dónde parte la ruta');
+    expect(selector).toHaveValue('lejano');
+    expect(within(selector).getAllByRole('option').map((o) => o.textContent)).toEqual(['Lo decide el sistema', 'Por lo más lejano del depósito', 'Por lo más cercano al depósito']);
+    await userEvent.selectOptions(selector, 'cercano');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
+    expect(await screen.findByText('Configuración guardada.')).toBeInTheDocument();
+    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5, lng: -70.7 }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230, ordenInicio: 'cercano' });
   });
 });
 
@@ -1797,6 +1809,35 @@ describe('el chofer: camión del día y carga de entregas', () => {
     expect(crearCliente).toHaveBeenCalledWith({ razonSocial: 'Av. Colón Sur 765', direccion: 'Av. Colón Sur 765', comuna: 'San Bernardo' });
     expect(fijarPinDesdeEnlace).toHaveBeenCalledWith('l9', '-33.6012, -70.7021');
     expect(await screen.findByText('Cargado: Av. Colón Sur 765.')).toBeInTheDocument();
+  });
+
+  it('«no está»: si el lugar elegido en el mapa cae en otra comuna que la escrita, avisa y deja cambiar la comuna', async () => {
+    const buscarDireccion = vi.fn(() => Promise.resolve(ok([{ lat: -33.61, lng: -70.58, etiqueta: 'Avenida Colón 765, Puente Alto', comuna: 'Puente Alto', precision: 'exacta' as const }])));
+    montar({ ruta: '/cargar', sesion: CHOFER, casos: { buscarDireccion }, api: baseApi({ buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Av. Colón 765 Maipú');
+    await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    expect(screen.queryByLabelText('La ubicación parece de otra comuna')).toBeNull();
+    await userEvent.click(form.getByRole('button', { name: 'BUSCAR LA DIRECCIÓN EN EL MAPA' }));
+    await userEvent.click(await form.findByRole('button', { name: /Avenida Colón 765, Puente Alto/ }));
+    const aviso = within(await screen.findByLabelText('La ubicación parece de otra comuna'));
+    expect(aviso.getByText('La ubicación queda en Puente Alto, no en Maipú.')).toBeInTheDocument();
+    await userEvent.click(aviso.getByRole('button', { name: 'CAMBIAR A PUENTE ALTO' }));
+    expect(form.getByLabelText('Comuna')).toHaveValue('Puente Alto');
+    expect(screen.queryByLabelText('La ubicación parece de otra comuna')).toBeNull();
+    expect(form.getByText('Ubicación elegida')).toBeInTheDocument();
+  });
+
+  it('«no está»: si el lugar está en la comuna escrita no avisa nada', async () => {
+    const buscarDireccion = vi.fn(() => Promise.resolve(ok([{ lat: -33.6012, lng: -70.7021, etiqueta: 'Avenida Colón Sur 765, San Bernardo', comuna: 'San Bernardo', precision: 'exacta' as const }])));
+    montar({ ruta: '/cargar', sesion: CHOFER, casos: { buscarDireccion }, api: baseApi({ buscarClientes: () => Promise.resolve(ok([])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Av. Colón Sur 765 San Bernardo');
+    await userEvent.click(await screen.findByRole('button', { name: 'NO ESTÁ: BUSCAR Y REGISTRAR' }));
+    const form = within(screen.getByRole('form', { name: 'Cliente nuevo' }));
+    await userEvent.click(form.getByRole('button', { name: 'BUSCAR LA DIRECCIÓN EN EL MAPA' }));
+    await userEvent.click(await form.findByRole('button', { name: /Avenida Colón Sur 765, San Bernardo/ }));
+    expect(form.getByText('Ubicación elegida')).toBeInTheDocument();
+    expect(screen.queryByLabelText('La ubicación parece de otra comuna')).toBeNull();
   });
 
   it('«no está»: si el mapa no la halla ofrece Google Maps; el enlace pegado se manda al servidor y, si no se puede leer, igual se carga con un aviso', async () => {

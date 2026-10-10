@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMUNAS_RM, comunaDeDireccionOsm, separarComuna } from './comunas';
+import { COMUNAS_RM, comunaDeDireccionOsm, comunaDistintaDelPin, separarComuna } from './comunas';
 
 describe('COMUNAS_RM', () => {
   it('son las 52 comunas, sin repetidas y en orden alfabético para el selector', () => {
@@ -47,5 +47,26 @@ describe('comunaDeDireccionOsm', () => {
     expect(comunaDeDireccionOsm({ municipality: 'Comuna de San Bernardo' })).toBe('San Bernardo');
     expect(comunaDeDireccionOsm({ municipality: 'Quilpué', county: 'Valparaíso' })).toBeUndefined();
     expect(comunaDeDireccionOsm({})).toBeUndefined();
+  });
+});
+
+describe('comunaDistintaDelPin', () => {
+  it('avisa cuando el pin está claramente en otra comuna que la escrita', () => {
+    // El centro de Puente Alto escrito como Maipú.
+    expect(comunaDistintaDelPin('Maipú', -33.61, -70.58)).toBe('Puente Alto');
+    expect(comunaDistintaDelPin('Providencia', -33.6, -70.7)).toBe('San Bernardo');
+  });
+
+  it('si el pin está en la comuna escrita, o cerca de su centro, no dice nada', () => {
+    expect(comunaDistintaDelPin('Puente Alto', -33.61, -70.58)).toBeUndefined();
+    expect(comunaDistintaDelPin('Maipú', -33.51, -70.76)).toBeUndefined();
+  });
+
+  it('un punto entre dos comunas (sin una clara) no se discute', () => {
+    expect(comunaDistintaDelPin('Santiago', -33.475, -70.655)).toBeUndefined();
+  });
+
+  it('una comuna que no se conoce no genera aviso', () => {
+    expect(comunaDistintaDelPin('Narnia', -33.45, -70.66)).toBeUndefined();
   });
 });

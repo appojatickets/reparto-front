@@ -7245,7 +7245,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Depósito, hora de salida y hora límite de regreso */
+        /** Depósito, hora de salida, hora límite de regreso y por dónde parte la ruta */
         get: {
             parameters: {
                 query?: never;
@@ -7269,6 +7269,8 @@ export interface paths {
                             };
                             salidaPorDefectoMin: number;
                             horaLimiteRegresoMin: number;
+                            /** @enum {string} */
+                            ordenInicio?: "automatico" | "lejano" | "cercano";
                         };
                     };
                 };
@@ -7396,6 +7398,8 @@ export interface paths {
                         };
                         salidaPorDefectoMin: number;
                         horaLimiteRegresoMin: number;
+                        /** @enum {string} */
+                        ordenInicio?: "automatico" | "lejano" | "cercano";
                     };
                 };
             };
@@ -7414,6 +7418,8 @@ export interface paths {
                             };
                             salidaPorDefectoMin: number;
                             horaLimiteRegresoMin: number;
+                            /** @enum {string} */
+                            ordenInicio?: "automatico" | "lejano" | "cercano";
                         };
                     };
                 };
