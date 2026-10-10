@@ -1,7 +1,7 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  CambiosFactura, LocalDeLista, ResumenComuna, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
+  AsignacionDia, CambiosFactura, FilaPlanillaEnviada, LocalDeLista, ResultadoFilaPlanilla, ResumenComuna, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
   PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
@@ -95,6 +95,11 @@ export interface ApiClient extends SaludApi {
   listarVendedores(opciones?: { incluirInactivos?: boolean }): R<readonly Vendedor[]>;
   crearVendedor(datos: { codigo: string; nombre: string; celular?: string }): R<Vendedor>;
   actualizarVendedor(id: string, cambios: { nombre?: string; celular?: string | null; activo?: boolean }): R<Vendedor>;
+
+  /** Qué lleva cada camión un día (hoy si no se indica). */
+  obtenerPlanilla(fecha?: string): R<readonly AsignacionDia[]>;
+  /** Aplica la planilla de la mañana: crea camiones y vendedores que falten, enlaza chofer y ayudante y, si es de hoy, les deja su camión elegido. */
+  aplicarPlanilla(fecha: string, filas: readonly FilaPlanillaEnviada[]): R<readonly ResultadoFilaPlanilla[]>;
 
   listarFacturas(filtro?: FiltroFacturas): R<readonly Factura[]>;
   registrarFactura(datos: NuevaFactura): R<Factura>;

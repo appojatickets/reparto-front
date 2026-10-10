@@ -213,6 +213,24 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     crearVendedor: (datos) => ejecutar(() => client.POST('/v1/vendedores', { body: datos, signal: timeout() })),
     actualizarVendedor: (id, cambios) => ejecutar(() => client.PATCH('/v1/vendedores/{id}', { params: { path: { id } }, body: cambios, signal: timeout() })),
 
+    async obtenerPlanilla(fecha) {
+      const r = await ejecutar(() => client.GET('/v1/planilla', { params: { query: fecha !== undefined ? { fecha } : {} }, signal: timeout() }), { repetible: true });
+      return mapear(r, (d) => d.asignaciones);
+    },
+    async aplicarPlanilla(fecha, filas) {
+      const r = await ejecutar(() => client.POST('/v1/planilla', { body: {
+          fecha,
+          filas: filas.map((f) => ({
+            patente: f.patente,
+            ...(f.chofer !== undefined ? { chofer: f.chofer } : {}),
+            ...(f.ayudante !== undefined ? { ayudante: f.ayudante } : {}),
+            ...(f.vendedores ? { vendedores: f.vendedores.map((v) => ({ codigo: v.codigo, ...(v.nombre !== undefined ? { nombre: v.nombre } : {}) })) } : {}),
+            ...(f.comunas ? { comunas: [...f.comunas] } : {}),
+          })),
+        }, signal: timeout() }));
+      return mapear(r, (d) => d.filas);
+    },
+
     async listarFacturas(filtro = {}) {
       const query = {
         ...(filtro.fecha ? { fecha: filtro.fecha } : {}),

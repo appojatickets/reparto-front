@@ -291,9 +291,13 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
       setAviso({ tipo: 'error', texto: mensajeDeError(r.error) });
       return;
     }
+    // La planilla dice qué comunas hace este camión: si la dirección cae en otra, se avisa (sin impedir la carga).
+    const zona = jornada.asignacion?.comunas ?? [];
+    const comuna = r.value.local.comuna;
+    const fueraDeZona = zona.length > 0 && !zona.some((z) => mismoTexto(z, comuna));
     setAviso({
-      tipo: avisos?.pin ? 'error' : 'exito',
-      texto: `Cargado: ${c.razonSocial}.${avisos?.existente ? ' Ya estaba registrado: lo completé con lo que le faltaba.' : ''}${avisos?.pin ? ` ${avisos.pin}` : ''}`,
+      tipo: avisos?.pin || fueraDeZona ? 'error' : 'exito',
+      texto: `Cargado: ${c.razonSocial}.${avisos?.existente ? ' Ya estaba registrado: lo completé con lo que le faltaba.' : ''}${avisos?.pin ? ` ${avisos.pin}` : ''}${fueraDeZona ? ` Ojo: ${comuna} no está entre las comunas de tu camión (${zona.join(', ')}). Revisa que la entrega sea tuya.` : ''}`,
     });
     setTexto('');
     setResultados(undefined);

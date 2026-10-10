@@ -1,14 +1,13 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 import { fechaLarga } from '../../../../domain/fechas';
-import { formatearPatente } from '../../../../domain/patente';
+import { nombreDeCamion } from '../../../../domain/patente';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { Camion } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
+import { AsignacionDelDia } from '../componentes/AsignacionDelDia';
 import { Aviso, Boton, Cargando, ErrorCarga } from '../componentes/ui';
-
-const nombreCamion = (c: { patente: string; alias?: string | undefined }): string => (c.alias ? `${c.alias} · ${formatearPatente(c.patente)}` : formatearPatente(c.patente));
 
 const ElegirCamion = ({ alElegir }: { readonly alElegir: () => void }) => {
   const { api } = useCasos();
@@ -34,7 +33,7 @@ const ElegirCamion = ({ alElegir }: { readonly alElegir: () => void }) => {
       {estado.tipo === 'ok' && estado.datos.length === 0 ? <Aviso>No hay camiones cargados. Avisa en la oficina.</Aviso> : null}
       {estado.tipo === 'ok' ? (
         <ul className="menu">
-          {estado.datos.map((c) => <li key={c.id}><button type="button" className="big-button big-button--primario" disabled={ocupado} onClick={() => void elegir(c)}>{nombreCamion(c)}</button></li>)}
+          {estado.datos.map((c) => <li key={c.id}><button type="button" className="big-button big-button--primario" disabled={ocupado} onClick={() => void elegir(c)}>{nombreDeCamion(c)}</button></li>)}
         </ul>
       ) : null}
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
@@ -68,7 +67,8 @@ export const InicioChofer = () => {
     <section className="pagina" aria-label="Mi jornada">
       <div className="tarjeta">
         <span>Hoy, {fechaLarga(jornada.fecha)}</span>
-        <strong>Camión {nombreCamion(jornada.camion)}</strong>
+        <strong>Camión {nombreDeCamion(jornada.camion)}</strong>
+        {jornada.asignacion ? <AsignacionDelDia a={jornada.asignacion} conCamion={false} /> : null}
       </div>
       <ul className="menu">
         <li><Link to="/cargar">CARGAR ENTREGAS</Link></li>

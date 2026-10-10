@@ -9,6 +9,7 @@ import { InicioChofer } from './InicioChofer';
 const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: string }>> = {
   facturas: { a: '/facturas', texto: 'FACTURAS DEL DÍA' },
   rutas: { a: '/rutas', texto: 'RUTAS DEL DÍA' },
+  planilla: { a: '/planilla', texto: 'PLANILLA DEL DÍA' },
   'buscar-clientes': { a: '/clientes', texto: 'BUSCAR CLIENTE' },
   'cliente-nuevo': { a: '/clientes/nuevo', texto: 'CLIENTE NUEVO' },
   locales: { a: '/locales', texto: 'LOCALES POR COMUNA' },

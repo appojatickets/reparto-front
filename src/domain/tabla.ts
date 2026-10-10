@@ -72,7 +72,7 @@ const SINONIMOS: Readonly<Record<CampoCliente, readonly string[]>> = {
 };
 const OBLIGATORIOS: readonly CampoCliente[] = ['razonSocial', 'direccion', 'comuna'];
 
-const clave = (t: string): string =>
+export const clave = (t: string): string =>
   t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 export type MapeoClientes = {

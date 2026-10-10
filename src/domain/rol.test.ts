@@ -7,7 +7,7 @@ describe('acciones por rol (solo para mostrar el menú; la API es quien manda)',
   });
 
   it('el despachador ve clientes y pines, pero no usuarios ni importación', () => {
-    expect(accionesDe('despachador')).toEqual(['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'reportes']);
+    expect(accionesDe('despachador')).toEqual(['facturas', 'rutas', 'planilla', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'reportes']);
     expect(puedeHacer('despachador', 'usuarios')).toBe(false);
     expect(puedeHacer('despachador', 'camiones')).toBe(false);
     expect(puedeHacer('despachador', 'configuracion')).toBe(false);
@@ -20,6 +20,10 @@ describe('acciones por rol (solo para mostrar el menú; la API es quien manda)',
     expect(puedeHacer('admin', 'camiones')).toBe(true);
     expect(puedeHacer('admin', 'vendedores')).toBe(true);
     expect(puedeHacer('despachador', 'vendedores')).toBe(false);
+    expect(puedeHacer('despachador', 'planilla')).toBe(true);
+    expect(puedeHacer('admin', 'planilla')).toBe(true);
+    expect(puedeHacer('chofer', 'planilla')).toBe(false);
+    expect(puedeHacer('ayudante', 'planilla')).toBe(false);
     expect(puedeHacer('admin', 'configuracion')).toBe(true);
     expect(puedeHacer('admin', 'rutas')).toBe(true);
     expect(puedeHacer('admin', 'facturas')).toBe(true);

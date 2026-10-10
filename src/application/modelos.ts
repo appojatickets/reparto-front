@@ -257,7 +257,31 @@ export type OperacionRuta =
 
 /** Lo que quedó del día al terminar la ruta (las pendientes no se alcanzaron a entregar y quedan en su día). */
 export type ResumenJornada = { readonly fecha: string; readonly camionId: string; readonly desde: string; readonly hasta: string; readonly entregadas: number; readonly noEntregadas: number; readonly pendientes: number };
-export type Jornada = { readonly id: string; readonly fecha: string; readonly desde: string; readonly camion: CamionResumen };
+export type PersonaDeCamion = { readonly nombre: string; readonly usuarioId?: string };
+/** Lo que dice la planilla del día de un camión: quiénes van, qué comunas hace y con qué vendedores (ADR 0036 del back). */
+export type AsignacionDia = {
+  readonly fecha: string;
+  readonly camion: CamionResumen;
+  readonly chofer?: PersonaDeCamion;
+  readonly ayudante?: PersonaDeCamion;
+  readonly comunas: readonly string[];
+  readonly vendedores: readonly Vendedor[];
+};
+export type Jornada = { readonly id: string; readonly fecha: string; readonly desde: string; readonly camion: CamionResumen; readonly asignacion?: AsignacionDia };
+export type { FilaPlanillaEnviada } from '../domain/planilla';
+export type EstadoPersona = 'enlazada' | 'sin_usuario';
+/** Qué pasó con cada fila al aplicar la planilla. */
+export type ResultadoFilaPlanilla = {
+  readonly patente: string;
+  readonly valida: boolean;
+  readonly errores: readonly string[];
+  readonly camionCreado: boolean;
+  readonly alias?: string;
+  readonly vendedoresCreados: number;
+  readonly chofer?: { readonly nombre: string; readonly estado: EstadoPersona };
+  readonly ayudante?: { readonly nombre: string; readonly estado: EstadoPersona };
+  readonly jornadasAbiertas: number;
+};
 
 /** Un punto del recorrido del camión (se sigue al camión, no a la persona). */
 export type PuntoGps = { readonly lat: number; readonly lng: number; readonly precisionM?: number; readonly velocidadMs?: number; readonly tomadoEn: string };

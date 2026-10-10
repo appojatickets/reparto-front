@@ -14,6 +14,7 @@ export type Accion =
   | 'rutas'
   | 'camiones'
   | 'vendedores'
+  | 'planilla'
   | 'exportar'
   | 'fotos'
   | 'reportes'
@@ -30,8 +31,8 @@ export const esDeCamion = (rol: Rol): boolean => rol === 'chofer' || rol === 'ay
 const ACCIONES: Readonly<Record<Rol, readonly Accion[]>> = {
   chofer: ['mi-ruta', 'cargar-facturas'],
   ayudante: ['mi-ruta', 'cargar-facturas'],
-  despachador: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'reportes'],
-  admin: ['facturas', 'rutas', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'importar-clientes', 'camiones', 'vendedores', 'exportar', 'reportes', 'fotos', 'analitica', 'configuracion', 'usuarios'],
+  despachador: ['facturas', 'rutas', 'planilla', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'reportes'],
+  admin: ['facturas', 'rutas', 'planilla', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'importar-clientes', 'camiones', 'vendedores', 'exportar', 'reportes', 'fotos', 'analitica', 'configuracion', 'usuarios'],
 };
 
 /** Lo que suma el permiso de editor (lo da el admin) a quien va en el camión: buscar una dirección para corregirla, verificar pines y editar los locales por comuna. */

@@ -4,7 +4,7 @@ import { minutosEnChile } from '../../../../domain/fechas';
 import { horaDelDia } from '../../../../domain/hora';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { EventoEntrega, ParadaDeRuta, ResultadoEvento } from '../../../../application/modelos';
-import type { Result } from '../../../../domain/result';
+import { ok, type Result } from '../../../../domain/result';
 import type { ApiError } from '../../../../application/ports/api-client';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
@@ -13,10 +13,22 @@ import { PegarUbicacion } from './PegarUbicacion';
 
 type Panel = 'cerrado' | 'direccion' | 'ubicacion' | undefined;
 
-/** Un botón de WhatsApp por cada vendedor con celular (ADR 0017); sin vendedores cargados, uno solo para elegir el contacto. */
+/**
+ * Un botón de WhatsApp por cada vendedor con celular (ADR 0017); sin vendedores cargados, uno solo para elegir el contacto.
+ * Si la planilla del día dice qué vendedores atiende este camión, solo esos (ADR 0036 del back); si no, todos los activos.
+ */
 const AvisoAlVendedor = ({ mensaje }: { readonly mensaje: (nombre: string) => string }) => {
   const { api } = useCasos();
-  const cargar = useCallback(() => api.listarVendedores(), [api]);
+  const cargar = useCallback(async () => {
+    try {
+      const j = await api.miJornada();
+      const delCamion = j.ok ? j.value?.asignacion?.vendedores.filter((v) => v.activo) : undefined;
+      if (delCamion && delCamion.length > 0) return ok(delCamion);
+    } catch {
+      /* sin jornada que consultar: se ofrecen todos los vendedores */
+    }
+    return api.listarVendedores();
+  }, [api]);
   const { estado } = useCarga(cargar);
   const [nombre, setNombre] = useState('');
   const texto = mensaje(nombre);

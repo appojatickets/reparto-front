@@ -1694,6 +1694,40 @@ describe('el chofer: camión del día y carga de entregas', () => {
     expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
   });
 
+  const ASIGNACION = {
+    fecha: '2026-10-05',
+    camion: JORNADA.camion,
+    chofer: { nombre: 'Juan Pérez', usuarioId: 'u1' },
+    ayudante: { nombre: 'Pedro Gómez' },
+    comunas: ['Pudahuel', 'Lampa'],
+    vendedores: [{ id: 'v1', codigo: 'V12', nombre: 'Mario Quiroz', celular: '56912345678', activo: true }],
+  };
+
+  it('el inicio del chofer muestra lo que dice la planilla de hoy: ayudante, comunas y vendedores', async () => {
+    montar({ sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok({ ...JORNADA, asignacion: ASIGNACION })), listarCamiones: () => Promise.resolve(ok([CAMION])) } });
+    expect(await screen.findByText('Ayudante: Pedro Gómez')).toBeInTheDocument();
+    expect(screen.getByText('Comunas: Pudahuel, Lampa')).toBeInTheDocument();
+    expect(screen.getByText('Vendedores: V12 Mario Quiroz')).toBeInTheDocument();
+  });
+
+  it('cargar una entrega de una comuna que no hace el camión avisa, sin impedir la carga', async () => {
+    const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ miJornada: () => Promise.resolve(ok({ ...JORNADA, asignacion: ASIGNACION })), registrarFactura, buscarClientes: () => Promise.resolve(ok([RABET])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Rabet');
+    await userEvent.click(await screen.findByRole('button', { name: /^Minimarket Rabet.*Maipú/ }));
+    expect(registrarFactura).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText(/Ojo: Maipú no está entre las comunas de tu camión \(Pudahuel, Lampa\)/)).toBeInTheDocument();
+  });
+
+  it('si la comuna sí está entre las del camión (o la planilla no trae comunas) no avisa nada', async () => {
+    const pudahuel = { ...FACTURA, local: { ...FACTURA.local, comuna: 'Pudahuel' } };
+    montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi({ miJornada: () => Promise.resolve(ok({ ...JORNADA, asignacion: ASIGNACION })), registrarFactura: () => Promise.resolve(ok(pudahuel)), buscarClientes: () => Promise.resolve(ok([{ ...RABET, comuna: 'Pudahuel' }])) }) });
+    await userEvent.type(await screen.findByLabelText('Dirección o cliente'), 'Rabet');
+    await userEvent.click(await screen.findByRole('button', { name: /^Minimarket Rabet.*Pudahuel/ }));
+    expect(await screen.findByText('Cargado: Minimarket Rabet.')).toBeInTheDocument();
+    expect(screen.queryByText(/Ojo:/)).toBeNull();
+  });
+
   it('carga una entrega con solo el cliente, sin número de factura', async () => {
     const registrarFactura = vi.fn(() => Promise.resolve(ok(FACTURA)));
     const buscarClientes = vi.fn(() => Promise.resolve(ok([RABET])));
@@ -2067,6 +2101,21 @@ describe('acciones en la parada (chofer)', () => {
     expect(ana.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/56912345678\?text=/);
     expect(panel.queryByText(/V02/)).toBeNull();
     expect(panel.getByRole('link', { name: 'AVISAR A OTRO CONTACTO' }).getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/);
+  });
+
+  it('ESTÁ CERRADO con planilla del día: solo se ofrecen los vendedores de ese camión', async () => {
+    const listarVendedores = vi.fn(() => Promise.resolve(ok([
+      { id: 'v1', codigo: 'V01', nombre: 'Ana', celular: '56912345678', activo: true },
+      { id: 'v9', codigo: 'V09', nombre: 'Luis', celular: '56987654321', activo: true },
+    ])));
+    const delCamion = { id: 'v9', codigo: 'V09', nombre: 'Luis', celular: '56987654321', activo: true };
+    const miJornada = () => Promise.resolve(ok({ id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' }, asignacion: { fecha: '2026-10-05', camion: { id: 'c1', patente: 'AB1234' }, comunas: [], vendedores: [delCamion] } }));
+    abrir({ miJornada, listarVendedores, registrarEvento: () => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })) }, { ubicacion: gps() });
+    await userEvent.click(await screen.findByRole('button', { name: 'ESTÁ CERRADO Local A' }));
+    const panel = within(await screen.findByLabelText('Local cerrado: Local A'));
+    expect(await panel.findByRole('link', { name: 'AVISAR A V09 LUIS POR WHATSAPP' })).toBeInTheDocument();
+    expect(panel.queryByRole('link', { name: 'AVISAR A V01 ANA POR WHATSAPP' })).toBeNull();
+    expect(listarVendedores).not.toHaveBeenCalled();
   });
 
   it('cerrado → SEGUIR Y VOLVER MÁS TARDE reordena la ruta (la deja para después)', async () => {
@@ -2727,5 +2776,91 @@ describe('reportes del local y insignias de verificación', () => {
     expect(await screen.findByText('Con todo')).toBeInTheDocument();
     expect(screen.getAllByLabelText('Pin verificado')).toHaveLength(1);
     expect(screen.getAllByLabelText('Foto verificada')).toHaveLength(1);
+  });
+});
+
+describe('planilla del día', () => {
+  const TABLA = ['Chofer\tAyudante\tCamión\tVendedor\tComuna', 'Juan Pérez\tPedro Gómez\tSDTS23\tV12 Mario Quiroz - V13 Oscar Baeza\tMaipú, Pudahuel', 'Luis Rojas\t\tLZYS23\tV14\t'].join('\n');
+  const pegar = async (texto: string) => {
+    const caja = await screen.findByLabelText('Pega aquí la planilla');
+    await userEvent.click(caja);
+    await userEvent.paste(texto);
+  };
+  const resultado = (extra: object = {}) => ({ patente: 'SDTS23', valida: true, errores: [] as string[], camionCreado: false, vendedoresCreados: 0, jornadasAbiertas: 0, ...extra });
+
+  it('el menú de la oficina la ofrece y el chofer no la ve ni puede entrar', async () => {
+    montar({ ruta: '/', sesion: DESPACHADOR });
+    expect(await screen.findByRole('link', { name: 'PLANILLA DEL DÍA' })).toHaveAttribute('href', '/planilla');
+  });
+
+  it('el chofer que entra a la dirección de la planilla vuelve al inicio', async () => {
+    montar({ ruta: '/planilla', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(null)), listarCamiones: () => Promise.resolve(ok([])) } });
+    expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Pega aquí la planilla')).toBeNull();
+  });
+
+  it('al pegar muestra la vista previa de cada camión con su gente, vendedores y comunas', async () => {
+    montar({ ruta: '/planilla', sesion: DESPACHADOR });
+    await pegar(TABLA);
+    const vista = await screen.findByRole('list', { name: 'Vista previa de la planilla' });
+    expect(within(vista).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(vista).getByText('Chofer: Juan Pérez')).toBeInTheDocument();
+    expect(within(vista).getByText('Ayudante: Pedro Gómez')).toBeInTheDocument();
+    expect(within(vista).getByText('Comunas: Maipú, Pudahuel')).toBeInTheDocument();
+    expect(within(vista).getByText('Vendedores: V12 Mario Quiroz · V13 Oscar Baeza')).toBeInTheDocument();
+    expect(screen.getByText('Se van a cargar 2 camiones')).toBeInTheDocument();
+    expect(screen.getByText(/queda con su camión ya elegido/)).toBeInTheDocument();
+  });
+
+  it('aplicar manda la fecha de hoy y las filas, y muestra qué pasó con cada camión', async () => {
+    const aplicarPlanilla = vi.fn(() => Promise.resolve(ok([
+      resultado({ camionCreado: true, alias: '23', vendedoresCreados: 2, chofer: { nombre: 'Juan Pérez', estado: 'enlazada' as const }, ayudante: { nombre: 'Pedro Gómez', estado: 'sin_usuario' as const }, jornadasAbiertas: 1 }),
+      resultado({ patente: 'LZYS23', valida: false, errores: ['«LZYS23» no es una patente'] }),
+    ])));
+    montar({ ruta: '/planilla', sesion: DESPACHADOR, api: { aplicarPlanilla, obtenerPlanilla: () => Promise.resolve(ok([])) } });
+    await pegar(TABLA);
+    await userEvent.click(await screen.findByRole('button', { name: 'APLICAR LA PLANILLA' }));
+    expect(aplicarPlanilla).toHaveBeenCalledWith('2026-10-05', [
+      { patente: 'SDTS23', chofer: 'Juan Pérez', ayudante: 'Pedro Gómez', vendedores: [{ codigo: 'V12', nombre: 'Mario Quiroz' }, { codigo: 'V13', nombre: 'Oscar Baeza' }], comunas: ['Maipú', 'Pudahuel'] },
+      { patente: 'LZYS23', chofer: 'Luis Rojas', vendedores: [{ codigo: 'V14' }] },
+    ]);
+    expect(await screen.findByText('1 de 2 camiones aplicados.')).toBeInTheDocument();
+    const primera = within(screen.getByLabelText('Resultado SDTS23'));
+    expect(primera.getByText('Camión nuevo, con el nombre 23.')).toBeInTheDocument();
+    expect(primera.getByText(/2 vendedores nuevos/)).toBeInTheDocument();
+    expect(primera.getByText(/Chofer Juan Pérez: enlazado con su usuario/)).toBeInTheDocument();
+    expect(primera.getByText(/Ayudante Pedro Gómez: no tiene usuario/)).toBeInTheDocument();
+    expect(primera.getByRole('link', { name: 'USUARIOS' })).toHaveAttribute('href', '/admin/usuarios');
+    expect(primera.getByText('Ya tiene su camión elegido en la app.')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Resultado LZYS23')).getByText(/No se aplicó/)).toBeInTheDocument();
+  });
+
+  it('un camión nuevo sin nombre (otro termina igual) avisa que hay que ponerle uno', async () => {
+    const aplicarPlanilla = vi.fn(() => Promise.resolve(ok([resultado({ camionCreado: true })])));
+    montar({ ruta: '/planilla', sesion: ADMIN, api: { aplicarPlanilla, obtenerPlanilla: () => Promise.resolve(ok([])) } });
+    await pegar(TABLA);
+    await userEvent.click(await screen.findByRole('button', { name: 'APLICAR LA PLANILLA' }));
+    expect(await screen.findByText(/Dos camiones terminan igual: ponle un nombre en CAMIONES/)).toBeInTheDocument();
+  });
+
+  it('sin la columna del camión avisa y no deja aplicar; un error de la API se muestra', async () => {
+    const aplicarPlanilla = vi.fn(() => Promise.resolve(http(500, { codigo: 'ERROR_INTERNO', mensaje: 'Algo salió mal.' })));
+    montar({ ruta: '/planilla', sesion: DESPACHADOR, api: { aplicarPlanilla, obtenerPlanilla: () => Promise.resolve(ok([])) } });
+    await pegar('Chofer\tRuta\nJuan\t3');
+    expect(await screen.findByText(/Falta la columna del camión/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'APLICAR LA PLANILLA' })).toBeNull();
+    await userEvent.clear(screen.getByLabelText('Pega aquí la planilla'));
+    await pegar('Chofer\tCamión\nJuan\tABCD12');
+    await userEvent.click(await screen.findByRole('button', { name: 'APLICAR LA PLANILLA' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Algo salió mal/);
+  });
+
+  it('muestra lo que ya está cargado para el día', async () => {
+    const obtenerPlanilla = vi.fn(() => Promise.resolve(ok([{ fecha: '2026-10-05', camion: { id: 'c1', patente: 'SDTS23', alias: '23' }, chofer: { nombre: 'Juan Pérez' }, comunas: ['Maipú'], vendedores: [] }])));
+    montar({ ruta: '/planilla', sesion: DESPACHADOR, api: { obtenerPlanilla } });
+    const lista = await screen.findByRole('list', { name: 'Planilla cargada' });
+    expect(within(lista).getByText('23 · SDTS·23')).toBeInTheDocument();
+    expect(within(lista).getByText('Chofer: Juan Pérez')).toBeInTheDocument();
+    expect(obtenerPlanilla).toHaveBeenCalledWith('2026-10-05');
   });
 });
