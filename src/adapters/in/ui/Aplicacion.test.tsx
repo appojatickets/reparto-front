@@ -2810,9 +2810,9 @@ describe('reportes del local y insignias de verificación', () => {
     await userEvent.click(screen.getByRole('button', { name: 'YA CORREGÍ EL NOMBRE DE Local n' }));
     expect(resolverReporteLocal).toHaveBeenCalledWith('n', 'corregido');
     await waitFor(() => { expect(screen.queryByText('REPORTE DE NOMBRE')).toBeNull(); });
-    await userEvent.click(screen.getByRole('button', { name: 'EL PIN DE Local u ESTÁ BIEN' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'EL PIN DE Local u ESTÁ BIEN' }));
     expect(resolverReporteLocal).toHaveBeenCalledWith('u', 'verificar_pin');
-    await userEvent.click(screen.getByRole('button', { name: 'LA FOTO DE Local f ESTÁ BIEN' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'LA FOTO DE Local f ESTÁ BIEN' }));
     expect(resolverReporteFoto).toHaveBeenCalledWith('f', 'descartar');
   });
 
