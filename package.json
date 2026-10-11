@@ -14,11 +14,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "secretos": "node scripts/revisar-secretos.mjs",
     "arch": "depcruise src --config .dependency-cruiser.cjs",
     "api:generate": "openapi-typescript openapi/openapi.json -o src/adapters/out/api/schema.d.ts",
     "api:check": "npm run api:generate && git diff --exit-code src/adapters/out/api/schema.d.ts",
     "e2e": "playwright test",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run arch"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run arch && npm run secretos"
   },
   "dependencies": {
     "openapi-fetch": "^0.17.0",

@@ -6,8 +6,8 @@ import { normalizar } from './texto';
 /**
  * Una lista de direcciones, cada una con su enlace de Google Maps (el que da «Compartir» o la búsqueda de la dirección):
  *
- *   Avenida Portales 4180, San Bernardo
- *   https://maps.app.goo.gl/Unz8sebYG5ooFVh66
+ *   Avenida Central 1500, San Bernardo
+ *   https://maps.app.goo.gl/Abc123xyz9
  *
  * Sirve para cargar cientos de clientes de una vez. El enlace corto trae el lugar exacto (el servidor lo lee y fija el pin);
  * el enlace de búsqueda solo repite la dirección, así que ese pin lo busca el sistema por la dirección.
@@ -53,7 +53,7 @@ export const tipoDeEnlace = (texto: string): TipoEnlace | undefined => {
   return u.pathname.startsWith('/maps/search') && u.searchParams.has('query') ? 'busqueda' : 'otro';
 };
 
-/** La dirección que lleva escrita un enlace de búsqueda (query=Los+Suspiros+16463+San+Bernardo%2C+Chile). */
+/** La dirección que lleva escrita un enlace de búsqueda (query=Los+Aromos+1200+San+Bernardo%2C+Chile). */
 const direccionDeBusqueda = (enlace: string): string | undefined => urlDe(enlace)?.searchParams.get('query') ?? undefined;
 
 const limpiarDireccion = (t: string): string => t.replace(/[,;\s]+Chile\s*$/iu, '').replace(/\s+/g, ' ').replace(/^[\s,;-]+|[\s,;-]+$/gu, '').trim();

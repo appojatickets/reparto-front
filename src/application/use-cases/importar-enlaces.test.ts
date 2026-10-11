@@ -27,7 +27,7 @@ describe('importar una lista de direcciones con enlace', () => {
   it('los enlaces de búsqueda y las direcciones sin enlace no leen pin: quedan para que el sistema las busque', async () => {
     const crearCliente = vi.fn(() => Promise.resolve(ok({ clienteId: 'c', localId: 'l', existente: false })));
     const fijarPinDesdeEnlace = vi.fn();
-    const texto = 'Los Suspiros 16463 San Bernardo\nhttps://www.google.com/maps/search/?api=1&query=Los+Suspiros+16463+San+Bernardo%2C+Chile\n\nFreire 917 San Bernardo';
+    const texto = 'Los Aromos 1200 San Bernardo\nhttps://www.google.com/maps/search/?api=1&query=Los+Aromos+1200+San+Bernardo%2C+Chile\n\nFreire 917 San Bernardo';
     const r = await crearImportarEnlaces({ api: fakeApi({ crearCliente, fijarPinDesdeEnlace }) })(analizarListaEnlaces(texto).entradas);
     expect(fijarPinDesdeEnlace).not.toHaveBeenCalled();
     expect(r).toMatchObject({ creados: 2, porBuscar: 2, pinesFijados: 0 });

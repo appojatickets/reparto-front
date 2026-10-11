@@ -453,7 +453,7 @@ describe('cliente nuevo', () => {
 });
 
 describe('importar una lista de direcciones con enlace de Google Maps', () => {
-  const lista = 'Avenida Portales 4180, San Bernardo\n\nhttps://maps.app.goo.gl/Unz8sebYG5ooFVh66\n\nLos Suspiros 16463 San Bernardo\nhttps://www.google.com/maps/search/?api=1&query=Los+Suspiros+16463+San+Bernardo%2C+Chile\n\nCalle Sin Comuna 12\nhttps://maps.app.goo.gl/abc';
+  const lista = 'Avenida Central 1500, San Bernardo\n\nhttps://maps.app.goo.gl/Abc123xyz9\n\nLos Aromos 1200 San Bernardo\nhttps://www.google.com/maps/search/?api=1&query=Los+Aromos+1200+San+Bernardo%2C+Chile\n\nCalle Sin Comuna 12\nhttps://maps.app.goo.gl/abc';
 
   it('se reconoce (ya no pide columnas), cuenta lo que hay y bloquea nada si hay algo listo', async () => {
     montar({ ruta: '/admin/importar', sesion: ADMIN });
@@ -478,19 +478,19 @@ describe('importar una lista de direcciones con enlace de Google Maps', () => {
     expect(resultado).toHaveTextContent('por buscar por dirección: 1');
     expect(within(resultado).getByText(/BUSCAR LOS PINES POR DIRECCIÓN/)).toBeInTheDocument();
     const entradas = (importarEnlaces.mock.calls[0] as unknown as [readonly { estado: string; direccion?: string }[]])[0];
-    expect(entradas.filter((e) => e.estado === 'lista').map((e) => e.direccion)).toEqual(['Avenida Portales 4180', 'Los Suspiros 16463']);
+    expect(entradas.filter((e) => e.estado === 'lista').map((e) => e.direccion)).toEqual(['Avenida Central 1500', 'Los Aromos 1200']);
   });
 
   it('si algunos no se pudieron cargar o su enlace no se leyó, lo dice con la dirección', async () => {
-    const importarEnlaces = vi.fn(() => Promise.resolve({ total: 2, creados: 1, yaExistian: 0, pinesFijados: 0, pinesPropuestos: 0, porBuscar: 0, pinesNoLeidos: [{ numero: 1, direccion: 'Avenida Portales 4180', mensaje: 'x' }], fallos: [{ numero: 2, direccion: 'Los Suspiros 16463', mensaje: 'Sin conexión. Revisa tu señal e intenta de nuevo.' }] }));
+    const importarEnlaces = vi.fn(() => Promise.resolve({ total: 2, creados: 1, yaExistian: 0, pinesFijados: 0, pinesPropuestos: 0, porBuscar: 0, pinesNoLeidos: [{ numero: 1, direccion: 'Avenida Central 1500', mensaje: 'x' }], fallos: [{ numero: 2, direccion: 'Los Aromos 1200', mensaje: 'Sin conexión. Revisa tu señal e intenta de nuevo.' }] }));
     montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarEnlaces } });
     await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
     await userEvent.paste(lista);
     await userEvent.click(await screen.findByRole('button', { name: 'IMPORTAR 2 DIRECCIONES' }));
     expect(await screen.findByText(/No se pudo leer el enlace de 1/)).toBeInTheDocument();
-    expect(screen.getByText(/#1 Avenida Portales 4180/)).toBeInTheDocument();
+    expect(screen.getByText(/#1 Avenida Central 1500/)).toBeInTheDocument();
     expect(screen.getByText(/No se pudieron cargar 1\. Vuelve a tocar IMPORTAR/)).toBeInTheDocument();
-    expect(screen.getByText(/#2 Los Suspiros 16463: Sin conexión/)).toBeInTheDocument();
+    expect(screen.getByText(/#2 Los Aromos 1200: Sin conexión/)).toBeInTheDocument();
   });
 });
 
@@ -711,12 +711,12 @@ describe('importar clientes', () => {
     const importarClientesEnLotes = vi.fn(() => Promise.resolve(ok({ totalFilas: 2, validas: 2, errores: [], resumen: { clientesCreados: 2, clientesActualizados: 0, localesCreados: 2, localesActualizados: 0 } })));
     montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes } });
     await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
-    await userEvent.paste('RUT,razón social,giro,dirección,comuna,latitud,longitud\n,Kiosko Sol,,Calle 1 100,Maipú,,\n,Ventas de Alimentos Dafna,,,,-33.797267,-70.776552');
+    await userEvent.paste('RUT,razón social,giro,dirección,comuna,latitud,longitud\n,Kiosko Sol,,Calle 1 100,Maipú,,\n,Ventas de Alimentos Sol,,,,-33.797267,-70.776552');
     expect(await screen.findByText(/1 filas solo traen el pin/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'IMPORTAR' }));
     await waitFor(() => { expect(importarClientesEnLotes).toHaveBeenCalledTimes(1); });
     const enviadas = (importarClientesEnLotes.mock.calls[0] as unknown as [readonly Record<string, string>[]])[0];
-    expect(enviadas[1]).toMatchObject({ razonSocial: 'Ventas de Alimentos Dafna', direccion: 'Ubicación en el mapa (-33.797267, -70.776552)', comuna: 'Paine', lat: '-33.797267', lng: '-70.776552' });
+    expect(enviadas[1]).toMatchObject({ razonSocial: 'Ventas de Alimentos Sol', direccion: 'Ubicación en el mapa (-33.797267, -70.776552)', comuna: 'Paine', lat: '-33.797267', lng: '-70.776552' });
   });
 
   it('reconoce las columnas, muestra la vista previa y bloquea si faltan obligatorias', async () => {
@@ -755,9 +755,9 @@ describe('importar clientes', () => {
     montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes } });
     await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
     await userEvent.paste([
-      'Pin colocado', '-33.606873,-70.917985', 'rosa gonzalez osses', 'camino mallarauco 16', '', '',
-      'Pin colocado', 'Cerca de Av. Hernán Prieto, Pirque, Región Metropolitana', 'olga aguilera toledo', 'avenida concha y toro 4089', '', '',
-      'Pin colocado', 'Cerca de Paine, Región Metropolitana', 'Gisela Carrasco',
+      'Pin colocado', '-33.606873,-70.917985', 'luisa herrera vidal', 'camino mallarauco 16', '', '',
+      'Pin colocado', 'Cerca de Av. Hernán Prieto, Pirque, Región Metropolitana', 'carla mendoza parra', 'avenida concha y toro 4089', '', '',
+      'Pin colocado', 'Cerca de Paine, Región Metropolitana', 'Marta Riquelme',
     ].join('\n'));
     const panel = await screen.findByRole('region', { name: 'Lista de Google Maps' });
     expect(within(panel).getByText(/3 lugares leídos. Listos: 1 · solo con una referencia «Cerca de…»: 0 · para revisar: 2/)).toBeInTheDocument();
@@ -769,15 +769,15 @@ describe('importar clientes', () => {
     await userEvent.click(screen.getByRole('button', { name: 'IMPORTAR 2 CLIENTES' }));
     await screen.findByRole('region', { name: 'Resultado de la importación' });
     expect(importarClientesEnLotes.mock.calls[0]?.[0]).toEqual([
-      { razonSocial: 'Rosa Gonzalez Osses', direccion: 'Camino Mallarauco 16', comuna: 'Melipilla', lat: '-33.606873', lng: '-70.917985' },
-      { razonSocial: 'Olga Aguilera Toledo', direccion: 'Avenida Concha y Toro 4089', comuna: 'Pirque', nota: 'Cerca de Av. Hernán Prieto' },
+      { razonSocial: 'Luisa Herrera Vidal', direccion: 'Camino Mallarauco 16', comuna: 'Melipilla', lat: '-33.606873', lng: '-70.917985' },
+      { razonSocial: 'Carla Mendoza Parra', direccion: 'Avenida Concha y Toro 4089', comuna: 'Pirque', nota: 'Cerca de Av. Hernán Prieto' },
     ]);
   });
 
   it('lista de Google Maps: un pin entre dos comunas ofrece las dos con un toque y un botón para aceptar la más cercana en todos', async () => {
     montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes: vi.fn() } });
     await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
-    await userEvent.paste(['Pin colocado', '-33.606873,-70.917985', 'rosa gonzalez osses', '', '', 'Pin colocado', '-33.606873,-70.917985', 'juan perez soto'].join('\n'));
+    await userEvent.paste(['Pin colocado', '-33.606873,-70.917985', 'luisa herrera vidal', '', '', 'Pin colocado', '-33.606873,-70.917985', 'juan perez soto'].join('\n'));
     const aceptar = await screen.findByRole('button', { name: 'ACEPTAR LA COMUNA MÁS CERCANA EN 2' });
     expect(screen.getAllByText(/el pin está entre Peñaflor y Talagante/)).toHaveLength(2);
     await userEvent.click(screen.getByRole('button', { name: 'USAR Talagante en #1' }));
@@ -791,7 +791,7 @@ describe('importar clientes', () => {
     const completarComunas = vi.fn(() => Promise.resolve({ comunas: { 1: 'Melipilla' }, sinRespuesta: 0, detenido: false }));
     montar({ ruta: '/admin/importar', sesion: ADMIN, casos: { importarClientesEnLotes: vi.fn(), completarComunas } });
     await userEvent.click(await screen.findByLabelText('O pega aquí la planilla'));
-    await userEvent.paste(['Pin colocado', '-33.606873,-70.917985', 'rosa gonzalez osses', '', '', 'Eliodoro Yañez 1909', '8082075 San Bernardo', 'Región Metropolitana'].join('\n'));
+    await userEvent.paste(['Pin colocado', '-33.606873,-70.917985', 'luisa herrera vidal', '', '', 'Ernesto Vidal 1909', '8082075 San Bernardo', 'Región Metropolitana'].join('\n'));
     expect(await screen.findByText(/Solo se envían las coordenadas, nunca nombres ni direcciones/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'BUSCAR LA COMUNA DE 1 PINES (OPENSTREETMAP)' }));
     expect(completarComunas).toHaveBeenCalledWith([{ numero: 1, lat: -33.606873, lng: -70.917985 }], expect.any(Function));
