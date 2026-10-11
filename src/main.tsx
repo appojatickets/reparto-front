@@ -24,6 +24,7 @@ import { crearDescargaNavegador } from './adapters/out/descarga/descarga-navegad
 import { crearExportacionStore } from './adapters/out/exportacion/local-storage-exportacion';
 import { crearTemaStore } from './adapters/out/tema/local-storage-tema';
 import { crearArmadoStore } from './adapters/out/armado/local-storage-armado';
+import { crearHorasStore } from './adapters/out/horas/local-storage-horas';
 import { crearVistaStore } from './adapters/out/vista/local-storage-vista';
 import { crearVozWeb } from './adapters/out/voz/voz-web';
 import { ProveedorCasos, type Casos } from './adapters/in/ui/contexto';
@@ -65,6 +66,7 @@ const casos: Casos = {
   permisos: crearPermisosWeb(),
   vista: crearVistaStore(),
   armado: crearArmadoStore(),
+  horas: crearHorasStore(),
   tema: crearTemaStore(),
 };
 const deps = { api, timer: browserTimer, wakingAfterMs: 3000 };

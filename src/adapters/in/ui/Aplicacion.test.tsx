@@ -37,6 +37,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
     voz: { disponible: false, escuchar: () => ({ detener: () => undefined }) },
     vista: { cargar: () => 'grande' as const, guardar: () => undefined },
     armado: { cargar: () => 'calcular' as const, guardar: () => undefined },
+    horas: { cargar: () => false, guardar: () => undefined },
     tema: { cargar: () => 'claro' as const, guardar: () => undefined },
     ubicacion: { disponible: false, actual: () => Promise.resolve(err('NO_DISPONIBLE' as const)) },
     permisos: { estado: () => Promise.resolve({ ubicacion: 'concedido' as const, microfono: 'concedido' as const }), pedir: () => Promise.resolve({ ubicacion: 'concedido' as const, microfono: 'concedido' as const }) },
@@ -2129,6 +2130,44 @@ describe('acciones en la parada (chofer)', () => {
     expect(await within(fila).findByText(/Según su horario cerró a las 10:00.*Sigue en tu ruta, al final: si está abierto, entrégalo igual\./)).toBeInTheDocument();
   });
 
+  describe('horas estimadas de llegada: se ven solo si se piden', () => {
+    const horas = (inicial = false) => {
+      const guardar = vi.fn();
+      return { guardar, store: { cargar: () => inicial, guardar } };
+    };
+
+    it('por defecto no se ve ninguna hora; VER HORAS ESTIMADAS las muestra en cada parada y en Ibiza, y se recuerda', async () => {
+      const h = horas();
+      // la parada A llega a las 600 + 0 min = 10:00 y la B a 10:20; el regreso es a las 11:40 (700)
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: { lat: -33.6, lng: -70.55, nombre: 'Ibiza' }, regreso: 700 }))) }, { horas: h.store });
+      const filaA = await screen.findByRole('listitem', { name: 'Parada 1' });
+      expect(within(filaA).queryByText(/~\d\d:\d\d/)).toBeNull();
+      expect(within(await screen.findByLabelText('Volver a la empresa')).queryByText(/Llegada aproximada/)).toBeNull();
+      await userEvent.click(screen.getByRole('button', { name: 'VER HORAS ESTIMADAS' }));
+      expect(h.guardar).toHaveBeenCalledWith(true);
+      expect(within(filaA).getByText('~10:00')).toBeInTheDocument();
+      expect(within(screen.getByRole('listitem', { name: 'Parada 2' })).getByText('~10:20')).toBeInTheDocument();
+      expect(within(screen.getByLabelText('Volver a la empresa')).getByText('Llegada aproximada 11:40')).toBeInTheDocument();
+      const ocultar = screen.getByRole('button', { name: 'OCULTAR HORAS ESTIMADAS' });
+      expect(ocultar).toHaveAttribute('aria-pressed', 'true');
+      await userEvent.click(ocultar);
+      expect(h.guardar).toHaveBeenLastCalledWith(false);
+      expect(within(filaA).queryByText(/~\d\d:\d\d/)).toBeNull();
+      expect(within(screen.getByLabelText('Volver a la empresa')).queryByText(/Llegada aproximada/)).toBeNull();
+    });
+
+    it('si ya estaba encendido en el teléfono, las horas se ven desde el principio', async () => {
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase())) }, { horas: horas(true).store });
+      expect(within(await screen.findByRole('listitem', { name: 'Parada 1' })).getByText('~10:00')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'OCULTAR HORAS ESTIMADAS' })).toBeInTheDocument();
+    });
+
+    it('la hora se redondea a los 5 minutos y nunca lleva decimales', async () => {
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [paradaDe('A', 0, { llegada: 607.7747575 })] }))) }, { horas: horas(true).store });
+      expect(within(await screen.findByRole('listitem', { name: 'Parada 1' })).getByText('~10:10')).toBeInTheDocument();
+    });
+  });
+
   it('ENTREGADO, SIN FIJAR EL PIN: la entrega queda hecha sin leer el GPS ni mandar posición, y la parada sale de la lista', async () => {
     const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'entregada' as const, pinFijado: false })));
     const verRuta = vi.fn()
@@ -2327,6 +2366,9 @@ describe('acciones en la parada (chofer)', () => {
       abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: DEPOSITO, regreso: 700.4 }))) });
       const fin = await screen.findByLabelText('Volver a la empresa');
       expect(within(fin).getByText('VOLVER A IBIZA')).toBeInTheDocument();
+      // las horas están apagadas hasta que se pidan con VER HORAS ESTIMADAS
+      expect(within(fin).queryByText(/Llegada aproximada/)).toBeNull();
+      await userEvent.click(screen.getByRole('button', { name: 'VER HORAS ESTIMADAS' }));
       expect(within(fin).getByText('Llegada aproximada 11:40')).toBeInTheDocument();
       expect(fin).not.toHaveTextContent(/Última parada|\./);
       expect(within(fin).queryByRole('link')).toBeNull();
