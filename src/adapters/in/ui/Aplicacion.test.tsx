@@ -2119,6 +2119,16 @@ describe('acciones en la parada (chofer)', () => {
     expect(verRuta).toHaveBeenCalledTimes(2);
   });
 
+  it('una parada que según su horario ya cerró sigue en la ruta, al final, marcada como posiblemente cerrada y con su explicación', async () => {
+    const enRiesgo = [{ ...paradaDe('B', 1), cierre: 600, conflictos: ['Según su horario cerró a las 10:00 y ya no se alcanza a llegar a tiempo.'], sugerencias: [] }];
+    abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ enRiesgo }))) });
+    const fila = await screen.findByRole('listitem', { name: 'Parada 2' });
+    expect(within(fila).getByText('POSIBLEMENTE CERRADO')).toBeInTheDocument();
+    expect(within(await screen.findByRole('listitem', { name: 'Parada 1' })).queryByText('POSIBLEMENTE CERRADO')).toBeNull();
+    await userEvent.click(fila.querySelector('.parada-fila') as HTMLElement);
+    expect(await within(fila).findByText(/Según su horario cerró a las 10:00.*Sigue en tu ruta, al final: si está abierto, entrégalo igual\./)).toBeInTheDocument();
+  });
+
   it('ENTREGADO, SIN FIJAR EL PIN: la entrega queda hecha sin leer el GPS ni mandar posición, y la parada sale de la lista', async () => {
     const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'entregada' as const, pinFijado: false })));
     const verRuta = vi.fn()

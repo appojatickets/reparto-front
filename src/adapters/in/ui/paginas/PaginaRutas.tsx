@@ -68,7 +68,9 @@ const AvisoAproximadas = ({ paradas }: { readonly paradas: readonly ParadaDeRuta
  * Una fila de la lista de paradas: número, nombre y comuna (y a qué hora llega). Al tocarla se despliega con el resto de los datos y las
  * acciones; así el chofer ve toda su ruta de un vistazo y solo abre la parada que le toca.
  */
-const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, alFijarPin, abierta, alAbrir, esSiguiente }: {
+const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, alFijarPin, abierta, alAbrir, esSiguiente, horario }: {
+  /** Si según su horario ya cerró (o no atiende hoy), lo que dice el sistema; la parada sigue en la ruta, al final. */
+  readonly horario?: string | undefined;
   readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void; readonly enCamion: boolean;
   /** Deja esta parada en la posición indicada (lo mismo que arrastrarla). */
   readonly mover: (posicion: number) => void;
@@ -91,6 +93,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
           {p.ubicacionAproximada ? <span className="parada-marca parada-marca--aproximada">SIN UBICACIÓN PRECISA</span> : null}
+          {horario !== undefined ? <span className="parada-marca">POSIBLEMENTE CERRADO</span> : null}
           <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} />
         </span>
       </button>
@@ -123,6 +126,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           {p.folio ? <span>Factura {p.folio}</span> : null}
           <Etiquetas i={p} />
           {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
+          {horario !== undefined ? <span className="ayuda">{horario} Sigue en tu ruta, al final: si está abierto, entrégalo igual.</span> : null}
           {p.ubicacionAproximada ? <AvisoUbicacion p={p} puedeAbrirFicha={puedeHacer(usuario.rol, 'buscar-clientes', usuario.editor)} /> : null}
           {p.nota ? <span>Nota: {p.nota}</span> : null}
           {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
@@ -281,6 +285,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   };
 
   const vista = actualizada ?? (estado.tipo === 'ok' ? estado.datos : undefined);
+  const cierranPorHorario = new Map((vista?.enRiesgo ?? []).flatMap((r) => (r.conflictos[0]?.startsWith('Según su horario') ? [[r.facturaId, r.conflictos[0]] as const] : [])));
 
   const aplicar = async (llamada: () => ReturnType<typeof api.planificarRuta>, alFallar?: () => void): Promise<void> => {
     setOcupado(true);
@@ -565,6 +570,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           <AvisoAproximadas paradas={vista.paradas} />
           <p role="status" className="ayuda">Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar.</p>
           {anuncio ? <p role="status" className="ayuda">{anuncio}</p> : null}
+          {/* El horario es una estimación: lo que según él ya cerró no sale de la ruta, queda al final y se avisa. */}
           <ol ref={lista} className={`paradas${arrastre.arrastrando ? ' paradas--arrastrando' : ''}`} aria-label="Paradas en orden">
             {vista.paradas.map((p, i) => (
               <FilaParada
@@ -580,6 +586,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
                 alCambiar={recargarVista}
                 alFijarPin={(cliente) => { setAnuncio(`La ubicación de ${cliente} quedó guardada con tu GPS.`); }}
                 esSiguiente={i === 0}
+                horario={cierranPorHorario.get(p.facturaId)}
                 abierta={(abierta ?? vista.paradas[0]?.facturaId) === p.facturaId}
                 alAbrir={() => { setAbierta((actual) => ((actual ?? vista.paradas[0]?.facturaId) === p.facturaId ? null : p.facturaId)); }}
               />
