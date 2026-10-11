@@ -770,3 +770,8 @@ html[data-vista='normal'] .parada-num {
   display: flex;
   flex-direction: column;
 }
+
+/* El mensaje de WhatsApp puede traer un enlace largo: se parte para no ensanchar la pantalla. */
+.mensaje-previo {
+  overflow-wrap: anywhere;
+}

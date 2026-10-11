@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { enlaceNavegar, enlaceWhatsApp, mensajeDireccionNoEncontrada, mensajeLocalCerrado } from '../../../../domain/enlaces';
 import { minutosEnChile } from '../../../../domain/fechas';
 import { horaDelDia } from '../../../../domain/hora';
+import { mismoTexto } from '../../../../domain/texto';
 import { mensajeDeError } from '../../../../application/mensajes';
 import type { EventoEntrega, ParadaDeRuta, ResultadoEvento } from '../../../../application/modelos';
 import { ok, type Result } from '../../../../domain/result';
@@ -13,11 +14,15 @@ import { PegarUbicacion } from './PegarUbicacion';
 
 type Panel = 'cerrado' | 'direccion' | 'ubicacion' | undefined;
 
+/** La razón social como sale en la guía: la que se cargó con la factura (si solo hay una dirección en su lugar, queda vacía para que el chofer la anote). */
+const razonSocialCargada = (p: Pick<ParadaDeRuta, 'cliente' | 'direccion'>): string => (mismoTexto(p.cliente, p.direccion) ? '' : p.cliente);
+
 /**
- * Un botón de WhatsApp por cada vendedor con celular (ADR 0017); sin vendedores cargados, uno solo para elegir el contacto.
+ * El aviso al vendedor de un local cerrado: se ve la dirección de la factura, el chofer anota (o confirma) la razón social y debajo está el mensaje
+ * tal como se va a enviar. Un botón de WhatsApp por cada vendedor con celular (ADR 0017); sin vendedores cargados, uno solo para elegir el contacto.
  * Si la planilla del día dice qué vendedores atiende este camión, solo esos (ADR 0036 del back); si no, todos los activos.
  */
-const AvisoAlVendedor = ({ mensaje }: { readonly mensaje: (nombre: string) => string }) => {
+const AvisoAlVendedor = ({ p, hora }: { readonly p: ParadaDeRuta; readonly hora: () => string }) => {
   const { api } = useCasos();
   const cargar = useCallback(async () => {
     try {
@@ -30,17 +35,24 @@ const AvisoAlVendedor = ({ mensaje }: { readonly mensaje: (nombre: string) => st
     return api.listarVendedores();
   }, [api]);
   const { estado } = useCarga(cargar);
-  const [nombre, setNombre] = useState('');
-  const texto = mensaje(nombre);
+  const [nombre, setNombre] = useState(() => razonSocialCargada(p));
+  const texto = mensajeLocalCerrado({ direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng, nombre }, hora());
   const conCelular = estado.tipo === 'ok' ? estado.datos.filter((v) => v.celular !== undefined) : [];
   const campo = (
-    <Campo
-      etiqueta="Nombre que sale en la guía"
-      ayuda="Escríbelo o dictalo como está en la guía: así el vendedor sabe de qué cliente hablas. Si lo dejas vacío, el mensaje lleva solo la dirección."
-      value={nombre}
-      onChange={(e) => { setNombre(e.target.value); }}
-      autoComplete="off"
-    />
+    <>
+      <div className="tarjeta" aria-label="Dirección de la factura">
+        <span>Dirección de la factura</span>
+        <strong>{p.direccion}, {p.comuna}</strong>
+      </div>
+      <Campo
+        etiqueta="Anota la razón social"
+        ayuda="Como sale en la guía de la factura: así el vendedor sabe de qué cliente hablas. Puedes escribirla o dictarla. Si no la anotas, el mensaje lleva solo la dirección."
+        value={nombre}
+        onChange={(e) => { setNombre(e.target.value); }}
+        autoComplete="off"
+      />
+      <p className="ayuda mensaje-previo">Se enviará: «{texto}»</p>
+    </>
   );
   if (conCelular.length === 0) {
     return (
@@ -136,7 +148,6 @@ export const AtajoCerrado = ({ p, alCambiar, alPosponer }: { readonly p: ParadaD
   const { aviso, setAviso, ocupado, avisar, esperar, volverMasTarde, noEntregado } = useEventosDeParada(p);
   const [abierto, setAbierto] = useState(false);
   const [mas, setMas] = useState(false);
-  const destino = { direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng };
 
   const tocar = async (): Promise<void> => {
     if (abierto) {
@@ -156,7 +167,7 @@ export const AtajoCerrado = ({ p, alCambiar, alPosponer }: { readonly p: ParadaD
       {abierto ? (
         <div className="tarjeta parada-panel" aria-label={`Opciones de local cerrado: ${p.cliente}`}>
           <strong>Local cerrado. ¿Qué hacemos?</strong>
-          <AvisoAlVendedor mensaje={(nombre) => mensajeLocalCerrado({ ...destino, nombre }, horaDelDia(minutosEnChile(ahora())))} />
+          <AvisoAlVendedor p={p} hora={() => horaDelDia(minutosEnChile(ahora()))} />
           <div className="fila-botones">
             <Boton variante="secundario" disabled={ocupado} onClick={() => void esperar(10)}>ESPERAR 10 MIN</Boton>
             <Boton variante="secundario" disabled={ocupado} onClick={() => void volverMasTarde(alPosponer, () => { setAbierto(false); })}>VOLVER MÁS TARDE</Boton>
@@ -227,7 +238,7 @@ export const AccionesParada = ({ p, alCambiar, alPosponer, alFijarPin }: { reado
       {panel === 'cerrado' ? (
         <div className="tarjeta" aria-label={`Local cerrado: ${p.cliente}`}>
           <strong>Local cerrado. ¿Qué hacemos?</strong>
-          <AvisoAlVendedor mensaje={(nombre) => mensajeLocalCerrado({ ...destino, nombre }, horaAhora())} />
+          <AvisoAlVendedor p={p} hora={horaAhora} />
           <span>Cuando el vendedor te responda:</span>
           <div className="fila-botones">
             {[10, 15, 20].map((m) => <Boton key={m} variante="secundario" disabled={ocupado} onClick={() => void esperar(m)}>{`ESPERAR ${m} MIN`}</Boton>)}
@@ -246,7 +257,7 @@ export const AccionesParada = ({ p, alCambiar, alPosponer, alFijarPin }: { reado
       {panel === 'direccion' ? (
         <div className="tarjeta" aria-label={`No encuentra la dirección: ${p.cliente}`}>
           <strong>¿No encuentras la dirección?</strong>
-          <a className="big-button big-button--primario" href={enlaceWhatsApp(mensajeDireccionNoEncontrada({ ...destino, nombre: p.cliente }))} target="_blank" rel="noreferrer">ENVIAR LA DIRECCIÓN POR WHATSAPP</a>
+          <a className="big-button big-button--primario" href={enlaceWhatsApp(mensajeDireccionNoEncontrada({ ...destino, nombre: razonSocialCargada(p) }))} target="_blank" rel="noreferrer">ENVIAR LA DIRECCIÓN POR WHATSAPP</a>
           <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('direccion', alCambiar)}>NO SE PUDO ENTREGAR (DIRECCIÓN)</Boton>
         </div>
       ) : null}

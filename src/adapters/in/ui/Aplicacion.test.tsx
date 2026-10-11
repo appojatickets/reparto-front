@@ -2185,13 +2185,28 @@ describe('acciones en la parada (chofer)', () => {
     expect(registrarEvento).toHaveBeenCalledWith('fA', expect.objectContaining({ tipo: 'cerrado' }));
     const panel = within(await screen.findByLabelText('Local cerrado: Local A'));
     const wa = panel.getByRole('link', { name: 'AVISAR AL VENDEDOR POR WHATSAPP' });
-    expect(decodeURIComponent(wa.getAttribute('href') ?? '')).toContain('Hola, estoy en Calle A 100, San Bernardo y está cerrado (12:00)');
-    await userEvent.type(panel.getByLabelText('Nombre que sale en la guía'), 'Rabelo Mágica SpA');
+    // La dirección de la factura se ve y la razón social cargada viene escrita; el mensaje se ve tal como se envía.
+    expect(within(panel.getByLabelText('Dirección de la factura')).getByText('Calle A 100, San Bernardo')).toBeInTheDocument();
+    const campo = panel.getByLabelText('Anota la razón social');
+    expect(campo).toHaveValue('Local A');
+    expect(panel.getByText(/Se enviará: «Hola, estoy en Calle A 100, San Bernardo \(Local A\) y está cerrado \(12:00\)/)).toBeInTheDocument();
+    expect(decodeURIComponent(wa.getAttribute('href') ?? '')).toContain('Hola, estoy en Calle A 100, San Bernardo (Local A) y está cerrado (12:00)');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'Rabelo Mágica SpA');
     expect(decodeURIComponent(panel.getByRole('link', { name: 'AVISAR AL VENDEDOR POR WHATSAPP' }).getAttribute('href') ?? '')).toContain('Calle A 100, San Bernardo (Rabelo Mágica SpA) y está cerrado (12:00)');
     expect(wa.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/);
     await userEvent.click(panel.getByRole('button', { name: 'ESPERAR 15 MIN' }));
     expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'espera', minutos: 15 });
     expect(await screen.findByText(/Esperando 15 minutos\. Cuando termine/)).toBeInTheDocument();
+  });
+
+  it('si la factura se cargó solo con la dirección, la razón social queda vacía para anotarla y el mensaje lleva solo la dirección', async () => {
+    const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })));
+    abrir({ registrarEvento, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [paradaDe('A', 0, { cliente: 'Calle A 100' })] }))) }, { ubicacion: gps() });
+    await userEvent.click(await screen.findByRole('button', { name: 'ESTÁ CERRADO Calle A 100' }));
+    const panel = within(await screen.findByLabelText('Local cerrado: Calle A 100'));
+    expect(panel.getByLabelText('Anota la razón social')).toHaveValue('');
+    expect(decodeURIComponent(panel.getByRole('link', { name: 'AVISAR AL VENDEDOR POR WHATSAPP' }).getAttribute('href') ?? '')).toContain('Hola, estoy en Calle A 100, San Bernardo y está cerrado (12:00)');
   });
 
   it('ESTÁ CERRADO con vendedores cargados: un botón de WhatsApp por cada uno con celular, al chat de ese vendedor', async () => {
@@ -2298,14 +2313,14 @@ describe('acciones en la parada (chofer)', () => {
   describe('la última parada: volver a la empresa', () => {
     const DEPOSITO = { lat: -33.6, lng: -70.55, nombre: 'Ibiza' };
 
-    it('toda ruta termina con una fila fija «VOLVER A IBIZA», con la hora de regreso y cómo ir, que no se puede mover', async () => {
-      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: DEPOSITO, regreso: 700 }))) });
+    it('toda ruta termina con una fila fija «VOLVER A IBIZA» que solo dice la hora aproximada de llegada (sin pin, botones ni más información) y no se puede mover', async () => {
+      abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: DEPOSITO, regreso: 700.4 }))) });
       const fin = await screen.findByLabelText('Volver a la empresa');
       expect(within(fin).getByText('VOLVER A IBIZA')).toBeInTheDocument();
-      expect(within(fin).getByText(/Llegada estimada 11:40/)).toBeInTheDocument();
-      expect(within(fin).getByRole('link', { name: 'IR A IBIZA CON GOOGLE MAPS' })).toHaveAttribute('href', expect.stringContaining('destination=-33.6,-70.55'));
-      expect(within(fin).getByRole('link', { name: 'IR A IBIZA CON WAZE' })).toHaveAttribute('href', 'https://waze.com/ul?ll=-33.6,-70.55&navigate=yes');
-      expect(within(fin).queryByRole('button', { name: /MOVER/ })).toBeNull();
+      expect(within(fin).getByText('Llegada aproximada 11:40')).toBeInTheDocument();
+      expect(fin).not.toHaveTextContent(/Última parada|\./);
+      expect(within(fin).queryByRole('link')).toBeNull();
+      expect(within(fin).queryByRole('button')).toBeNull();
       // viene después de la última parada y no cuenta como una parada más
       const ultima = screen.getByRole('listitem', { name: 'Parada 2' });
       expect(ultima.compareDocumentPosition(fin) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -2327,10 +2342,10 @@ describe('acciones en la parada (chofer)', () => {
       const fin = await screen.findByLabelText('Volver a la empresa');
       expect(within(fin).getByText('Terminaste las entregas')).toBeInTheDocument();
       expect(within(fin).getByText('VUELVE A IBIZA')).toBeInTheDocument();
-      expect(within(fin).getByRole('link', { name: 'IR A IBIZA CON GOOGLE MAPS' })).toBeInTheDocument();
+      expect(within(fin).queryByRole('link')).toBeNull();
     });
 
-    it('quien arma la ruta (no va en el camión) la ve igual, sin botones de navegación', async () => {
+    it('quien arma la ruta (no va en el camión) la ve igual', async () => {
       montar({ ruta: '/rutas', sesion: DESPACHADOR, api: { listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true }])), verRuta: () => Promise.resolve(ok(vistaBase({ deposito: DEPOSITO }))) } });
       await screen.findByRole('option', { name: 'Camión 3 · AB·1234' });
       await userEvent.selectOptions(screen.getByLabelText('Camión'), 'c1');

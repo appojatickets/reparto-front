@@ -13,3 +13,6 @@ export const horaDeMinutos = (minutos: number): string =>
 
 /** Hora estimada que puede pasar de medianoche (1500 → «01:00»). */
 export const horaDelDia = (minutos: number): string => horaDeMinutos(((Math.round(minutos) % 1440) + 1440) % 1440);
+
+/** Hora aproximada para mostrar: redondeada a los 5 minutos más cercanos (736,4 → «12:15»), nunca con decimales. */
+export const horaAproximada = (minutos: number): string => horaDelDia(Math.round(minutos / 5) * 5);
