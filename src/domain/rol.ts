@@ -19,6 +19,7 @@ export type Accion =
   | 'fotos'
   | 'reportes'
   | 'analitica'
+  | 'estado'
   | 'configuracion';
 
 export const ETIQUETA_ROL: Readonly<Record<Rol, string>> = { admin: 'Administración', despachador: 'Despacho', chofer: 'Chofer', ayudante: 'Ayudante' };
@@ -34,7 +35,7 @@ const ACCIONES: Readonly<Record<Rol, readonly Accion[]>> = {
   chofer: ['mi-ruta', 'cargar-facturas'],
   ayudante: ['mi-ruta', 'cargar-facturas'],
   despachador: ['facturas', 'rutas', 'planilla', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'reportes'],
-  admin: ['facturas', 'rutas', 'planilla', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'importar-clientes', 'camiones', 'vendedores', 'exportar', 'reportes', 'fotos', 'analitica', 'configuracion', 'usuarios'],
+  admin: ['facturas', 'rutas', 'planilla', 'buscar-clientes', 'cliente-nuevo', 'locales', 'verificar-pines', 'revisar-pines', 'importar-clientes', 'camiones', 'vendedores', 'exportar', 'reportes', 'fotos', 'analitica', 'estado', 'configuracion', 'usuarios'],
 };
 
 /** Lo que suma el permiso de editor (lo da el admin) a quien va en el camión: buscar una dirección para corregirla, verificar pines y editar los locales por comuna. */

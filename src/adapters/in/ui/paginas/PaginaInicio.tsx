@@ -23,6 +23,7 @@ const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: str
   reportes: { a: '/admin/reportes', texto: 'REPORTES' },
   fotos: { a: '/admin/fotos', texto: 'REVISAR FOTOS' },
   analitica: { a: '/admin/analitica', texto: 'ANALÍTICA' },
+  estado: { a: '/admin/estado', texto: 'ESTADO DEL SISTEMA' },
   vendedores: { a: '/admin/vendedores', texto: 'VENDEDORES' },
   usuarios: { a: '/admin/usuarios', texto: 'USUARIOS' },
 };

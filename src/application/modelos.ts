@@ -219,6 +219,8 @@ export type ConfigEmpresa = {
   readonly horaLimiteRegresoMin: number;
   /** Por dónde parte la ruta (ADR 0038 del back); sin indicar, lo decide el sistema. */
   readonly ordenInicio?: OrdenInicio;
+  /** Si la ruta usa lo aprendido sobre cuándo suele estar cerrado cada local (ADR 0050 del back); sin indicar, se usa. */
+  readonly usarCierresAprendidos?: boolean;
 };
 export type OrdenInicio = 'automatico' | 'lejano' | 'cercano';
 
@@ -352,6 +354,8 @@ export type PanelAnalitica = {
   readonly cierres: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly horasCerrado: readonly number[]; readonly etiqueta?: EtiquetaLocal }[];
   /** Locales donde se avisó la entrega con buen GPS lejos del pin. */
   readonly pinesDudosos: readonly { readonly localId: string; readonly distanciaM: number; readonly visitas: number; readonly fuente?: string; readonly etiqueta?: EtiquetaLocal }[];
+  /** Cuántos locales ya tienen hora habitual y cuántos tienen franjas de cierre probable: lo que la ruta puede usar (ADR 0051 del back). */
+  readonly fichas?: { readonly locales: number; readonly conHoraHabitual: number; readonly conCierreProbable: number };
   /** ¿La ficha aprendida de los locales acierta? Probada con lo ya ocurrido, solo con días anteriores (ADR 0049 del back). */
   readonly bancoFicha?: {
     readonly cierre: { readonly evaluadas: number; readonly cerradas: number; readonly anticipadas: number; readonly falsasAlarmas: number; readonly aciertos: number };

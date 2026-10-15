@@ -10,6 +10,8 @@ export type HealthReport = {
   readonly status: 'ok' | 'degraded';
   readonly database: 'ok' | 'error';
   readonly timestamp: string;
+  /** El commit que corre en el servidor. */
+  readonly version?: string;
 };
 
 /** `HTTP`: el servidor respondió con un error de negocio (`status`, `codigo` y un `mensaje` ya en español). */

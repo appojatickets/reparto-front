@@ -1408,7 +1408,7 @@ describe('configuración del reparto', () => {
     await userEvent.type(screen.getByLabelText('Nombre del depósito (opcional)'), 'Bodega Central');
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
     expect(await screen.findByText('Configuración guardada.')).toBeInTheDocument();
-    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5123, lng: -70.7001, nombre: 'Bodega Central' }, salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260, ordenInicio: 'automatico' });
+    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5123, lng: -70.7001, nombre: 'Bodega Central' }, salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260, ordenInicio: 'automatico', usarCierresAprendidos: true });
   });
 
   it('coordenadas que no se entienden o fuera de la RM no se envían', async () => {
@@ -1428,7 +1428,23 @@ describe('configuración del reparto', () => {
     expect(screen.queryByLabelText('Avisar si el regreso pasa de las')).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
     expect(await screen.findByText('Configuración guardada.')).toBeInTheDocument();
-    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5, lng: -70.7, nombre: 'Bodega' }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230, ordenInicio: 'automatico' });
+    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5, lng: -70.7, nombre: 'Bodega' }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230, ordenInicio: 'automatico', usarCierresAprendidos: true });
+  });
+
+  it('lo aprendido sobre cierres: viene encendido, se puede apagar y se manda al guardar', async () => {
+    const guardarConfig = vi.fn((c: ConfigEmpresa) => Promise.resolve(ok(c)));
+    montar({ ruta: '/admin/configuracion', sesion: ADMIN, api: { obtenerConfig: () => Promise.resolve(ok({ deposito: { lat: -33.5, lng: -70.7 }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230 })), guardarConfig } });
+    const selector = await screen.findByLabelText('Usar lo aprendido sobre cierres en la ruta');
+    expect(selector).toHaveValue('si');
+    await userEvent.selectOptions(selector, 'no');
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
+    expect(await screen.findByText('Configuración guardada.')).toBeInTheDocument();
+    expect(guardarConfig).toHaveBeenCalledWith(expect.objectContaining({ usarCierresAprendidos: false }));
+  });
+
+  it('si estaba apagado, la pantalla lo muestra apagado', async () => {
+    montar({ ruta: '/admin/configuracion', sesion: ADMIN, api: { obtenerConfig: () => Promise.resolve(ok({ deposito: { lat: -33.5, lng: -70.7 }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230, usarCierresAprendidos: false })) } });
+    expect(await screen.findByLabelText('Usar lo aprendido sobre cierres en la ruta')).toHaveValue('no');
   });
 
   it('por dónde parte la ruta: muestra lo guardado, deja elegir entre las tres opciones y lo manda al guardar', async () => {
@@ -1440,7 +1456,7 @@ describe('configuración del reparto', () => {
     await userEvent.selectOptions(selector, 'cercano');
     await userEvent.click(screen.getByRole('button', { name: 'GUARDAR' }));
     expect(await screen.findByText('Configuración guardada.')).toBeInTheDocument();
-    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5, lng: -70.7 }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230, ordenInicio: 'cercano' });
+    expect(guardarConfig).toHaveBeenCalledWith({ deposito: { lat: -33.5, lng: -70.7 }, salidaPorDefectoMin: 450, horaLimiteRegresoMin: 1230, ordenInicio: 'cercano', usarCierresAprendidos: true });
   });
 });
 
@@ -3333,5 +3349,40 @@ describe('kit de emergencia (chofer)', () => {
     const kit = await abrirKit({ registrarEmergencia: () => Promise.resolve(err({ kind: 'NETWORK' as const })) });
     await userEvent.click(within(kit).getByRole('link', { name: 'BUSCAR VULCANIZACIÓN EN GOOGLE MAPS' }));
     expect(await within(kit).findByText(/No se pudo anotar la parada, pero la búsqueda se abrió igual/)).toBeInTheDocument();
+  });
+});
+
+describe('estado del sistema (admin)', () => {
+  const panelBase = {
+    desde: '2026-09-15T12:00:00.000Z',
+    cobertura: { jornadas: 14, jornadasTerminadas: 12, avisos: 200, avisosConGps: 190, avisosAutomaticos: 20, paradasConLlegada: 90, paradasResueltas: 150, puntosGps: 900, ultimoPuntoGps: '2026-10-15T11:30:00.000Z', operacionesRuta: 30, correccionesManuales: 8 },
+    pines: { verificados: 40, porVerificar: 100, sinPin: 20 },
+    porDia: [], calidad: [], cierres: [], pinesDudosos: [], aprendido: { ritmo: [], capacidad: [], localesLentos: [] },
+  };
+  const montarEstado = (panel: unknown, extra: Partial<ApiClient> = {}) =>
+    montar({ ruta: '/admin/estado', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(panel as never)), getHealth: () => Promise.resolve(ok({ status: 'ok' as const, database: 'ok' as const, timestamp: '2026-10-15T12:00:00.000Z', version: 'abc1234' })), obtenerConfig: () => Promise.resolve(ok({ salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260 })), ...extra } });
+
+  it('junta las versiones, los datos acumulados y lo aprendido, y dice si ya hay datos para concluir', async () => {
+    montarEstado({ ...panelBase, fichas: { locales: 80, conHoraHabitual: 12, conCierreProbable: 3 }, ultimaEjecucion: { iniciadoEn: '2026-10-15T10:00:00.000Z', terminadoEn: '2026-10-15T10:00:05.000Z', resumen: { eventos: 1, jornadas: 1, parametros: 1, jornadasComparadas: 1, pinesSugeridos: 0, pinesProponidos: 0, llegadasDeducidas: 0, seguimientoRuta: { entregas: 0, primeraDeLaLista: 0, conRutaDelSistema: 0, primeraDeLaRutaDelSistema: 0 }, cierresFrecuentes: [] } } });
+    expect(await screen.findByRole('heading', { name: 'Estado del sistema' })).toBeInTheDocument();
+    expect(await screen.findByText('abc1234 · funcionando')).toBeInTheDocument();
+    expect(screen.getByText('prueba')).toBeInTheDocument();
+    expect(await screen.findByText('Ya hay datos para mirar la analítica con algo de confianza.')).toBeInTheDocument();
+    expect(screen.getByText('12 terminadas de 14')).toBeInTheDocument();
+    expect(screen.getByText('12 de 80')).toBeInTheDocument();
+    expect(screen.getByText('3 de 80')).toBeInTheDocument();
+    expect(await screen.findByText('Sí')).toBeInTheDocument();
+  });
+
+  it('con pocos datos lo dice, y si lo aprendido está apagado lo muestra', async () => {
+    montarEstado({ ...panelBase, cobertura: { ...panelBase.cobertura, jornadasTerminadas: 2, jornadas: 3, avisos: 20 } }, { obtenerConfig: () => Promise.resolve(ok({ salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260, usarCierresAprendidos: false })) });
+    expect(await screen.findByText(/Todavía son pocos datos/)).toBeInTheDocument();
+    expect(await screen.findByText('No (apagado)')).toBeInTheDocument();
+    expect(screen.getByText('todavía no corrió')).toBeInTheDocument();
+  });
+
+  it('el chofer no entra al estado del sistema', async () => {
+    montar({ ruta: '/admin/estado', sesion: CHOFER });
+    expect(await screen.findByRole('heading', { name: 'Hola, Juan' })).toBeInTheDocument();
   });
 });

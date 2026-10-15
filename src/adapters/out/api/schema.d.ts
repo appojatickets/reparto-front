@@ -33,6 +33,7 @@ export interface paths {
                             database: "ok" | "error";
                             /** Format: date-time */
                             timestamp: string;
+                            version?: string;
                         };
                     };
                 };
@@ -49,6 +50,7 @@ export interface paths {
                             database: "ok" | "error";
                             /** Format: date-time */
                             timestamp: string;
+                            version?: string;
                         };
                     };
                 };
@@ -8162,6 +8164,7 @@ export interface paths {
                             horaLimiteRegresoMin: number;
                             /** @enum {string} */
                             ordenInicio?: "automatico" | "lejano" | "cercano";
+                            usarCierresAprendidos?: boolean;
                         };
                     };
                 };
@@ -8291,6 +8294,7 @@ export interface paths {
                         horaLimiteRegresoMin: number;
                         /** @enum {string} */
                         ordenInicio?: "automatico" | "lejano" | "cercano";
+                        usarCierresAprendidos?: boolean;
                     };
                 };
             };
@@ -8311,6 +8315,7 @@ export interface paths {
                             horaLimiteRegresoMin: number;
                             /** @enum {string} */
                             ordenInicio?: "automatico" | "lejano" | "cercano";
+                            usarCierresAprendidos?: boolean;
                         };
                     };
                 };
@@ -10708,6 +10713,11 @@ export interface paths {
                                     dentroDelRango: number;
                                 };
                             };
+                            fichas?: {
+                                locales: number;
+                                conHoraHabitual: number;
+                                conCierreProbable: number;
+                            };
                             ultimaEjecucion?: {
                                 iniciadoEn: string;
                                 terminadoEn: string;
@@ -10775,6 +10785,11 @@ export interface paths {
                                             evaluadas: number;
                                             dentroDelRango: number;
                                         };
+                                    };
+                                    fichas?: {
+                                        locales: number;
+                                        conHoraHabitual: number;
+                                        conCierreProbable: number;
                                     };
                                 };
                             };
@@ -10984,6 +10999,11 @@ export interface paths {
                                     evaluadas: number;
                                     dentroDelRango: number;
                                 };
+                            };
+                            fichas?: {
+                                locales: number;
+                                conHoraHabitual: number;
+                                conCierreProbable: number;
                             };
                         };
                     };
