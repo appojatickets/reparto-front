@@ -8493,7 +8493,7 @@ export interface paths {
                                 salida: number;
                                 espera: number;
                                 atraso: number;
-                                readonly motivos: ("VENTANA_DURA" | "PRIORIDAD" | "CERCANIA_COMUNA" | "COLACION" | "FIJADA_POR_CHOFER" | "MENOR_DESVIO")[];
+                                readonly motivos: ("VENTANA_DURA" | "PRIORIDAD" | "CERCANIA_COMUNA" | "COLACION" | "FIJADA_POR_CHOFER" | "CIERRE_PROBABLE" | "MENOR_DESVIO")[];
                                 fijada: boolean;
                             }[];
                             readonly nuevas: {
@@ -8935,7 +8935,7 @@ export interface paths {
                                 salida: number;
                                 espera: number;
                                 atraso: number;
-                                readonly motivos: ("VENTANA_DURA" | "PRIORIDAD" | "CERCANIA_COMUNA" | "COLACION" | "FIJADA_POR_CHOFER" | "MENOR_DESVIO")[];
+                                readonly motivos: ("VENTANA_DURA" | "PRIORIDAD" | "CERCANIA_COMUNA" | "COLACION" | "FIJADA_POR_CHOFER" | "CIERRE_PROBABLE" | "MENOR_DESVIO")[];
                                 fijada: boolean;
                             }[];
                             readonly nuevas: {
@@ -9247,7 +9247,7 @@ export interface paths {
                                 salida: number;
                                 espera: number;
                                 atraso: number;
-                                readonly motivos: ("VENTANA_DURA" | "PRIORIDAD" | "CERCANIA_COMUNA" | "COLACION" | "FIJADA_POR_CHOFER" | "MENOR_DESVIO")[];
+                                readonly motivos: ("VENTANA_DURA" | "PRIORIDAD" | "CERCANIA_COMUNA" | "COLACION" | "FIJADA_POR_CHOFER" | "CIERRE_PROBABLE" | "MENOR_DESVIO")[];
                                 fijada: boolean;
                             }[];
                             readonly nuevas: {

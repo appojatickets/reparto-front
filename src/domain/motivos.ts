@@ -1,4 +1,4 @@
-export type Motivo = 'VENTANA_DURA' | 'PRIORIDAD' | 'CERCANIA_COMUNA' | 'COLACION' | 'FIJADA_POR_CHOFER' | 'MENOR_DESVIO';
+export type Motivo = 'VENTANA_DURA' | 'PRIORIDAD' | 'CERCANIA_COMUNA' | 'COLACION' | 'FIJADA_POR_CHOFER' | 'CIERRE_PROBABLE' | 'MENOR_DESVIO';
 
 /** Por qué el sistema puso una parada en ese lugar, en palabras simples. */
 export const TEXTO_MOTIVO: Readonly<Record<Motivo, string>> = {
@@ -7,6 +7,7 @@ export const TEXTO_MOTIVO: Readonly<Record<Motivo, string>> = {
   CERCANIA_COMUNA: 'Queda cerca de la anterior',
   COLACION: 'Cierra a mediodía',
   FIJADA_POR_CHOFER: 'La fijaste tú',
+  CIERRE_PROBABLE: 'Suele estar cerrado a esta hora',
   MENOR_DESVIO: 'Es el mejor recorrido',
 };
 
