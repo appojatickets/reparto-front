@@ -37,6 +37,8 @@ export const Marco = () => {
         {estado.usuario.rol === 'chofer' || estado.usuario.rol === 'ayudante' ? <SeguimientoDelCamion /> : null}
         {pathname !== '/' ? <Link className="volver" to="/">← INICIO</Link> : null}
         <Outlet />
+        {/* Para saber si el teléfono ya tiene la última versión publicada (es el commit que Vercel desplegó). */}
+        <p className="ayuda version-app">Versión de la app: {__VERSION__}</p>
       </main>
     </>
   );
