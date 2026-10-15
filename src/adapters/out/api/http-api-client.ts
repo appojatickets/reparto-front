@@ -157,6 +157,7 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
       return mapear(r, (d) => d.comunas);
     },
     listarLocales: (filtro) => ejecutar(() => client.GET('/v1/locales', { params: { query: { ...(filtro.comuna ? { comuna: filtro.comuna } : {}), ...(filtro.texto ? { texto: filtro.texto } : {}), ...(filtro.limite ? { limite: filtro.limite } : {}) } }, signal: timeout() }), { repetible: true }),
+    fichaAprendida: (id) => ejecutar(() => client.GET('/v1/locales/{id}/ficha-aprendida', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
     obtenerLocal: (id) => ejecutar(() => client.GET('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
     corregirCliente: async (id, cambios) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/clientes/{id}', { params: { path: { id } }, body: cambios, signal: timeout() }))),
     eliminarLocal: async (id) => sinCuerpo(await ejecutar(() => client.DELETE('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() }))),

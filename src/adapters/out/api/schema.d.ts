@@ -3054,6 +3054,173 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/locales/{id}/ficha-aprendida": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lo que se aprendió del local con sus entregas: a qué hora suele entregarse (rango, también por día de la semana) y con qué probabilidad está cerrado en cada franja de 2 horas */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            visitas: number;
+                            entregas: number;
+                            cerrados: number;
+                            confianza: number;
+                            horaHabitual?: {
+                                desdeMin: number;
+                                hastaMin: number;
+                                medianaMin: number;
+                                entregas: number;
+                            };
+                            porDiaSemana: {
+                                desdeMin: number;
+                                hastaMin: number;
+                                medianaMin: number;
+                                entregas: number;
+                                diaSemana: number;
+                            }[];
+                            franjas: {
+                                desdeHora: number;
+                                hastaHora: number;
+                                visitas: number;
+                                cerrados: number;
+                                pCerrado: number;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            codigo: string;
+                            mensaje: string;
+                            detalle?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/locales": {
         parameters: {
             query?: never;
@@ -10528,6 +10695,19 @@ export interface paths {
                                     };
                                 }[];
                             };
+                            bancoFicha?: {
+                                cierre: {
+                                    evaluadas: number;
+                                    cerradas: number;
+                                    anticipadas: number;
+                                    falsasAlarmas: number;
+                                    aciertos: number;
+                                };
+                                hora: {
+                                    evaluadas: number;
+                                    dentroDelRango: number;
+                                };
+                            };
                             ultimaEjecucion?: {
                                 iniciadoEn: string;
                                 terminadoEn: string;
@@ -10582,6 +10762,19 @@ export interface paths {
                                                 comuna: string;
                                             };
                                         }[];
+                                    };
+                                    bancoFicha?: {
+                                        cierre: {
+                                            evaluadas: number;
+                                            cerradas: number;
+                                            anticipadas: number;
+                                            falsasAlarmas: number;
+                                            aciertos: number;
+                                        };
+                                        hora: {
+                                            evaluadas: number;
+                                            dentroDelRango: number;
+                                        };
                                     };
                                 };
                             };
@@ -10778,6 +10971,19 @@ export interface paths {
                                         comuna: string;
                                     };
                                 }[];
+                            };
+                            bancoFicha?: {
+                                cierre: {
+                                    evaluadas: number;
+                                    cerradas: number;
+                                    anticipadas: number;
+                                    falsasAlarmas: number;
+                                    aciertos: number;
+                                };
+                                hora: {
+                                    evaluadas: number;
+                                    dentroDelRango: number;
+                                };
                             };
                         };
                     };

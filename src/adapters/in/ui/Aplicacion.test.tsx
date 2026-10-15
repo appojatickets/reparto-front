@@ -315,6 +315,27 @@ describe('detalle del local', () => {
       expect(await screen.findByText('Nombre corregido.')).toBeInTheDocument();
     });
 
+    it('la ficha del cliente muestra lo aprendido: hora habitual, por día y cuándo se lo encontró cerrado', async () => {
+      const fichaAprendida = () => Promise.resolve(ok({
+        visitas: 9, entregas: 7, cerrados: 2, confianza: 0.5,
+        horaHabitual: { desdeMin: 620, hastaMin: 700, medianaMin: 660, entregas: 7 },
+        porDiaSemana: [{ diaSemana: 1, desdeMin: 600, hastaMin: 640, medianaMin: 620, entregas: 3 }],
+        franjas: [{ desdeHora: 12, hastaHora: 14, visitas: 3, cerrados: 2, pCerrado: 0.6 }],
+      }));
+      montar({ ruta: '/clientes/l1', sesion: EDITOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), fichaAprendida } });
+      const seccion = await screen.findByRole('region', { name: 'Lo que se aprendió de este local' });
+      expect(within(seccion).getByText('entre las 10:20 y las 11:40 (lo más común: 11:00)')).toBeInTheDocument();
+      expect(within(seccion).getByText('Los lunes')).toBeInTheDocument();
+      expect(within(seccion).getByText('de 12:00 a 14:00')).toBeInTheDocument();
+      expect(within(seccion).queryByText(/solo una pista/)).toBeNull();
+    });
+
+    it('un local sin visitas no muestra ficha aprendida', async () => {
+      montar({ ruta: '/clientes/l1', sesion: EDITOR, api: { obtenerLocal: () => Promise.resolve(ok(local)) } });
+      await screen.findByLabelText('Razón social (corrige un error de tipeo)');
+      expect(screen.queryByRole('region', { name: 'Lo que se aprendió de este local' })).toBeNull();
+    });
+
     it('puede corregir la dirección y la comuna de la ficha', async () => {
       const actualizarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
       montar({ ruta: '/clientes/l1', sesion: EDITOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), actualizarLocal } });
@@ -2849,6 +2870,17 @@ describe('analítica del admin', () => {
     expect(screen.getByText('3 de 4 avisos de cerrado con segundo intento')).toBeInTheDocument();
     expect(screen.getByText('2,5 min cerrado · 9 min atendido')).toBeInTheDocument();
     expect(screen.getByText('Solo el GPS dice cerrado (2 min)')).toBeInTheDocument();
+  });
+
+  it('muestra si lo aprendido de cada local acierta, con la línea base «siempre abierto» y el aviso de pocos datos', async () => {
+    const bancoFicha = { cierre: { evaluadas: 10, cerradas: 3, anticipadas: 2, falsasAlarmas: 1, aciertos: 8 }, hora: { evaluadas: 6, dentroDelRango: 5 } };
+    montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok({ ...panel, bancoFicha })) } });
+    expect(await screen.findByRole('heading', { name: '¿Lo aprendido de cada local acierta?' })).toBeInTheDocument();
+    expect(screen.getByText('2 de 3')).toBeInTheDocument();
+    expect(screen.getByText('8 de 10 (80 %)')).toBeInTheDocument();
+    expect(screen.getByText(/Si dijera siempre «abierto» acertaría 7 de 10 \(70 %\)/)).toBeInTheDocument();
+    expect(screen.getByText('5 de 6 (83 %)')).toBeInTheDocument();
+    expect(screen.getByText(/Todavía son pocas visitas para concluir algo/)).toBeInTheDocument();
   });
 
   it('ANALIZAR AHORA corre el análisis y vuelve a cargar el panel', async () => {

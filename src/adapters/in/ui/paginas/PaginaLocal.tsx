@@ -4,6 +4,7 @@ import { leerCoordenadas } from '../../../../domain/coordenadas';
 import { COMUNAS_RM } from '../../../../domain/comunas';
 import { enlaceGoogleMaps, enlaceStreetView, enlaceWaze } from '../../../../domain/enlaces';
 import { Contribuyentes } from '../componentes/Contribuyentes';
+import { FichaAprendida } from '../componentes/FichaAprendida';
 import { InsigniasDeVerificacion } from '../componentes/InsigniasDeVerificacion';
 import { ReportarFoto } from '../componentes/ReportarFoto';
 import { ReportarLocal } from '../componentes/ReportarLocal';
@@ -262,6 +263,7 @@ const Detalle = ({ local, recargar }: { readonly local: LocalDetalle; readonly r
       {mensaje ? <Aviso tipo={mensaje.tipo}>{mensaje.texto}</Aviso> : null}
       {editar ? <CorregirFicha key={`${local.id}:${local.razonSocial}`} local={local} recargar={recargar} /> : null}
       {editar ? <PinLocal key={`${local.lat ?? ''},${local.lng ?? ''}`} local={local} recargar={recargar} /> : null}
+      <FichaAprendida localId={local.id} />
       <SeccionHorario localId={local.id} editar={editar} />
     </Pagina>
   );

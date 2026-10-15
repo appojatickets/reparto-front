@@ -1,3 +1,4 @@
+import type { FichaAprendida } from '../../domain/ficha';
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
@@ -37,6 +38,8 @@ export interface ApiClient extends SaludApi {
   crearCliente(fila: FilaCliente): R<{ clienteId: string; localId: string; existente: boolean }>;
   importarClientes(filas: readonly FilaCliente[]): R<ResultadoImportacion>;
   obtenerLocal(localId: string): R<LocalDetalle>;
+  /** Lo que se aprendió del local con sus entregas: hora habitual de entrega y probabilidad de cerrado por franja. */
+  fichaAprendida(localId: string): R<FichaAprendida>;
   /** Cuántos locales hay por comuna, cuántos con pin verificado y cuántos sin pin. */
   resumenComunas(): R<readonly ResumenComuna[]>;
   /** Locales de una comuna, o los que coinciden con un texto (razón social, RUT o dirección); primero los de pin por verificar. */

@@ -352,6 +352,11 @@ export type PanelAnalitica = {
   readonly cierres: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly horasCerrado: readonly number[]; readonly etiqueta?: EtiquetaLocal }[];
   /** Locales donde se avisó la entrega con buen GPS lejos del pin. */
   readonly pinesDudosos: readonly { readonly localId: string; readonly distanciaM: number; readonly visitas: number; readonly fuente?: string; readonly etiqueta?: EtiquetaLocal }[];
+  /** ¿La ficha aprendida de los locales acierta? Probada con lo ya ocurrido, solo con días anteriores (ADR 0049 del back). */
+  readonly bancoFicha?: {
+    readonly cierre: { readonly evaluadas: number; readonly cerradas: number; readonly anticipadas: number; readonly falsasAlarmas: number; readonly aciertos: number };
+    readonly hora: { readonly evaluadas: number; readonly dentroDelRango: number };
+  };
   /** El cierre que deduce el GPS frente al botón CERRADO (ADR 0046 del back). */
   readonly cierresGps?: {
     readonly visitas: number; readonly atendidas: number; readonly cerradoDeducido: number; readonly sinDesenlace: number; readonly botonCerrado: number; readonly botonSinRecorrido: number; readonly botonSinDesenlace: number;

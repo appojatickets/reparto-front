@@ -173,6 +173,19 @@ export const PaginaAnalitica = () => {
               </>
             ) : null}
 
+            {p.bancoFicha && (p.bancoFicha.cierre.evaluadas > 0 || p.bancoFicha.hora.evaluadas > 0) ? (
+              <>
+                <h2>¿Lo aprendido de cada local acierta?</h2>
+                <p>Se repasa lo que ya pasó: para cada visita se arma lo aprendido del local solo con días anteriores y se compara con lo que ocurrió. Si acierta bastante más que «siempre abierto», vale la pena que la ruta lo use. Todavía no lo usa.</p>
+                <ul className="tarjetas">
+                  <Dato titulo="Cierres que anticipó" valor={`${p.bancoFicha.cierre.anticipadas} de ${p.bancoFicha.cierre.cerradas}`} ayuda={`${p.bancoFicha.cierre.falsasAlarmas} veces dijo cerrado y estaba abierto.`} />
+                  <Dato titulo="Aciertos al decir abierto o cerrado" valor={proporcion(p.bancoFicha.cierre.aciertos, p.bancoFicha.cierre.evaluadas)} ayuda={`Si dijera siempre «abierto» acertaría ${proporcion(p.bancoFicha.cierre.evaluadas - p.bancoFicha.cierre.cerradas, p.bancoFicha.cierre.evaluadas)}: lo aprendido tiene que superar eso.`} />
+                  <Dato titulo="Entrega dentro de su hora habitual" valor={proporcion(p.bancoFicha.hora.dentroDelRango, p.bancoFicha.hora.evaluadas)} ayuda="Con el rango de horas en que suele entregarse cada local (media hora de margen)." />
+                </ul>
+                {p.bancoFicha.cierre.evaluadas < 20 ? <Aviso>Todavía son pocas visitas para concluir algo; sigue juntando días de reparto.</Aviso> : null}
+              </>
+            ) : null}
+
             {p.cierresGps && p.cierresGps.visitas > 0 ? (
               <>
                 <h2>Cerrado: lo que dice el GPS frente al botón</h2>
