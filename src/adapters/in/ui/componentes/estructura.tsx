@@ -5,6 +5,7 @@ import { useSesion } from '../sesion';
 import { CambiarTema } from '../tema';
 import { CambiarVista } from '../vista';
 import { Avatar } from './Avatar';
+import { KitEmergencia } from './KitEmergencia';
 import { PermisosAlAbrir } from './PermisosAlAbrir';
 import { SeguimientoDelCamion } from './SeguimientoDelCamion';
 import { Boton, Cargando, Pagina, Aviso } from './ui';
@@ -32,6 +33,7 @@ export const Marco = () => {
       </header>
       <main className="screen">
         <PermisosAlAbrir />
+        {estado.usuario.rol === 'chofer' || estado.usuario.rol === 'ayudante' ? <KitEmergencia /> : null}
         {estado.usuario.rol === 'chofer' || estado.usuario.rol === 'ayudante' ? <SeguimientoDelCamion /> : null}
         {pathname !== '/' ? <Link className="volver" to="/">← INICIO</Link> : null}
         <Outlet />

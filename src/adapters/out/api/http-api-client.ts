@@ -269,6 +269,11 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     enviarPosiciones: (puntos) => ejecutar(() => client.POST('/v1/jornada/posiciones', { body: { puntos: puntos.map((p) => ({ ...p })) }, signal: timeout() })),
     analitica: () => ejecutar(() => client.GET('/v1/analitica', { signal: timeout() }), { repetible: true }),
     ejecutarAnalisis: () => ejecutar(() => client.POST('/v1/analitica/ejecutar', { signal: timeout() })),
+    registrarEmergencia: (aviso) => ejecutar(() => client.POST('/v1/emergencias', { body: aviso, signal: timeout() })),
+    listarEmergencias: async (fecha, camionId) => {
+      const r = await ejecutar(() => client.GET('/v1/emergencias', { params: { query: { fecha, ...(camionId !== undefined ? { camionId } : {}) } }, signal: timeout() }), { repetible: true });
+      return r.ok ? ok(r.value.emergencias) : r;
+    },
     registrarEvento: (facturaId, evento) => ejecutar(() => client.POST('/v1/entregas/{id}/eventos', { params: { path: { id: facturaId } }, body: evento, signal: timeout() })),
 
     async obtenerHorario(localId) {

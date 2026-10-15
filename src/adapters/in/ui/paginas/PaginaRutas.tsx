@@ -16,6 +16,7 @@ import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { AccionesParada, AtajoCerrado, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
 import { Contribuyentes } from '../componentes/Contribuyentes';
+import { EmergenciasDelDia } from '../componentes/EmergenciasDelDia';
 import { FotoFachada } from '../componentes/FotoFachada';
 import { InsigniasDeVerificacion } from '../componentes/InsigniasDeVerificacion';
 import { useDiaDeReparto } from '../componentes/dia';
@@ -653,6 +654,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           </ul>
         </section>
       ) : null}
+
+      <EmergenciasDelDia camionId={camionId} fecha={fecha} version={vista} />
 
       {vista.planificada ? <ListaItems titulo="Entregas nuevas sin ordenar" items={vista.nuevas} /> : null}
       {vista.planificada && vista.nuevas.length > 0 && !enCamion ? (

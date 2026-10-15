@@ -2558,6 +2558,13 @@ describe('acciones en la parada (chofer)', () => {
     }
   });
 
+  it('las paradas de emergencia del día se ven junto a lo hecho, con la hora y si el lugar quedó verificado por GPS', async () => {
+    abrir({ listarEmergencias: () => Promise.resolve(ok([{ id: 'e1', camionId: 'c1', tipo: 'vulcanizacion' as const, lat: -33.5, lng: -70.7, precisionM: 20, creadoEn: '2026-10-05T15:30:00.000Z' }])) });
+    const seccion = await screen.findByRole('region', { name: 'Paradas de emergencia' });
+    expect(within(seccion).getByText(/Vulcanización/)).toBeInTheDocument();
+    expect(within(seccion).getByText('Lugar verificado con el GPS.')).toBeInTheDocument();
+  });
+
   it('al terminar con un compañero todavía en el camión, avisa que la ruta y lo pendiente quedan para él', async () => {
     const terminarRuta = vi.fn(() => Promise.resolve(ok({ ...resumen, sigueElCamion: true })));
     abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [], hechas: [hechaA] }))) });
@@ -3244,3 +3251,55 @@ describe('foto de perfil', () => {
   });
 });
 
+
+describe('kit de emergencia (chofer)', () => {
+  const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
+  const abrirKit = async (api: Partial<ApiClient> = {}, ubicacion?: Partial<Casos['ubicacion']>, sesion = CHOFER) => {
+    montar({ sesion, api: { miJornada: () => Promise.resolve(ok(JORNADA)), listarCamiones: () => Promise.resolve(ok([{ id: 'c1', patente: 'AB1234', alias: 'Camión 3', activo: true }])), ...api }, ...(ubicacion ? { casos: { ubicacion: { disponible: true, actual: () => Promise.resolve(ok({ lat: -33.5, lng: -70.7, precisionM: 12 })), ...ubicacion } } } : {}) });
+    await userEvent.click(await screen.findByRole('button', { name: /EMERGENCIA/ }));
+    return screen.getByRole('region', { name: 'Kit de emergencia' });
+  };
+
+  it('está arriba para el chofer, en rojo y cerrado; los teléfonos de Carabineros, PDI, Bomberos y ambulancia se llaman con un toque', async () => {
+    const kit = await abrirKit();
+    expect(within(kit).getByRole('link', { name: 'LLAMAR A CARABINEROS AL 133' })).toHaveAttribute('href', 'tel:133');
+    expect(within(kit).getByRole('link', { name: 'LLAMAR A PDI AL 134' })).toHaveAttribute('href', 'tel:134');
+    expect(within(kit).getByRole('link', { name: 'LLAMAR A BOMBEROS AL 132' })).toHaveAttribute('href', 'tel:132');
+    expect(within(kit).getByRole('link', { name: 'LLAMAR A AMBULANCIA AL 131' })).toHaveAttribute('href', 'tel:131');
+  });
+
+  it('el despachador no ve el kit (va en el camión)', async () => {
+    montar({ sesion: DESPACHADOR });
+    await screen.findByRole('heading', { name: /Hola/ });
+    expect(screen.queryByRole('region', { name: 'Kit de emergencia' })).toBeNull();
+  });
+
+  it('BUSCAR MECÁNICO abre Google Maps centrado donde está el camión y anota la parada de emergencia con la posición', async () => {
+    const registrarEmergencia = vi.fn(() => Promise.resolve(ok({ id: 'e1', camionId: 'cam-1', tipo: 'mecanico' as const, creadoEn: '2026-10-05T15:00:00.000Z' })));
+    const kit = await abrirKit({ registrarEmergencia }, {});
+    const enlace = await within(kit).findByRole('link', { name: 'BUSCAR MECÁNICO EN GOOGLE MAPS' });
+    await waitFor(() => { expect(enlace.getAttribute('href')).toContain('@-33.500000,-70.700000'); });
+    expect(enlace).toHaveAttribute('href', expect.stringContaining('mec%C3%A1nico%20automotriz'));
+    await userEvent.click(enlace);
+    expect(registrarEmergencia).toHaveBeenCalledWith({ tipo: 'mecanico', lat: -33.5, lng: -70.7, precisionM: 12 });
+    expect(await within(kit).findByText('Quedó anotada la parada de emergencia.')).toBeInTheDocument();
+  });
+
+  it('una palabra libre (grúa) se busca y se anota con ese texto; vacía no hace nada', async () => {
+    const registrarEmergencia = vi.fn(() => Promise.resolve(ok({ id: 'e1', camionId: 'cam-1', tipo: 'otro' as const, texto: 'grúa', creadoEn: '2026-10-05T15:00:00.000Z' })));
+    const kit = await abrirKit({ registrarEmergencia });
+    const buscar = within(kit).getByRole('button', { name: /BUSCAR EN GOOGLE MAPS \(escribe qué buscar\)/ });
+    expect(buscar).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(buscar);
+    expect(registrarEmergencia).not.toHaveBeenCalled();
+    await userEvent.type(within(kit).getByLabelText(/Otra ayuda/), 'grúa');
+    await userEvent.click(within(kit).getByRole('link', { name: 'BUSCAR EN GOOGLE MAPS' }));
+    expect(registrarEmergencia).toHaveBeenCalledWith(expect.objectContaining({ tipo: 'otro', texto: 'grúa' }));
+  });
+
+  it('si no se puede anotar, avisa pero la búsqueda ya se abrió', async () => {
+    const kit = await abrirKit({ registrarEmergencia: () => Promise.resolve(err({ kind: 'NETWORK' as const })) });
+    await userEvent.click(within(kit).getByRole('link', { name: 'BUSCAR VULCANIZACIÓN EN GOOGLE MAPS' }));
+    expect(await within(kit).findByText(/No se pudo anotar la parada, pero la búsqueda se abrió igual/)).toBeInTheDocument();
+  });
+});

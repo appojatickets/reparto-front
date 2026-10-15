@@ -188,6 +188,19 @@ export type CambiosFactura = {
 };
 export type FiltroFacturas = { readonly fecha?: string; readonly incluirAnuladas?: boolean; readonly incluirHechas?: boolean };
 
+/** Una parada de emergencia del camión (mecánico, vulcanización u otra ayuda): no es una entrega. */
+export type ParadaEmergencia = {
+  readonly id: string;
+  readonly camionId: string;
+  readonly tipo: 'mecanico' | 'vulcanizacion' | 'otro';
+  readonly texto?: string;
+  readonly lat?: number;
+  readonly lng?: number;
+  readonly precisionM?: number;
+  readonly creadoEn: string;
+};
+export type AvisoEmergencia = { readonly tipo: 'mecanico' | 'vulcanizacion' | 'otro'; readonly texto?: string; readonly lat?: number; readonly lng?: number; readonly precisionM?: number };
+
 export type EventoEntrega = {
   readonly tipo: 'llegada' | 'entregado' | 'cerrado' | 'espera' | 'no_entregado' | 'vuelve_mas_tarde';
   readonly lat?: number;

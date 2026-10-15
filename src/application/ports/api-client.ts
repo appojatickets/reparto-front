@@ -1,7 +1,7 @@
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  AsignacionDia, CambiosFactura, FilaPlanillaEnviada, LocalDeLista, ResultadoFilaPlanilla, ResumenComuna, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
+  AsignacionDia, CambiosFactura, FilaPlanillaEnviada, LocalDeLista, ResultadoFilaPlanilla, ResumenComuna, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, AvisoEmergencia, ParadaEmergencia, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
   Contribuyente, PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
@@ -124,6 +124,10 @@ export interface ApiClient extends SaludApi {
   guardarConfig(config: ConfigEmpresa): R<ConfigEmpresa>;
 
   registrarEvento(facturaId: string, evento: EventoEntrega): R<ResultadoEvento>;
+  /** Kit de emergencia: anota que el camión va a un mecánico, una vulcanización u otra ayuda (no es una entrega). */
+  registrarEmergencia(aviso: AvisoEmergencia): R<ParadaEmergencia>;
+  /** Las paradas de emergencia de ese día (del camión pedido, o todas si quien pregunta es despacho). */
+  listarEmergencias(fecha: string, camionId?: string): R<readonly ParadaEmergencia[]>;
   /** Informa dónde está el camión mientras la app está abierta; el servidor anota solo la llegada si se queda junto al pin de una entrega. */
   enviarPosiciones(puntos: readonly PuntoGps[]): R<ResultadoPosiciones>;
   /** Solo admin: qué datos se guardan, qué aprendió el sistema y cuánto se parece la ruta sugerida a la manejada. */
