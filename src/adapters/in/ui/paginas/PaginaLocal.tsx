@@ -1,6 +1,7 @@
 import { useCallback, useState, type ChangeEvent, type SyntheticEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { leerCoordenadas } from '../../../../domain/coordenadas';
+import { COMUNAS_RM } from '../../../../domain/comunas';
 import { enlaceGoogleMaps, enlaceStreetView, enlaceWaze } from '../../../../domain/enlaces';
 import { Contribuyentes } from '../componentes/Contribuyentes';
 import { InsigniasDeVerificacion } from '../componentes/InsigniasDeVerificacion';
@@ -15,7 +16,7 @@ import { useCarga } from '../hooks';
 import { useUsuario } from '../sesion';
 import { EditorHorario, ResumenHorario } from '../componentes/EditorHorario';
 import { PegarUbicacion } from '../componentes/PegarUbicacion';
-import { AreaTexto, Aviso, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina } from '../componentes/ui';
+import { AreaTexto, Aviso, Boton, Campo, Cargando, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 import { ETIQUETA_PIN } from './PaginaClientes';
 
 const FotoLocal = ({ localId, version }: { readonly localId: string; readonly version: number }) => {
@@ -112,6 +113,8 @@ const CorregirFicha = ({ local, recargar }: { readonly local: LocalDetalle; read
   const { api } = useCasos();
   const navegar = useNavigate();
   const [nombre, setNombre] = useState(local.razonSocial);
+  const [direccion, setDireccion] = useState(local.direccion);
+  const [comuna, setComuna] = useState(local.comuna);
   const [confirmando, setConfirmando] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | undefined>();
@@ -123,6 +126,18 @@ const CorregirFicha = ({ local, recargar }: { readonly local: LocalDetalle; read
     setOcupado(false);
     if (r.ok) {
       setMensaje({ tipo: 'exito', texto: 'Nombre corregido.' });
+      recargar();
+    } else setMensaje({ tipo: 'error', texto: mensajeDeError(r.error) });
+  };
+
+  const direccionCambio = direccion.trim() !== local.direccion || comuna !== local.comuna;
+  const guardarDireccion = async (e: SyntheticEvent): Promise<void> => {
+    e.preventDefault();
+    setOcupado(true);
+    const r = await api.actualizarLocal(local.id, { ...(direccion.trim() !== local.direccion ? { direccion } : {}), ...(comuna !== local.comuna ? { comuna } : {}) });
+    setOcupado(false);
+    if (r.ok) {
+      setMensaje({ tipo: 'exito', texto: 'Dirección corregida. Si el pin lo había puesto el buscador, se vuelve a buscar solo.' });
       recargar();
     } else setMensaje({ tipo: 'error', texto: mensajeDeError(r.error) });
   };
@@ -144,6 +159,14 @@ const CorregirFicha = ({ local, recargar }: { readonly local: LocalDetalle; read
       <form className="pagina" onSubmit={(e) => void guardarNombre(e)} noValidate>
         <Campo etiqueta="Razón social (corrige un error de tipeo)" value={nombre} onChange={(e) => { setNombre(e.target.value); }} maxLength={200} />
         <Boton type="submit" variante="secundario" disabled={ocupado || nombre.trim() === '' || nombre.trim() === local.razonSocial}>GUARDAR NOMBRE</Boton>
+      </form>
+      <form className="pagina" onSubmit={(e) => void guardarDireccion(e)} noValidate>
+        <Campo etiqueta="Dirección (corrige un error de tipeo)" value={direccion} onChange={(e) => { setDireccion(e.target.value); }} maxLength={300} />
+        <Selector etiqueta="Comuna" value={comuna} onChange={(e) => { setComuna(e.target.value); }}>
+          {COMUNAS_RM.includes(comuna) ? null : <option value={comuna}>{comuna}</option>}
+          {COMUNAS_RM.map((c) => <option key={c} value={c}>{c}</option>)}
+        </Selector>
+        <Boton type="submit" variante="secundario" disabled={ocupado || direccion.trim() === '' || !direccionCambio}>GUARDAR DIRECCIÓN</Boton>
       </form>
       {confirmando ? (
         <div className="pagina" role="group" aria-label="Confirmar eliminación">

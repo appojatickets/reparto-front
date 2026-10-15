@@ -130,6 +130,22 @@ export const PaginaAnalitica = () => {
               </>
             )}
 
+            {p.calidad.some((q) => q.entregadas !== undefined) ? (
+              <>
+                <h2>Lo entregado frente a la ruta con que salió el camión</h2>
+                <ul className="tarjetas">
+                  {p.calidad.filter((q) => q.entregadas !== undefined).map((q) => (
+                    <Dato
+                      key={`salida-${q.fecha}-${q.camionId}`}
+                      titulo={`${q.fecha} · ${q.camion ?? 'camión'}`}
+                      valor={`${q.entregadas ?? 0} entregadas · ${q.inversionesSalida ?? 0} ${q.inversionesSalida === 1 ? 'par' : 'pares'} fuera de orden`}
+                      ayuda={q.salioComoSugeria === true ? 'Salió con el orden que sugirió el sistema.' : q.salioComoSugeria === false ? 'Salió con un orden distinto del sugerido (acomodado a mano o en el orden de carga).' : ''}
+                    />
+                  ))}
+                </ul>
+              </>
+            ) : null}
+
             {delChofer.length > 0 ? (
               <>
                 <h2>Días en orden manual: la experiencia del chofer</h2>

@@ -273,7 +273,7 @@ export type OperacionRuta =
   | { readonly tipo: 'salida'; readonly salidaMin: number };
 
 /** Lo que quedó del día al terminar la ruta (las pendientes no se alcanzaron a entregar y quedan en su día). */
-export type ResumenJornada = { readonly fecha: string; readonly camionId: string; readonly desde: string; readonly hasta: string; readonly entregadas: number; readonly noEntregadas: number; readonly pendientes: number };
+export type ResumenJornada = { readonly fecha: string; readonly camionId: string; readonly desde: string; readonly hasta: string; readonly entregadas: number; readonly noEntregadas: number; readonly pendientes: number; readonly sigueElCamion?: boolean };
 export type PersonaDeCamion = { readonly nombre: string; readonly usuarioId?: string };
 /** Lo que dice la planilla del día de un camión: quiénes van, qué comunas hace y con qué vendedores (ADR 0036 del back). */
 export type AsignacionDia = {
@@ -329,7 +329,7 @@ export type PanelAnalitica = {
   /** Locales con el pin verificado (fijo), por verificar (se ajusta con las entregas) y sin pin. */
   readonly pines: { readonly verificados: number; readonly porVerificar: number; readonly sinPin: number };
   readonly porDia: readonly { readonly fecha: string; readonly jornadas: number; readonly atendidas: number; readonly sinHacer: number }[];
-  readonly calidad: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly distSugeridaM: number; readonly distRealM: number; readonly inversiones: number; readonly origen: 'sistema' | 'chofer'; readonly cambios: number }[];
+  readonly calidad: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly distSugeridaM: number; readonly distRealM: number; readonly inversiones: number; readonly origen: 'sistema' | 'chofer'; readonly cambios: number; readonly entregadas?: number; readonly inversionesSalida?: number; readonly salioComoSugeria?: boolean }[];
   readonly aprendido: {
     readonly ritmo: readonly ParametroAprendido[];
     readonly capacidad: readonly ParametroAprendido[];

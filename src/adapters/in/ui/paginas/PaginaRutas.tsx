@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { reordenarParadas } from '../../../../domain/arrastre';
-import { enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
+import { enlaceNavegar, enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
 import { horaAproximada, horaDeMinutos } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
@@ -23,6 +23,8 @@ import { useUsuario } from '../sesion';
 import { Aviso, Boton, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
 const REFRESCO_MS = 3 * 60 * 1000;
+/** Cada cuánto se mira si alguien más del camión cambió la ruta (consulta liviana; solo con la app a la vista). */
+const SINCRONIZAR_MS = 8_000;
 /** Cada cuánto se mira si el camión ya llegó al depósito (solo con la pantalla abierta y después de haber entregado algo). */
 const MIRAR_DEPOSITO_MS = 90 * 1000;
 
@@ -238,14 +240,15 @@ const ListaItems = ({ titulo, items, children }: { readonly titulo: string; read
   );
 
 /**
- * La última parada de toda ruta: volver a la empresa (el depósito configurado). Está anclada: no se mueve ni se entrega, solo marca adónde se
- * vuelve y a qué hora se llega. Al hacer la última entrega se destaca: ya no queda nada y es hora de volver.
+ * La última parada de toda ruta: volver a la empresa (el depósito configurado). Está anclada: no se mueve ni se entrega, marca adónde se
+ * vuelve y a qué hora se llega (siempre a la vista, aunque las horas de las paradas estén ocultas), y ofrece IR con Waze o Google Maps. Al hacer la última entrega se destaca: ya no queda nada y es hora de volver.
  */
-const FilaDeposito = ({ v, verHoras }: { readonly v: VistaRuta; readonly verHoras: boolean }) => {
+const FilaDeposito = ({ v }: { readonly v: VistaRuta }) => {
   const deposito = v.deposito;
   if (!deposito || !v.planificada || (v.paradas.length === 0 && v.hechas.length === 0)) return null;
   const nombre = deposito.nombre?.trim() ? deposito.nombre.trim().toUpperCase() : 'LA EMPRESA';
   const terminaste = v.paradas.length === 0;
+  const destino = { direccion: nombre, comuna: '', lat: deposito.lat, lng: deposito.lng };
   return (
     <div className={`parada parada--deposito${terminaste ? ' parada--deposito-final' : ''}`} aria-label="Volver a la empresa">
       <div className="parada-fila parada-fila--fija">
@@ -253,8 +256,12 @@ const FilaDeposito = ({ v, verHoras }: { readonly v: VistaRuta; readonly verHora
         <span className="parada-nombre">
           {terminaste ? <strong>Terminaste las entregas</strong> : null}
           <strong>{terminaste ? `VUELVE A ${nombre}` : `VOLVER A ${nombre}`}</strong>
-          {verHoras && v.regreso !== undefined && !terminaste ? <span className="comuna">Llegada aproximada {horaAproximada(v.regreso)}</span> : null}
+          {v.regreso !== undefined && !terminaste ? <span className="comuna">Llegada aproximada {horaAproximada(v.regreso)}</span> : null}
         </span>
+      </div>
+      <div className="fila-botones" role="group" aria-label={`Ir a ${nombre} con`}>
+        <a className="big-button big-button--primario" href={enlaceNavegar(destino, 'waze')} target="_blank" rel="noreferrer" aria-label={`IR A ${nombre} CON WAZE`}>IR CON WAZE</a>
+        <a className="big-button big-button--primario" href={enlaceNavegar(destino, 'google')} target="_blank" rel="noreferrer" aria-label={`IR A ${nombre} CON GOOGLE MAPS`}>IR CON GOOGLE MAPS</a>
       </div>
     </div>
   );
@@ -288,7 +295,10 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     setVerHoras(!verHoras);
   };
   /** Después de entregar o avisar: se vuelve a pedir la ruta (la parada hecha sale de la lista y las horas se corren). */
+  const marcaVista = useRef<string | undefined>(undefined);
   const recargarVista = (): void => {
+    // Lo que se pide ahora ya trae lo último: la próxima marca se toma como base para no recargar dos veces por el mismo cambio.
+    marcaVista.current = undefined;
     setActualizada(undefined);
     refrescar();
   };
@@ -411,6 +421,29 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     void aplicar(() => api.operarRuta(camionId, fecha, version, { tipo: 'primero', facturaId }));
   };
 
+  /**
+   * El camión es dueño de la ruta y varias personas la usan a la vez (chofer y ayudante, o quien despacha): se mira seguido una marca liviana y,
+   * si alguien más movió la ruta, cargó una factura o entregó, se recarga la ruta completa.
+   */
+  useEffect(() => {
+    let activo = true;
+    const mirar = async (): Promise<void> => {
+      if (document.visibilityState !== 'visible') return;
+      const r = await api.marcaDeRuta(camionId, fecha);
+      if (!activo || !r.ok) return;
+      const antes = marcaVista.current;
+      marcaVista.current = r.value;
+      if (antes !== undefined && antes !== r.value) recargarVista();
+    };
+    void mirar();
+    const cada = setInterval(() => { void mirar(); }, SINCRONIZAR_MS);
+    return () => {
+      activo = false;
+      clearInterval(cada);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recargarVista solo usa setters estables
+  }, [api, camionId, fecha]);
+
   /** La lista se mantiene al día sola: cada pocos minutos y al volver a la app (por ejemplo desde Waze) se recalculan las horas. */
   useEffect(() => {
     const actualizar = (): void => {
@@ -469,7 +502,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
             <span>Sin hacer: <strong>{r.pendientes}</strong></span>
           </div>
         ) : null}
-        {(r?.pendientes ?? 0) > 0 ? <Aviso>La lista quedó limpia. Lo que no se alcanzó a entregar volvió a «Facturas del día» sin camión; mañana la ruta se arma de cero.</Aviso> : null}
+        {r?.sigueElCamion ? <Aviso>Tu compañero sigue en el camión: la ruta y lo pendiente quedan para él, y el día del camión se cierra cuando termine el último.</Aviso> : null}
+        {(r?.pendientes ?? 0) > 0 && !r?.sigueElCamion ? <Aviso>La lista quedó limpia. Lo que no se alcanzó a entregar volvió a «Facturas del día» sin camión; mañana la ruta se arma de cero.</Aviso> : null}
         <Link className="big-button big-button--primario" to="/">VOLVER AL INICIO</Link>
       </section>
     );
@@ -605,7 +639,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               />
             ))}
           </ol>
-          <FilaDeposito v={vista} verHoras={verHoras} />
+          <FilaDeposito v={vista} />
         </>
       )}
 

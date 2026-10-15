@@ -281,6 +281,10 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     },
 
     verRuta: (camionId, fecha) => ejecutar(() => client.GET('/v1/rutas', { params: { query: { camionId, fecha } }, signal: timeout() }), { repetible: true }),
+    marcaDeRuta: async (camionId, fecha) => {
+      const r = await ejecutar(() => client.GET('/v1/rutas/marca', { params: { query: { camionId, fecha } }, signal: timeout() }), { repetible: true });
+      return r.ok ? ok(r.value.marca) : r;
+    },
     planificarRuta: (camionId, fecha, salidaMin, orden) => ejecutar(() => client.POST('/v1/rutas/planificar', { body: { camionId, fecha, ...(salidaMin !== undefined ? { salidaMin } : {}), ...(orden !== undefined ? { orden } : {}) }, signal: timeout() })),
     operarRuta: (camionId, fecha, version, operacion) => ejecutar(() => client.POST('/v1/rutas/operaciones', { body: { camionId, fecha, version, operacion }, signal: timeout() })),
   };

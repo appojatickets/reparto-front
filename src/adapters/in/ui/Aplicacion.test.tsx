@@ -202,6 +202,27 @@ describe('servidor dormido', () => {
 describe('búsqueda de clientes', () => {
   const resultado = { localId: 'l1', clienteId: 'c1', razonSocial: 'Rabelo Mágica SpA', direccion: 'Av. Providencia 2500', comuna: 'Providencia', pinEstado: 'validado' as const };
 
+  it('quien puede corregir ve ELIMINAR en cada resultado: pide confirmar y lo saca de la lista; el chofer común no lo ve', async () => {
+    const eliminarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/clientes', sesion: DESPACHADOR, api: { buscarClientes: () => Promise.resolve(ok([resultado])), eliminarLocal } });
+    await userEvent.type(await screen.findByLabelText('Nombre o dirección'), 'rabelo');
+    await userEvent.click(await screen.findByRole('button', { name: 'ELIMINAR LA DIRECCIÓN DE Rabelo Mágica SpA' }));
+    expect(eliminarLocal).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'SÍ, ELIMINAR' }));
+    expect(eliminarLocal).toHaveBeenCalledWith('l1');
+    await waitFor(() => { expect(screen.queryByRole('link', { name: 'Rabelo Mágica SpA' })).toBeNull(); });
+  });
+
+  it('si la dirección ya tiene entregas, el borrado rápido lo explica y la deja en la lista', async () => {
+    const eliminarLocal = vi.fn(() => Promise.resolve(err({ kind: 'HTTP' as const, status: 409, mensaje: 'Esta dirección ya tiene entregas hechas: no se puede eliminar para no perder el historial.' })));
+    montar({ ruta: '/clientes', sesion: DESPACHADOR, api: { buscarClientes: () => Promise.resolve(ok([resultado])), eliminarLocal } });
+    await userEvent.type(await screen.findByLabelText('Nombre o dirección'), 'rabelo');
+    await userEvent.click(await screen.findByRole('button', { name: 'ELIMINAR LA DIRECCIÓN DE Rabelo Mágica SpA' }));
+    await userEvent.click(screen.getByRole('button', { name: 'SÍ, ELIMINAR' }));
+    expect(await screen.findByText(/ya tiene entregas hechas/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Rabelo Mágica SpA' })).toBeInTheDocument();
+  });
+
   it('busca desde la 3.ª letra y muestra tarjetas con comuna y estado del pin', async () => {
     const buscarClientes = vi.fn(() => Promise.resolve(ok([resultado])));
     montar({ ruta: '/clientes', sesion: DESPACHADOR, api: { buscarClientes } });
@@ -292,6 +313,20 @@ describe('detalle del local', () => {
       await userEvent.click(screen.getByRole('button', { name: 'GUARDAR NOMBRE' }));
       expect(corregirCliente).toHaveBeenCalledWith('c1', { razonSocial: 'Rabelo Magica SpA' });
       expect(await screen.findByText('Nombre corregido.')).toBeInTheDocument();
+    });
+
+    it('puede corregir la dirección y la comuna de la ficha', async () => {
+      const actualizarLocal = vi.fn(() => Promise.resolve(ok(undefined)));
+      montar({ ruta: '/clientes/l1', sesion: EDITOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), actualizarLocal } });
+      const campo = await screen.findByLabelText('Dirección (corrige un error de tipeo)');
+      expect(campo).toHaveValue('Av. Providencia 2500');
+      expect(screen.getByRole('button', { name: 'GUARDAR DIRECCIÓN' })).toBeDisabled();
+      await userEvent.clear(campo);
+      await userEvent.type(campo, 'Av. Providencia 2550');
+      await userEvent.selectOptions(screen.getByLabelText('Comuna'), 'Ñuñoa');
+      await userEvent.click(screen.getByRole('button', { name: 'GUARDAR DIRECCIÓN' }));
+      expect(actualizarLocal).toHaveBeenCalledWith('l1', { direccion: 'Av. Providencia 2550', comuna: 'Ñuñoa' });
+      expect(await screen.findByText(/Dirección corregida/)).toBeInTheDocument();
     });
 
     it('un chofer sin el permiso no llega a la ficha', async () => {
@@ -2136,13 +2171,13 @@ describe('acciones en la parada (chofer)', () => {
       return { guardar, store: { cargar: () => inicial, guardar } };
     };
 
-    it('por defecto no se ve ninguna hora; VER HORAS ESTIMADAS las muestra en cada parada y en Ibiza, y se recuerda', async () => {
+    it('por defecto no se ven las horas de las paradas; VER HORAS ESTIMADAS las muestra, y se recuerda (la de Ibiza se ve siempre)', async () => {
       const h = horas();
       // la parada A llega a las 600 + 0 min = 10:00 y la B a 10:20; el regreso es a las 11:40 (700)
       abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: { lat: -33.6, lng: -70.55, nombre: 'Ibiza' }, regreso: 700 }))) }, { horas: h.store });
       const filaA = await screen.findByRole('listitem', { name: 'Parada 1' });
       expect(within(filaA).queryByText(/~\d\d:\d\d/)).toBeNull();
-      expect(within(await screen.findByLabelText('Volver a la empresa')).queryByText(/Llegada aproximada/)).toBeNull();
+      expect(within(await screen.findByLabelText('Volver a la empresa')).getByText('Llegada aproximada 11:40')).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: 'VER HORAS ESTIMADAS' }));
       expect(h.guardar).toHaveBeenCalledWith(true);
       expect(within(filaA).getByText('~10:00')).toBeInTheDocument();
@@ -2153,7 +2188,7 @@ describe('acciones en la parada (chofer)', () => {
       await userEvent.click(ocultar);
       expect(h.guardar).toHaveBeenLastCalledWith(false);
       expect(within(filaA).queryByText(/~\d\d:\d\d/)).toBeNull();
-      expect(within(screen.getByLabelText('Volver a la empresa')).queryByText(/Llegada aproximada/)).toBeNull();
+      expect(within(screen.getByLabelText('Volver a la empresa')).getByText('Llegada aproximada 11:40')).toBeInTheDocument();
     });
 
     it('si ya estaba encendido en el teléfono, las horas se ven desde el principio', async () => {
@@ -2362,16 +2397,15 @@ describe('acciones en la parada (chofer)', () => {
   describe('la última parada: volver a la empresa', () => {
     const DEPOSITO = { lat: -33.6, lng: -70.55, nombre: 'Ibiza' };
 
-    it('toda ruta termina con una fila fija «VOLVER A IBIZA» que solo dice la hora aproximada de llegada (sin pin, botones ni más información) y no se puede mover', async () => {
+    it('toda ruta termina con una fila fija «VOLVER A IBIZA» con la hora aproximada de llegada y los botones para ir con Waze o Google Maps, y no se puede mover', async () => {
       abrir({ verRuta: () => Promise.resolve(ok(vistaBase({ deposito: DEPOSITO, regreso: 700.4 }))) });
       const fin = await screen.findByLabelText('Volver a la empresa');
       expect(within(fin).getByText('VOLVER A IBIZA')).toBeInTheDocument();
-      // las horas están apagadas hasta que se pidan con VER HORAS ESTIMADAS
-      expect(within(fin).queryByText(/Llegada aproximada/)).toBeNull();
-      await userEvent.click(screen.getByRole('button', { name: 'VER HORAS ESTIMADAS' }));
+      // la hora de llegada a la empresa se ve siempre, aunque las horas de las paradas estén ocultas
       expect(within(fin).getByText('Llegada aproximada 11:40')).toBeInTheDocument();
-      expect(fin).not.toHaveTextContent(/Última parada|\./);
-      expect(within(fin).queryByRole('link')).toBeNull();
+      // ir a la empresa: Waze o Google Maps con las coordenadas del depósito
+      expect(within(fin).getByRole('link', { name: 'IR A IBIZA CON WAZE' })).toHaveAttribute('href', 'https://waze.com/ul?ll=-33.6,-70.55&navigate=yes');
+      expect(within(fin).getByRole('link', { name: 'IR A IBIZA CON GOOGLE MAPS' })).toHaveAttribute('href', expect.stringContaining('destination=-33.6,-70.55'));
       expect(within(fin).queryByRole('button')).toBeNull();
       // viene después de la última parada y no cuenta como una parada más
       const ultima = screen.getByRole('listitem', { name: 'Parada 2' });
@@ -2394,7 +2428,7 @@ describe('acciones en la parada (chofer)', () => {
       const fin = await screen.findByLabelText('Volver a la empresa');
       expect(within(fin).getByText('Terminaste las entregas')).toBeInTheDocument();
       expect(within(fin).getByText('VUELVE A IBIZA')).toBeInTheDocument();
-      expect(within(fin).queryByRole('link')).toBeNull();
+      expect(within(fin).getAllByRole('link')).toHaveLength(2);
     });
 
     it('quien arma la ruta (no va en el camión) la ve igual', async () => {
@@ -2403,7 +2437,7 @@ describe('acciones en la parada (chofer)', () => {
       await userEvent.selectOptions(screen.getByLabelText('Camión'), 'c1');
       const fin = await screen.findByLabelText('Volver a la empresa');
       expect(within(fin).getByText('VOLVER A IBIZA')).toBeInTheDocument();
-      expect(within(fin).queryByRole('link')).toBeNull();
+      expect(within(fin).getAllByRole('link')).toHaveLength(2);
     });
   });
 
@@ -2504,6 +2538,33 @@ describe('acciones en la parada (chofer)', () => {
     expect(fin).toHaveTextContent('Sin hacer: 2');
     expect(within(fin).getByText(/La lista quedó limpia/)).toBeInTheDocument();
     expect(within(fin).getByRole('link', { name: 'VOLVER AL INICIO' })).toHaveAttribute('href', '/');
+  });
+
+  it('si el compañero del camión cambia la ruta, se recarga sola sin esperar los minutos de siempre; si nada cambió, no se vuelve a pedir', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const verRuta = vi.fn(() => Promise.resolve(ok(vistaBase())));
+      const marcaDeRuta = vi.fn().mockResolvedValueOnce(ok('v1')).mockResolvedValueOnce(ok('v1')).mockResolvedValue(ok('v2'));
+      abrir({ verRuta, marcaDeRuta });
+      await screen.findByRole('listitem', { name: 'Parada 1' });
+      expect(verRuta).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(8_100);
+      expect(marcaDeRuta).toHaveBeenCalledTimes(2);
+      expect(verRuta).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(8_100);
+      await waitFor(() => { expect(verRuta).toHaveBeenCalledTimes(2); });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('al terminar con un compañero todavía en el camión, avisa que la ruta y lo pendiente quedan para él', async () => {
+    const terminarRuta = vi.fn(() => Promise.resolve(ok({ ...resumen, sigueElCamion: true })));
+    abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [], hechas: [hechaA] }))) });
+    await userEvent.click(await screen.findByRole('button', { name: 'TERMINAR RUTA' }));
+    const fin = await screen.findByRole('region', { name: 'Ruta terminada' });
+    expect(within(fin).getByText(/Tu compañero sigue en el camión/)).toBeInTheDocument();
+    expect(within(fin).queryByText(/La lista quedó limpia/)).toBeNull();
   });
 
   it('sin nada pendiente, TERMINAR RUTA termina directo; un error se avisa y deja seguir', async () => {
@@ -2723,7 +2784,7 @@ describe('analítica del admin', () => {
     pines: { verificados: 12, porVerificar: 140, sinPin: 590 },
     porDia: [{ fecha: '2026-10-05', jornadas: 2, atendidas: 60, sinHacer: 3 }],
     calidad: [
-      { fecha: '2026-10-05', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 40_000, distRealM: 44_000, inversiones: 3, origen: 'sistema' as const, cambios: 2 },
+      { fecha: '2026-10-05', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 40_000, distRealM: 44_000, inversiones: 3, origen: 'sistema' as const, cambios: 2, entregadas: 38, inversionesSalida: 7, salioComoSugeria: false },
       { fecha: '2026-10-09', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 30_000, distRealM: 27_000, inversiones: 5, origen: 'chofer' as const, cambios: 0 },
       { fecha: '2026-10-08', camionId: 'c1', camion: 'LRST·81', distSugeridaM: 20_000, distRealM: 22_000, inversiones: 2, origen: 'chofer' as const, cambios: 3 },
     ],
@@ -2765,6 +2826,13 @@ describe('analítica del admin', () => {
     expect(screen.getByText('3 paradas movidas a mano.')).toBeInTheDocument();
     // la comparación de siempre solo cuenta los días que ordenó el sistema
     expect(screen.getByText('Lo manejado fue 10 % más largo que lo sugerido.')).toBeInTheDocument();
+  });
+
+  it('muestra las tres rutas del día: cuánto de lo entregado quedó fuera del orden con que salió el camión', async () => {
+    montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(panel)) } });
+    expect(await screen.findByRole('heading', { name: 'Lo entregado frente a la ruta con que salió el camión' })).toBeInTheDocument();
+    expect(screen.getByText('38 entregadas · 7 pares fuera de orden')).toBeInTheDocument();
+    expect(screen.getByText(/Salió con un orden distinto del sugerido/)).toBeInTheDocument();
   });
 
   it('ANALIZAR AHORA corre el análisis y vuelve a cargar el panel', async () => {
