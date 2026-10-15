@@ -2835,6 +2835,15 @@ describe('analítica del admin', () => {
     expect(screen.getByText(/Salió con un orden distinto del sugerido/)).toBeInTheDocument();
   });
 
+  it('muestra el cierre deducido por GPS frente al botón, con los casos para revisar', async () => {
+    const cierresGps = { visitas: 40, atendidas: 30, cerradoDeducido: 6, sinDesenlace: 4, botonCerrado: 5, botonSinRecorrido: 1, botonSinDesenlace: 1, coinciden: 3, soloGps: 3, soloGpsConfirmados: 2, soloBoton: 1, medianaMinCerradoBoton: 2.5, medianaMinAtendidas: 9, casos: [{ tipo: 'solo_gps' as const, facturaId: 'f1', localId: 'l1', fecha: '2026-10-05', minutos: 2, entregadaDespues: true, etiqueta: { razonSocial: 'Kiosko Ana', direccion: 'Calle 1 100', comuna: 'Buin' } }] };
+    montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok({ ...panel, cierresGps })) } });
+    expect(await screen.findByRole('heading', { name: 'Cerrado: lo que dice el GPS frente al botón' })).toBeInTheDocument();
+    expect(screen.getByText('3 de 4 avisos de cerrado con segundo intento')).toBeInTheDocument();
+    expect(screen.getByText('2,5 min cerrado · 9 min atendido')).toBeInTheDocument();
+    expect(screen.getByText('Solo el GPS dice cerrado (2 min)')).toBeInTheDocument();
+  });
+
   it('ANALIZAR AHORA corre el análisis y vuelve a cargar el panel', async () => {
     const analitica = vi.fn(() => Promise.resolve(ok(panel)));
     const ejecutarAnalisis = vi.fn(() => Promise.resolve(ok(panel.ultimaEjecucion.resumen)));

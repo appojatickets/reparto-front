@@ -339,5 +339,11 @@ export type PanelAnalitica = {
   readonly cierres: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly horasCerrado: readonly number[]; readonly etiqueta?: EtiquetaLocal }[];
   /** Locales donde se avisó la entrega con buen GPS lejos del pin. */
   readonly pinesDudosos: readonly { readonly localId: string; readonly distanciaM: number; readonly visitas: number; readonly fuente?: string; readonly etiqueta?: EtiquetaLocal }[];
+  /** El cierre que deduce el GPS frente al botón CERRADO (ADR 0046 del back). */
+  readonly cierresGps?: {
+    readonly visitas: number; readonly atendidas: number; readonly cerradoDeducido: number; readonly sinDesenlace: number; readonly botonCerrado: number; readonly botonSinRecorrido: number; readonly botonSinDesenlace: number;
+    readonly coinciden: number; readonly soloGps: number; readonly soloGpsConfirmados: number; readonly soloBoton: number; readonly medianaMinCerradoBoton?: number; readonly medianaMinAtendidas?: number;
+    readonly casos: readonly { readonly tipo: 'solo_gps' | 'solo_boton'; readonly facturaId: string; readonly localId: string; readonly fecha: string; readonly minutos: number; readonly entregadaDespues: boolean; readonly camion?: string; readonly etiqueta?: EtiquetaLocal }[];
+  };
   readonly ultimaEjecucion?: { readonly iniciadoEn: string; readonly terminadoEn: string; readonly resumen: ResumenAnalisis };
 };

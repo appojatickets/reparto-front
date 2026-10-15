@@ -173,6 +173,32 @@ export const PaginaAnalitica = () => {
               </>
             ) : null}
 
+            {p.cierresGps && p.cierresGps.visitas > 0 ? (
+              <>
+                <h2>Cerrado: lo que dice el GPS frente al botón</h2>
+                <p>El sistema prueba una idea: si el camión se queda poco junto al local, se va sin entregar y después vuelve, estaba cerrado. Aquí se compara con lo que avisan los choferes con el botón CERRADO. Todavía no cambia ninguna ruta.</p>
+                <ul className="tarjetas">
+                  <Dato titulo="Coinciden (GPS y botón dicen cerrado)" valor={`${p.cierresGps.coinciden} de ${p.cierresGps.botonCerrado - p.cierresGps.botonSinDesenlace} avisos de cerrado con segundo intento`} ayuda="Si es alto, la regla ve lo que ven los choferes." />
+                  <Dato titulo="Cerrado solo según el GPS" valor={`${p.cierresGps.soloGps}`} ayuda={`${p.cierresGps.soloGpsConfirmados} se entregaron después. Son cierres que nadie avisó con el botón.`} />
+                  <Dato titulo="Cerrado solo según el botón" valor={`${p.cierresGps.soloBoton}`} ayuda="El chofer avisó cerrado pero el camión se quedó más de lo esperado y volvió: revisar el umbral." />
+                  <Dato titulo="Avisos de cerrado sin recorrido GPS" valor={`${p.cierresGps.botonSinRecorrido}`} ayuda="Cuánto del GPS se está perdiendo (app cerrada, sin pin)." />
+                  {p.cierresGps.medianaMinCerradoBoton !== undefined && p.cierresGps.medianaMinAtendidas !== undefined ? (
+                    <Dato titulo="Permanencia típica" valor={`${String(p.cierresGps.medianaMinCerradoBoton).replace('.', ',')} min cerrado · ${String(p.cierresGps.medianaMinAtendidas).replace('.', ',')} min atendido`} ayuda="Si se separan bien, la regla de tiempo corto es válida." />
+                  ) : null}
+                </ul>
+                {p.cierresGps.casos.length > 0 ? (
+                  <>
+                    <h3>Casos para revisar</h3>
+                    <ul className="tarjetas">
+                      {p.cierresGps.casos.map((c) => (
+                        <Dato key={`${c.facturaId}-${c.fecha}-${c.tipo}`} titulo={`${c.fecha} · ${c.etiqueta ? `${c.etiqueta.razonSocial} · ${c.etiqueta.comuna}` : c.localId}`} valor={`${c.tipo === 'solo_gps' ? 'Solo el GPS dice cerrado' : 'Solo el botón dice cerrado'} (${c.minutos} min)`} ayuda={c.entregadaDespues ? 'Se entregó después.' : ''} />
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+
             {p.cierres.length > 0 ? (
               <>
                 <h2>Locales encontrados cerrados</h2>

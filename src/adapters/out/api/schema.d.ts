@@ -10497,6 +10497,37 @@ export interface paths {
                                     comuna: string;
                                 };
                             }[];
+                            cierresGps?: {
+                                visitas: number;
+                                atendidas: number;
+                                cerradoDeducido: number;
+                                sinDesenlace: number;
+                                botonCerrado: number;
+                                botonSinRecorrido: number;
+                                botonSinDesenlace: number;
+                                coinciden: number;
+                                soloGps: number;
+                                soloGpsConfirmados: number;
+                                soloBoton: number;
+                                medianaMinCerradoBoton?: number;
+                                medianaMinAtendidas?: number;
+                                casos: {
+                                    /** @enum {string} */
+                                    tipo: "solo_gps" | "solo_boton";
+                                    facturaId: string;
+                                    localId: string;
+                                    camionId: string;
+                                    fecha: string;
+                                    minutos: number;
+                                    entregadaDespues: boolean;
+                                    camion?: string;
+                                    etiqueta?: {
+                                        razonSocial: string;
+                                        direccion: string;
+                                        comuna: string;
+                                    };
+                                }[];
+                            };
                             ultimaEjecucion?: {
                                 iniciadoEn: string;
                                 terminadoEn: string;
@@ -10521,6 +10552,37 @@ export interface paths {
                                         confianzaAbierto: number;
                                         horasCerrado: number[];
                                     }[];
+                                    cierresGps?: {
+                                        visitas: number;
+                                        atendidas: number;
+                                        cerradoDeducido: number;
+                                        sinDesenlace: number;
+                                        botonCerrado: number;
+                                        botonSinRecorrido: number;
+                                        botonSinDesenlace: number;
+                                        coinciden: number;
+                                        soloGps: number;
+                                        soloGpsConfirmados: number;
+                                        soloBoton: number;
+                                        medianaMinCerradoBoton?: number;
+                                        medianaMinAtendidas?: number;
+                                        casos: {
+                                            /** @enum {string} */
+                                            tipo: "solo_gps" | "solo_boton";
+                                            facturaId: string;
+                                            localId: string;
+                                            camionId: string;
+                                            fecha: string;
+                                            minutos: number;
+                                            entregadaDespues: boolean;
+                                            camion?: string;
+                                            etiqueta?: {
+                                                razonSocial: string;
+                                                direccion: string;
+                                                comuna: string;
+                                            };
+                                        }[];
+                                    };
                                 };
                             };
                         };
@@ -10686,6 +10748,37 @@ export interface paths {
                                 confianzaAbierto: number;
                                 horasCerrado: number[];
                             }[];
+                            cierresGps?: {
+                                visitas: number;
+                                atendidas: number;
+                                cerradoDeducido: number;
+                                sinDesenlace: number;
+                                botonCerrado: number;
+                                botonSinRecorrido: number;
+                                botonSinDesenlace: number;
+                                coinciden: number;
+                                soloGps: number;
+                                soloGpsConfirmados: number;
+                                soloBoton: number;
+                                medianaMinCerradoBoton?: number;
+                                medianaMinAtendidas?: number;
+                                casos: {
+                                    /** @enum {string} */
+                                    tipo: "solo_gps" | "solo_boton";
+                                    facturaId: string;
+                                    localId: string;
+                                    camionId: string;
+                                    fecha: string;
+                                    minutos: number;
+                                    entregadaDespues: boolean;
+                                    camion?: string;
+                                    etiqueta?: {
+                                        razonSocial: string;
+                                        direccion: string;
+                                        comuna: string;
+                                    };
+                                }[];
+                            };
                         };
                     };
                 };
