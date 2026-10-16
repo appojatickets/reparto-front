@@ -10584,6 +10584,13 @@ export interface paths {
                                 porVerificar: number;
                                 sinPin: number;
                             };
+                            coberturaGps: {
+                                fecha: string;
+                                camionId: string;
+                                camion?: string;
+                                minutosConGps: number;
+                                minutosEnRuta: number;
+                            }[];
                             porDia: {
                                 fecha: string;
                                 jornadas: number;

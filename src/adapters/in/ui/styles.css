@@ -822,3 +822,14 @@ html[data-vista='normal'] .parada-num {
   border-color: var(--emergencia-bg);
   border-left-width: 12px;
 }
+
+/* ---- Estado del GPS del camión: una línea chica bajo el kit de emergencia ---- */
+.estado-gps {
+  margin: 0 0 0.5rem;
+  font-size: 0.8em;
+}
+.estado-gps--sin_permiso,
+.estado-gps--sin_gps {
+  font-weight: 700;
+  text-decoration: underline;
+}

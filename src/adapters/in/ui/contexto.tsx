@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import type { Ubicacion } from '../../../application/ports/ubicacion';
+import type { PantallaEncendida, Ubicacion } from '../../../application/ports/ubicacion';
 import type { TemaStore } from '../../../application/ports/tema-store';
 import type { ArmadoStore } from '../../../application/ports/armado-store';
 import type { HorasStore } from '../../../application/ports/horas-store';
@@ -47,6 +47,8 @@ export type Casos = {
   readonly voz: Voz;
   /** GPS del teléfono (una lectura al llegar o entregar, y una por minuto mientras la app está abierta). */
   readonly ubicacion: Ubicacion;
+  /** Mantener la pantalla encendida mientras el chofer usa la app (sin esto el navegador deja de leer el GPS). */
+  readonly pantalla?: PantallaEncendida;
   /** Permisos de ubicación y micrófono, que se piden al abrir la app. */
   readonly permisos: Permisos;
   /** Vista elegida (grande o normal), recordada en el teléfono. */

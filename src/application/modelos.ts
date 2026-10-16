@@ -354,6 +354,8 @@ export type PanelAnalitica = {
   readonly cierres: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly horasCerrado: readonly number[]; readonly etiqueta?: EtiquetaLocal }[];
   /** Locales donde se avisó la entrega con buen GPS lejos del pin. */
   readonly pinesDudosos: readonly { readonly localId: string; readonly distanciaM: number; readonly visitas: number; readonly fuente?: string; readonly etiqueta?: EtiquetaLocal }[];
+  /** Cuánto de cada día de reparto quedó con GPS (ADR 0052 del back). */
+  readonly coberturaGps?: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly minutosConGps: number; readonly minutosEnRuta: number }[];
   /** Cuántos locales ya tienen hora habitual y cuántos tienen franjas de cierre probable: lo que la ruta puede usar (ADR 0051 del back). */
   readonly fichas?: { readonly locales: number; readonly conHoraHabitual: number; readonly conCierreProbable: number };
   /** ¿La ficha aprendida de los locales acierta? Probada con lo ya ocurrido, solo con días anteriores (ADR 0049 del back). */

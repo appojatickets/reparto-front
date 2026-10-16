@@ -62,6 +62,18 @@ export const PaginaEstado = () => {
               </ul>
             </section>
 
+            {p.coberturaGps && p.coberturaGps.length > 0 ? (
+              <section className="pagina" aria-label="GPS del recorrido">
+                <h2>GPS del recorrido</h2>
+                <p>Minutos con GPS entre la primera y la última entrega de cada día. Mientras más alto, mejor aprende la ruta (llegadas, tiempos, cierres).</p>
+                <ul className="tarjetas">
+                  {p.coberturaGps.map((g) => (
+                    <Dato key={`${g.fecha}-${g.camionId}`} titulo={`${g.fecha} · camión ${g.camion ?? ''}`} valor={`${Math.round((g.minutosConGps / Math.max(1, g.minutosEnRuta)) * 100)} %`} ayuda={`${g.minutosConGps} de ${g.minutosEnRuta} minutos.`} />
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
             <section className="pagina" aria-label="Lo aprendido">
               <h2>Lo aprendido</h2>
               <ul className="tarjetas">

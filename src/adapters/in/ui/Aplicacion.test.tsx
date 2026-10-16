@@ -3363,12 +3363,14 @@ describe('estado del sistema (admin)', () => {
     montar({ ruta: '/admin/estado', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok(panel as never)), getHealth: () => Promise.resolve(ok({ status: 'ok' as const, database: 'ok' as const, timestamp: '2026-10-15T12:00:00.000Z', version: 'abc1234' })), obtenerConfig: () => Promise.resolve(ok({ salidaPorDefectoMin: 480, horaLimiteRegresoMin: 1260 })), ...extra } });
 
   it('junta las versiones, los datos acumulados y lo aprendido, y dice si ya hay datos para concluir', async () => {
-    montarEstado({ ...panelBase, fichas: { locales: 80, conHoraHabitual: 12, conCierreProbable: 3 }, ultimaEjecucion: { iniciadoEn: '2026-10-15T10:00:00.000Z', terminadoEn: '2026-10-15T10:00:05.000Z', resumen: { eventos: 1, jornadas: 1, parametros: 1, jornadasComparadas: 1, pinesSugeridos: 0, pinesProponidos: 0, llegadasDeducidas: 0, seguimientoRuta: { entregas: 0, primeraDeLaLista: 0, conRutaDelSistema: 0, primeraDeLaRutaDelSistema: 0 }, cierresFrecuentes: [] } } });
+    montarEstado({ ...panelBase, coberturaGps: [{ fecha: '2026-10-15', camionId: 'c1', camion: '81', minutosConGps: 80, minutosEnRuta: 553 }], fichas: { locales: 80, conHoraHabitual: 12, conCierreProbable: 3 }, ultimaEjecucion: { iniciadoEn: '2026-10-15T10:00:00.000Z', terminadoEn: '2026-10-15T10:00:05.000Z', resumen: { eventos: 1, jornadas: 1, parametros: 1, jornadasComparadas: 1, pinesSugeridos: 0, pinesProponidos: 0, llegadasDeducidas: 0, seguimientoRuta: { entregas: 0, primeraDeLaLista: 0, conRutaDelSistema: 0, primeraDeLaRutaDelSistema: 0 }, cierresFrecuentes: [] } } });
     expect(await screen.findByRole('heading', { name: 'Estado del sistema' })).toBeInTheDocument();
     expect(await screen.findByText('abc1234 · funcionando')).toBeInTheDocument();
     expect(screen.getByText('prueba')).toBeInTheDocument();
     expect(await screen.findByText('Ya hay datos para mirar la analítica con algo de confianza.')).toBeInTheDocument();
     expect(screen.getByText('12 terminadas de 14')).toBeInTheDocument();
+    expect(screen.getByText('14 %')).toBeInTheDocument();
+    expect(screen.getByText('80 de 553 minutos.')).toBeInTheDocument();
     expect(screen.getByText('12 de 80')).toBeInTheDocument();
     expect(screen.getByText('3 de 80')).toBeInTheDocument();
     expect(await screen.findByText('Sí')).toBeInTheDocument();
@@ -3384,5 +3386,25 @@ describe('estado del sistema (admin)', () => {
   it('el chofer no entra al estado del sistema', async () => {
     montar({ ruta: '/admin/estado', sesion: CHOFER });
     expect(await screen.findByRole('heading', { name: 'Hola, Juan' })).toBeInTheDocument();
+  });
+});
+
+describe('GPS del camión (chofer)', () => {
+  const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
+  const api = { miJornada: () => Promise.resolve(ok(JORNADA)), listarCamiones: () => Promise.resolve(ok([])) };
+
+  it('sigue el GPS en forma continua, mantiene la pantalla encendida y lo dice', async () => {
+    const mantener = vi.fn(() => Promise.resolve(true));
+    const seguir = vi.fn((alPunto: (p: { lat: number; lng: number; precisionM: number }) => void) => { alPunto({ lat: -33.5, lng: -70.7, precisionM: 8 }); return () => undefined; });
+    montar({ sesion: CHOFER, api, casos: { ubicacion: { disponible: true, actual: () => Promise.resolve(ok({ lat: -33.5, lng: -70.7, precisionM: 8 })), seguir }, pantalla: { disponible: true, mantener, soltar: () => Promise.resolve() } } });
+    expect(await screen.findByText('GPS activo · pantalla encendida')).toBeInTheDocument();
+    expect(seguir).toHaveBeenCalledTimes(1);
+    expect(mantener).toHaveBeenCalled();
+  });
+
+  it('sin permiso de ubicación lo avisa claramente', async () => {
+    const seguir = vi.fn((_p: unknown, alError: (e: 'PERMISO') => void) => { alError('PERMISO'); return () => undefined; });
+    montar({ sesion: CHOFER, api, casos: { ubicacion: { disponible: true, actual: () => Promise.resolve(err('PERMISO' as const)), seguir } } });
+    expect(await screen.findByText(/GPS sin permiso/)).toBeInTheDocument();
   });
 });

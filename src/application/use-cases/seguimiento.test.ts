@@ -57,3 +57,30 @@ describe('seguimiento del camión', () => {
     expect(s.pendientes()).toBe(0);
   });
 });
+
+describe('seguimiento continuo', () => {
+  it('con GPS continuo guarda como mucho un punto cada 15 s y manda lo acumulado en lotes', async () => {
+    let t = AHORA.getTime();
+    const enviarPosiciones = vi.fn(() => Promise.resolve(ok(respuesta)));
+    const s = crearSeguimiento({ api: fakeApi({ enviarPosiciones }), ubicacion: gps(), ahora: () => new Date(t) });
+    const punto = { lat: -33.5, lng: -70.7, precisionM: 8 };
+    expect(s.agregar(punto)).toBe(true);
+    t += 5_000;
+    expect(s.agregar(punto)).toBe(false);
+    t += 10_000;
+    expect(s.agregar(punto)).toBe(true);
+    expect(s.pendientes()).toBe(2);
+    expect(await s.enviar()).toBe('enviado');
+    expect(s.pendientes()).toBe(0);
+  });
+
+  it('al volver la señal manda varios lotes seguidos', async () => {
+    let t = AHORA.getTime();
+    const enviarPosiciones = vi.fn(() => Promise.resolve(ok(respuesta)));
+    const s = crearSeguimiento({ api: fakeApi({ enviarPosiciones }), ubicacion: gps(), ahora: () => new Date(t) });
+    for (let i = 0; i < LOTE_MAXIMO * 2 + 5; i += 1) { s.agregar({ lat: -33.5, lng: -70.7, precisionM: 8 }); t += 15_000; }
+    await s.enviar();
+    expect(enviarPosiciones).toHaveBeenCalledTimes(3);
+    expect(s.pendientes()).toBe(0);
+  });
+});

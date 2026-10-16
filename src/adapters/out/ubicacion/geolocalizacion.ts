@@ -1,7 +1,7 @@
 import { err, ok } from '../../../domain/result';
 import type { Ubicacion } from '../../../application/ports/ubicacion';
 
-type Geo = Pick<Geolocation, 'getCurrentPosition'>;
+type Geo = Pick<Geolocation, 'getCurrentPosition'> & Partial<Pick<Geolocation, 'watchPosition' | 'clearWatch'>>;
 
 const geoDelNavegador = (): Geo | undefined => {
   try {
@@ -26,4 +26,16 @@ export const crearUbicacionWeb = (geo: Geo | undefined = geoDelNavegador(), tiem
         { enableHighAccuracy: true, timeout: tiempoMs, maximumAge: 5_000 },
       );
     }),
+  ...(geo?.watchPosition && geo.clearWatch
+    ? {
+        seguir: (alPunto, alError) => {
+          const id = geo.watchPosition?.(
+            (p) => { alPunto({ lat: p.coords.latitude, lng: p.coords.longitude, precisionM: p.coords.accuracy, ...(typeof p.coords.speed === 'number' && p.coords.speed >= 0 ? { velocidadMs: p.coords.speed } : {}) }); },
+            (e) => { alError(e.code === e.PERMISSION_DENIED ? 'PERMISO' : e.code === e.TIMEOUT ? 'TIEMPO' : 'NO_DISPONIBLE'); },
+            { enableHighAccuracy: true, maximumAge: 10_000, timeout: 60_000 },
+          );
+          return () => { if (id !== undefined) geo.clearWatch?.(id); };
+        },
+      }
+    : {}),
 });
