@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Map, Marker, NavigationControl, Popup, LngLatBounds, setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { VistaRuta, TrazadoMapa } from '../../../../application/modelos';
+import type { VistaRuta } from '../../../../application/modelos';
 import { enlaceNavegar } from '../../../../domain/enlaces';
 
 setWorkerUrl(workerUrl);
 export const COLORES = ['#1d4ed8', '#b45309', '#7e22ce', '#047857', '#be123c', '#0e7490'];
 const color = (i: number): string => COLORES[i % COLORES.length] ?? '#1d4ed8';
 
-export default function MapaInteractivo({ vista, trazado }: { readonly vista: VistaRuta; readonly trazado: TrazadoMapa }) {
+export default function MapaInteractivo({ vista }: { readonly vista: VistaRuta }) {
   const contenedor = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -42,15 +42,7 @@ export default function MapaInteractivo({ vista, trazado }: { readonly vista: Vi
       agregar(p.lng, p.lat, String(i + 1), p.cliente, `${p.direccion}, ${p.comuna}${p.ubicacionAproximada ? ' · Ubicación aproximada' : ''}`, p.ubicacionAproximada ? '#9a3412' : color(i), p);
     });
     if (!limites.isEmpty()) mapa.fitBounds(limites, { padding: 65, maxZoom: 15, duration: 0 });
-    mapa.on('load', () => {
-      trazado.tramos.forEach((t, i) => {
-        if (t.coordenadas.length < 2) return;
-        const id = `tramo-${i}`;
-        mapa.addSource(id, { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: t.coordenadas.map((p) => [...p]) } } });
-        mapa.addLayer({ id, type: 'line', source: id, paint: { 'line-color': color(i), 'line-width': 5, 'line-opacity': 0.85, ...(t.porCalles ? {} : { 'line-dasharray': [2, 2] }) } });
-      });
-    });
     return () => { mapa.remove(); };
-  }, [vista, trazado]);
+  }, [vista]);
   return <><div ref={contenedor} className="mapa-ruta" role="region" aria-label="Mapa interactivo de las entregas en orden" />{error ? <p role="status" className="ayuda">{error}</p> : null}</>;
 }

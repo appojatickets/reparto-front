@@ -14,3 +14,9 @@ Es una versión de pruebas, no una publicación en Google Play. Debe validarse e
 ## Compilar desde tu PC
 
 Android Studio compatible con SDK 36 y JDK 21; Node >=22. Instala dependencias con `npm ci`, ejecuta `npm run android:sync` y abre con `npm run android:open`. El APK usa la misma API de producción que la web. Para otra API: define VITE_API_URL con HTTPS antes de construir. No pongas credenciales de Supabase ni claves ORS en el APK.
+
+## iPhone y uso sin instalar el APK
+
+La misma web se puede abrir en Safari y añadir a la pantalla de inicio del iPhone como PWA. También funciona en navegadores Android. En estas plataformas se usan los adaptadores web: no se carga el puente nativo de Android ni se exige instalar el APK. Mapa, puntos numerados, entregas y enlaces de navegación siguen disponibles. No conceder GPS impide registrar la ubicación, pero no impide consultar y gestionar la ruta.
+
+La ubicación web requiere permiso y la aplicación visible. No se ofrece seguimiento continuo en segundo plano en iPhone: al cambiar a Waze/Maps o bloquear la pantalla, iOS puede suspenderlo. Las copias locales guardan los datos de ruta; no garantizan disponer de todas las calles del mapa sin conexión. El GPS en segundo plano de esta implementación es opcional y exclusivo del APK Android.

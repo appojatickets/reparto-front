@@ -24,3 +24,7 @@ Los recursos públicos de calles no contienen datos de clientes; la ruta guardad
 ## Validación
 
 Pruebas de apertura bajo demanda, cambio de versión, guardado y consulta de la copia sin red; caché aislada por usuario y tolerancia a datos corruptos. Check y build. La prueba visual WebGL requiere un navegador compatible; la descarga de Chromium falló en el entorno de trabajo, por lo que no se declara validación visual real del mapa.
+
+## Ajuste solicitado: solo puntos numerados
+
+El mapa deja de dibujar líneas de recorrido y de consultar `/v1/rutas/trazado`. Muestra directamente los puntos y números del orden actual, con colores y popup de navegación. Se mantiene compatibilidad de lectura con las copias guardadas anteriores, pero sus geometrías no se dibujan. El backend conserva el endpoint por compatibilidad; el mapa no lo consume ni necesita una clave ORS para ver los puntos.
