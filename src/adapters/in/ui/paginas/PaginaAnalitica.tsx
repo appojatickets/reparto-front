@@ -56,7 +56,7 @@ export const PaginaAnalitica = () => {
               <Dato titulo="Jornadas" valor={`${c.jornadas}`} ayuda={`${c.jornadasTerminadas} terminadas con TERMINAR RUTA`} />
               <Dato titulo="Avisos desde la parada" valor={`${c.avisos}`} ayuda={`${proporcion(c.avisosConGps, c.avisos)} con ubicación`} />
               <Dato titulo="Paradas con «llegué» (aprendizaje de atención)" valor={proporcion(c.paradasConLlegada, c.paradasResueltas)} ayuda={`${c.avisosAutomaticos} llegadas las detectó el sistema solo.${p.ultimaEjecucion && p.ultimaEjecucion.resumen.llegadasDeducidas > 0 ? ` Otras ${p.ultimaEjecucion.resumen.llegadasDeducidas} las dedujo del recorrido del camión.` : ''}`} />
-              <Dato titulo="Recorrido del camión" valor={`${c.puntosGps} puntos`} ayuda={c.ultimoPuntoGps ? `El último: ${fechaYHoraEnChile(c.ultimoPuntoGps)}` : 'Aún no llegan puntos: el chofer debe tener la app abierta y dar permiso de ubicación.'} />
+              <Dato titulo="Recorrido del camión" valor={`${c.puntosGps} puntos`} ayuda={c.ultimoPuntoGps ? `El último: ${fechaYHoraEnChile(c.ultimoPuntoGps)}` : 'Aún no llegan puntos: activa el GPS de jornada en Android; en la PWA mantén la app visible y permite la ubicación.'} />
               <Dato titulo="Cambios a la ruta" valor={`${c.operacionesRuta}`} ayuda={`${c.correccionesManuales} los hizo una persona (subir, bajar, ir primero, quitar)`} />
             </ul>
 
@@ -108,6 +108,22 @@ export const PaginaAnalitica = () => {
                 </ul>
               </>
             ) : null}
+
+            {p.jornadasGps && p.jornadasGps.length > 0 ? <>
+              <h2>Seguimiento diario por GPS</h2>
+              <p>Inicio y término registrados se distinguen del primer y último punto recibido. El regreso al depósito no cierra la jornada automáticamente. Solo las visitas confirmadas enseñan resultados al motor.</p>
+              <ul className="tarjetas">{p.jornadasGps.map((g) => <li className="tarjeta" key={`${g.fecha}-${g.camionId}`}>
+                <strong>{g.fecha} · {g.camion ?? 'Camión'}</strong>
+                <span>{g.entregadas} entregadas · {g.visitasCerrado} visitas con cierre confirmado · {g.visitasSinResultado} sin resultado confirmado</span>
+                <span>GPS: {fechaYHoraEnChile(g.inicioGps)} → {fechaYHoraEnChile(g.ultimoGps)}</span>
+                {g.inicioRegistrado ? <span>Inicio registrado: {fechaYHoraEnChile(g.inicioRegistrado)}</span> : null}
+                {g.finRegistrado ? <span>Término confirmado: {fechaYHoraEnChile(g.finRegistrado)}</span> : <span>Jornada sin cierre confirmado</span>}
+                {g.salidaDeposito ? <span>Salida observada del depósito: {fechaYHoraEnChile(g.salidaDeposito)}</span> : null}
+                {g.regresoDeposito ? <span>Regreso observado al depósito: {fechaYHoraEnChile(g.regresoDeposito)}</span> : null}
+                <span>{g.kmObservados} km observados · {Math.round(g.minutosObservados)} min con GPS · {Math.round(g.minutosSinSenal)} min sin evidencia continua</span>
+                <span className="ayuda">Cobertura {Math.round(g.cobertura * 100)}% entre el primer y último punto. La distancia es una estimación parcial; los huecos y saltos imposibles no se rellenan.</span>
+              </li>)}</ul>
+            </> : null}
 
             <h2>La ruta sugerida frente a la manejada</h2>
             {p.ultimaEjecucion && p.ultimaEjecucion.resumen.seguimientoRuta.entregas > 0 ? (
@@ -176,7 +192,7 @@ export const PaginaAnalitica = () => {
             {p.bancoFicha && (p.bancoFicha.cierre.evaluadas > 0 || p.bancoFicha.hora.evaluadas > 0) ? (
               <>
                 <h2>¿Lo aprendido de cada local acierta?</h2>
-                <p>Se repasa lo que ya pasó: para cada visita se arma lo aprendido del local solo con días anteriores y se compara con lo que ocurrió. Si acierta bastante más que «siempre abierto», vale la pena que la ruta lo use. Todavía no lo usa.</p>
+                <p>Se repasa lo que ya pasó: para cada visita se arma lo aprendido del local solo con días anteriores y se compara con lo que ocurrió. Si acierta bastante más que «siempre abierto», vale la pena que la ruta lo use. El motor usa las franjas con evidencia suficiente como una preferencia, sin reemplazar los horarios confirmados.</p>
                 <ul className="tarjetas">
                   <Dato titulo="Cierres que anticipó" valor={`${p.bancoFicha.cierre.anticipadas} de ${p.bancoFicha.cierre.cerradas}`} ayuda={`${p.bancoFicha.cierre.falsasAlarmas} veces dijo cerrado y estaba abierto.`} />
                   <Dato titulo="Aciertos al decir abierto o cerrado" valor={proporcion(p.bancoFicha.cierre.aciertos, p.bancoFicha.cierre.evaluadas)} ayuda={`Si dijera siempre «abierto» acertaría ${proporcion(p.bancoFicha.cierre.evaluadas - p.bancoFicha.cierre.cerradas, p.bancoFicha.cierre.evaluadas)}: lo aprendido tiene que superar eso.`} />
@@ -188,15 +204,15 @@ export const PaginaAnalitica = () => {
 
             {p.cierresGps && p.cierresGps.visitas > 0 ? (
               <>
-                <h2>Cerrado: lo que dice el GPS frente al botón</h2>
-                <p>El sistema prueba una idea: si el camión se queda poco junto al local, se va sin entregar y después vuelve, estaba cerrado. Aquí se compara con lo que avisan los choferes con el botón CERRADO. Todavía no cambia ninguna ruta.</p>
+                <h2>Visitas que necesitan confirmación</h2>
+                <p>Una visita breve, volver después o no regresar no demuestra si hubo una entrega o si el local estaba cerrado. El GPS mide cercanía y permanencia; el resultado se confirma con los avisos del chofer. Los casos sin confirmar no enseñan horarios de cierre al motor.</p>
                 <ul className="tarjetas">
-                  <Dato titulo="Coinciden (GPS y botón dicen cerrado)" valor={`${p.cierresGps.coinciden} de ${p.cierresGps.botonCerrado - p.cierresGps.botonSinDesenlace} avisos de cerrado con segundo intento`} ayuda="Si es alto, la regla ve lo que ven los choferes." />
-                  <Dato titulo="Cerrado solo según el GPS" valor={`${p.cierresGps.soloGps}`} ayuda={`${p.cierresGps.soloGpsConfirmados} se entregaron después. Son cierres que nadie avisó con el botón.`} />
-                  <Dato titulo="Cerrado solo según el botón" valor={`${p.cierresGps.soloBoton}`} ayuda="El chofer avisó cerrado pero el camión se quedó más de lo esperado y volvió: revisar el umbral." />
+                  <Dato titulo="Visitas breves con cierre confirmado" valor={`${p.cierresGps.coinciden} de ${p.cierresGps.botonCerrado - p.cierresGps.botonSinDesenlace} avisos de cerrado con segundo intento`} ayuda="El cierre lo confirmó el chofer; la duración es solo una observación." />
+                  <Dato titulo="Visitas breves sin resultado confirmado" valor={`${p.cierresGps.soloGps}`} ayuda={`${p.cierresGps.soloGpsConfirmados} se entregaron después. La entrega posterior no demuestra qué pasó en la visita anterior.`} />
+                  <Dato titulo="Cierres confirmados con permanencia larga" valor={`${p.cierresGps.soloBoton}`} ayuda="El tiempo de espera no invalida el cierre que confirmó el chofer." />
                   <Dato titulo="Avisos de cerrado sin recorrido GPS" valor={`${p.cierresGps.botonSinRecorrido}`} ayuda="Cuánto del GPS se está perdiendo (app cerrada, sin pin)." />
                   {p.cierresGps.medianaMinCerradoBoton !== undefined && p.cierresGps.medianaMinAtendidas !== undefined ? (
-                    <Dato titulo="Permanencia típica" valor={`${String(p.cierresGps.medianaMinCerradoBoton).replace('.', ',')} min cerrado · ${String(p.cierresGps.medianaMinAtendidas).replace('.', ',')} min atendido`} ayuda="Si se separan bien, la regla de tiempo corto es válida." />
+                    <Dato titulo="Permanencia típica" valor={`${String(p.cierresGps.medianaMinCerradoBoton).replace('.', ',')} min cerrado · ${String(p.cierresGps.medianaMinAtendidas).replace('.', ',')} min atendido`} ayuda="Son tiempos de visitas con resultado confirmado; no hay un umbral universal para distinguir entregas de cierres." />
                   ) : null}
                 </ul>
                 {p.cierresGps.casos.length > 0 ? (
@@ -204,7 +220,7 @@ export const PaginaAnalitica = () => {
                     <h3>Casos para revisar</h3>
                     <ul className="tarjetas">
                       {p.cierresGps.casos.map((c) => (
-                        <Dato key={`${c.facturaId}-${c.fecha}-${c.tipo}`} titulo={`${c.fecha} · ${c.etiqueta ? `${c.etiqueta.razonSocial} · ${c.etiqueta.comuna}` : c.localId}`} valor={`${c.tipo === 'solo_gps' ? 'Solo el GPS dice cerrado' : 'Solo el botón dice cerrado'} (${c.minutos} min)`} ayuda={c.entregadaDespues ? 'Se entregó después.' : ''} />
+                        <Dato key={`${c.facturaId}-${c.fecha}-${c.tipo}`} titulo={`${c.fecha} · ${c.etiqueta ? `${c.etiqueta.razonSocial} · ${c.etiqueta.comuna}` : c.localId}`} valor={`${c.tipo === 'solo_gps' ? 'Visita sin confirmar' : 'Cierre confirmado por el chofer'} (${c.minutos} min)`} ayuda={c.entregadaDespues ? 'Se entregó después.' : ''} />
                       ))}
                     </ul>
                   </>

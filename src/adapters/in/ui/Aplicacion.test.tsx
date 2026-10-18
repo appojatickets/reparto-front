@@ -2837,6 +2837,14 @@ describe('ayudante', () => {
 });
 
 describe('analítica del admin', () => {
+  it('muestra la jornada GPS con resultados confirmados sin interpretar una parada breve como cerrado', async () => {
+    const jornadasGps = [{ camionId: 'c1', fecha: '2026-10-05', inicioGps: '2026-10-05T12:00:00Z', ultimoGps: '2026-10-05T14:00:00Z', puntos: 200, minutosObservados: 110, minutosSinSenal: 10, kmObservados: 20, cobertura: 0.92, entregadas: 5, visitasCerrado: 1, visitasSinResultado: 2, jornadaCerrada: false }];
+    montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok({ ...panel, jornadasGps })) } });
+    expect(await screen.findByRole('heading', { name: 'Seguimiento diario por GPS' })).toBeInTheDocument();
+    expect(screen.getByText('5 entregadas · 1 visitas con cierre confirmado · 2 sin resultado confirmado')).toBeInTheDocument();
+    expect(screen.getByText('Jornada sin cierre confirmado')).toBeInTheDocument();
+  });
+
   const panel = {
     desde: '2026-09-05T12:00:00.000Z',
     cobertura: { jornadas: 6, jornadasTerminadas: 5, avisos: 80, avisosConGps: 76, avisosAutomaticos: 9, paradasConLlegada: 30, paradasResueltas: 50, puntosGps: 640, ultimoPuntoGps: '2026-10-05T20:00:00.000Z', operacionesRuta: 21, correccionesManuales: 8 },
@@ -2897,10 +2905,10 @@ describe('analítica del admin', () => {
   it('muestra el cierre deducido por GPS frente al botón, con los casos para revisar', async () => {
     const cierresGps = { visitas: 40, atendidas: 30, cerradoDeducido: 6, sinDesenlace: 4, botonCerrado: 5, botonSinRecorrido: 1, botonSinDesenlace: 1, coinciden: 3, soloGps: 3, soloGpsConfirmados: 2, soloBoton: 1, medianaMinCerradoBoton: 2.5, medianaMinAtendidas: 9, casos: [{ tipo: 'solo_gps' as const, facturaId: 'f1', localId: 'l1', fecha: '2026-10-05', minutos: 2, entregadaDespues: true, etiqueta: { razonSocial: 'Kiosko Ana', direccion: 'Calle 1 100', comuna: 'Buin' } }] };
     montar({ ruta: '/admin/analitica', sesion: ADMIN, api: { analitica: () => Promise.resolve(ok({ ...panel, cierresGps })) } });
-    expect(await screen.findByRole('heading', { name: 'Cerrado: lo que dice el GPS frente al botón' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Visitas que necesitan confirmación' })).toBeInTheDocument();
     expect(screen.getByText('3 de 4 avisos de cerrado con segundo intento')).toBeInTheDocument();
     expect(screen.getByText('2,5 min cerrado · 9 min atendido')).toBeInTheDocument();
-    expect(screen.getByText('Solo el GPS dice cerrado (2 min)')).toBeInTheDocument();
+    expect(screen.getByText('Visita sin confirmar (2 min)')).toBeInTheDocument();
   });
 
   it('muestra si lo aprendido de cada local acierta, con la línea base «siempre abierto» y el aviso de pocos datos', async () => {

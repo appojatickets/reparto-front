@@ -335,7 +335,15 @@ export type ResumenAnalisis = {
   readonly seguimientoRuta: { readonly entregas: number; readonly primeraDeLaLista: number; readonly conRutaDelSistema: number; readonly primeraDeLaRutaDelSistema: number };
   readonly cierresFrecuentes: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly confianzaAbierto: number; readonly horasCerrado: readonly number[] }[];
 };
+export type JornadaGps = {
+  readonly camionId: string; readonly camion?: string; readonly fecha: string;
+  readonly inicioGps: string; readonly ultimoGps: string; readonly inicioRegistrado?: string; readonly finRegistrado?: string;
+  readonly salidaDeposito?: string; readonly regresoDeposito?: string; readonly puntos: number;
+  readonly minutosObservados: number; readonly minutosSinSenal: number; readonly kmObservados: number; readonly cobertura: number;
+  readonly entregadas: number; readonly visitasCerrado: number; readonly visitasSinResultado: number; readonly jornadaCerrada: boolean;
+};
 export type PanelAnalitica = {
+  readonly jornadasGps?: readonly JornadaGps[];
   readonly desde: string;
   readonly cobertura: {
     readonly jornadas: number; readonly jornadasTerminadas: number; readonly avisos: number; readonly avisosConGps: number; readonly avisosAutomaticos: number;

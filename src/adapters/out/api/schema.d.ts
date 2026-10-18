@@ -10715,6 +10715,26 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            jornadasGps?: {
+                                camionId: string;
+                                fecha: string;
+                                camion?: string;
+                                inicioGps: string;
+                                ultimoGps: string;
+                                inicioRegistrado?: string;
+                                finRegistrado?: string;
+                                salidaDeposito?: string;
+                                regresoDeposito?: string;
+                                puntos: number;
+                                minutosObservados: number;
+                                minutosSinSenal: number;
+                                kmObservados: number;
+                                cobertura: number;
+                                entregadas: number;
+                                visitasCerrado: number;
+                                visitasSinResultado: number;
+                                jornadaCerrada: boolean;
+                            }[];
                             desde: string;
                             cobertura: {
                                 jornadas: number;
@@ -10879,6 +10899,26 @@ export interface paths {
                                 iniciadoEn: string;
                                 terminadoEn: string;
                                 resumen: {
+                                    jornadasGps?: {
+                                        camionId: string;
+                                        fecha: string;
+                                        camion?: string;
+                                        inicioGps: string;
+                                        ultimoGps: string;
+                                        inicioRegistrado?: string;
+                                        finRegistrado?: string;
+                                        salidaDeposito?: string;
+                                        regresoDeposito?: string;
+                                        puntos: number;
+                                        minutosObservados: number;
+                                        minutosSinSenal: number;
+                                        kmObservados: number;
+                                        cobertura: number;
+                                        entregadas: number;
+                                        visitasCerrado: number;
+                                        visitasSinResultado: number;
+                                        jornadaCerrada: boolean;
+                                    }[];
                                     eventos: number;
                                     jornadas: number;
                                     parametros: number;
@@ -11093,6 +11133,26 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            jornadasGps?: {
+                                camionId: string;
+                                fecha: string;
+                                camion?: string;
+                                inicioGps: string;
+                                ultimoGps: string;
+                                inicioRegistrado?: string;
+                                finRegistrado?: string;
+                                salidaDeposito?: string;
+                                regresoDeposito?: string;
+                                puntos: number;
+                                minutosObservados: number;
+                                minutosSinSenal: number;
+                                kmObservados: number;
+                                cobertura: number;
+                                entregadas: number;
+                                visitasCerrado: number;
+                                visitasSinResultado: number;
+                                jornadaCerrada: boolean;
+                            }[];
                             eventos: number;
                             jornadas: number;
                             parametros: number;

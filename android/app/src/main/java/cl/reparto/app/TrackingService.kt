@@ -74,9 +74,9 @@ class TrackingService : Service(), LocationListener {
             active = true
             hardStop.postDelayed({ stopSelf() }, TrackingPolicy.MAX_DURATION_MS)
             if (locations.isProviderEnabled(LocationManager.GPS_PROVIDER))
-                locations.requestLocationUpdates(LocationManager.GPS_PROVIDER, 15_000L, 20f, this, Looper.getMainLooper())
+                locations.requestLocationUpdates(LocationManager.GPS_PROVIDER, 15_000L, 0f, this, Looper.getMainLooper())
             if (locations.isProviderEnabled(LocationManager.NETWORK_PROVIDER))
-                locations.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 30_000L, 30f, this, Looper.getMainLooper())
+                locations.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 30_000L, 0f, this, Looper.getMainLooper())
             worker.scheduleWithFixedDelay(::upload, 10, 60, TimeUnit.SECONDS)
             started(null)
         } catch (_: Exception) {
