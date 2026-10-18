@@ -72,6 +72,7 @@ internal class NativeApi(context: Context) {
 
     private fun raw(method: String, path: String, body: String?, token: String?): Reply {
         val base = checkNotNull(store.get("api")) { "Falta configurar la API" }
+        val payload = RequestBodyPolicy.payload(method, body)
         val connection = URI.create(base + path).toURL().openConnection() as HttpURLConnection
         try {
             connection.instanceFollowRedirects = false
@@ -80,10 +81,10 @@ internal class NativeApi(context: Context) {
             connection.requestMethod = method
             connection.setRequestProperty("Accept", "application/json")
             if (token != null) connection.setRequestProperty("Authorization", "Bearer $token")
-            if (!body.isNullOrEmpty() && method !in listOf("GET", "HEAD")) {
+            if (payload != null) {
                 connection.doOutput = true
                 connection.setRequestProperty("Content-Type", "application/json")
-                connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
             }
             val status = connection.responseCode
             val source = (if (status >= 400) connection.errorStream else connection.inputStream) ?: return Reply(status, "")

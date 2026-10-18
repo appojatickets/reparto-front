@@ -82,7 +82,7 @@ export const PaginaAnalitica = () => {
               <>
                 <h3>Cuánto se demora una entrega</h3>
                 <ul className="tarjetas">
-                  <Dato titulo="En general" valor={`${Math.round(p.aprendido.servicioGeneral.valor)} min`} ayuda={`${p.aprendido.servicioGeneral.muestras} entregas medidas`} />
+                  <Dato titulo="En general" valor={`${Math.round(p.aprendido.servicioGeneral.valor)} min`} ayuda={`${p.aprendido.servicioGeneral.muestras} entregas medidas${p.aprendido.servicioGeneral.ambito === 'gps:global' ? ' · permanencia GPS hasta salir del local' : ''}`} />
                 </ul>
               </>
             ) : null}

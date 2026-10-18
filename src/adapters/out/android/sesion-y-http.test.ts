@@ -14,6 +14,13 @@ const montar = () => {
   return bridge;
 };
 describe('sesión y peticiones nativas', () => {
+  it('TERMINAR RUTA envía JSON vacío explícito, no un POST con formato form implícito', async () => {
+    const bridge = montar();
+    const client = await crearSesionYHttpAndroid(bridge, 'https://api.example.test');
+    await client.fetch('https://api.example.test/v1/jornada/terminar', { method: 'POST', headers: { authorization: 'Bearer access-prueba' } });
+    expect(bridge.request).toHaveBeenCalledWith({ method: 'POST', path: '/v1/jornada/terminar', body: '{}', authenticated: true });
+  });
+
   it('restaura la sesión cifrada y envía la API por el puente nativo', async () => {
     const bridge = montar();
     const client = await crearSesionYHttpAndroid(bridge, 'https://api.example.test');

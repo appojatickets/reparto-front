@@ -21,7 +21,8 @@ export const crearSesionYHttpAndroid = async (bridge: NativeBridge, apiUrl: stri
     if (url.origin !== base.origin || !url.href.startsWith(`${baseUrl}/v1/`)) return fallback(request);
     request.signal.throwIfAborted();
     const version = generacion;
-    const body = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text();
+    const texto = request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text();
+    const body = texto?.trim() ? texto : ['POST', 'PUT', 'PATCH'].includes(request.method) ? '{}' : undefined;
     const operation = bridge.request({ method: request.method, path: url.href.slice(baseUrl.length), ...(body !== undefined ? { body } : {}), authenticated: request.headers.has('authorization') });
     // Cancellation stops delivery to the UI; native requests use their own bounded timeouts.
     const response = await new Promise<Awaited<typeof operation>>((resolve, reject) => {
