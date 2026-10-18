@@ -84,6 +84,9 @@ public class TrackingService extends Service implements LocationListener {
             }
         });
     }
+    @Override public void onProviderEnabled(String provider) { }
+    @Override public void onProviderDisabled(String provider) { }
+    @Override public void onStatusChanged(String provider, int status, android.os.Bundle extras) { }
     private JSONArray queue() throws Exception { String raw = store.get("queue"); return raw == null ? new JSONArray() : new JSONArray(raw); }
     private JSONArray tail(JSONArray input, int max) throws Exception {
         JSONArray result = new JSONArray();

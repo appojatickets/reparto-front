@@ -1,5 +1,7 @@
 # Instalar Reparto en Android para el piloto
 
+Requiere Android 8.0 o posterior.
+
 1. Abre https://github.com/appojatickets/reparto-front/actions y entra a **Android APK de pruebas** del último commit de main.
 2. Cuando esté verde, baja el artefacto **reparto-android-pruebas**, descomprime el ZIP y abre **app-debug.apk** en el teléfono.
 3. Android puede pedir permitir instalaciones desde el navegador o gestor de archivos. Autoriza ese origen para instalar tu APK de pruebas.
