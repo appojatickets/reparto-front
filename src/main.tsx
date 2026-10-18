@@ -1,3 +1,4 @@
+import { crearConsultaAndroid } from './adapters/out/descarga/android-release';
 import { Capacitor } from '@capacitor/core';
 import { StrictMode } from 'react';
 import { registerSW } from 'virtual:pwa-register';
@@ -52,6 +53,7 @@ const api = createHttpApiClient({
 
 // Casos de uso con sus puertos inyectados
 const casos: Casos = {
+  consultarAndroid: crearConsultaAndroid(),
   api,
   ...(android ? { seguimientoNativo: {
     estado: () => android.nativeBridge.status(),

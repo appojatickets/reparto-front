@@ -23,6 +23,7 @@
     "android:sync": "npm run build:android && cap sync android",
     "android:open": "cap open android",
     "build:android": "node scripts/build-android.mjs",
+    "android:firma": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/preparar-firma-android.ps1",
     "android:apk": "npm run android:sync && cd android && ./gradlew testDebugUnitTest assembleDebug"
   },
   "dependencies": {

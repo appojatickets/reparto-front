@@ -49,3 +49,8 @@ Thumbs.db
 *.jks
 *.keystore
 android/local.properties
+
+# Firma local de distribución
+Reparto-firma-privada/
+ANDROID_SIGNING_BUNDLE*
+android-distribucion/

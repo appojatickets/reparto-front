@@ -1,5 +1,5 @@
 import { useState, type SyntheticEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { useSesion } from '../sesion';
 import { Aviso, Boton, Campo, Pagina } from '../componentes/ui';
 
@@ -34,6 +34,7 @@ export const PaginaLogin = () => {
           {error ? <Aviso tipo="error">{error}</Aviso> : null}
           <Boton type="submit" disabled={enviando}>{enviando ? 'ENTRANDO…' : 'ENTRAR'}</Boton>
         </form>
+        <Link className="big-button big-button--secundario" to="/android">DESCARGAR APP ANDROID</Link>
       </Pagina>
     </main>
   );

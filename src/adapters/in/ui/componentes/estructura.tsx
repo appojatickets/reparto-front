@@ -1,3 +1,4 @@
+import { useCasos } from '../contexto';
 import { MapaGuardadoOffline } from './MapaRuta';
 import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import type { ReactNode } from 'react';
@@ -14,6 +15,7 @@ import { Boton, Cargando, Pagina, Aviso } from './ui';
 /** Cabecera común: quién eres y SALIR siempre a mano. */
 export const Marco = () => {
   const { estado, salir } = useSesion();
+  const { seguimientoNativo } = useCasos();
   const { pathname } = useLocation();
   if (estado.tipo !== 'sesion') return null;
   return (
@@ -39,6 +41,7 @@ export const Marco = () => {
         {pathname !== '/' ? <Link className="volver" to="/">← INICIO</Link> : null}
         <Outlet />
         {/* Para saber si el teléfono ya tiene la última versión publicada (es el commit que Vercel desplegó). */}
+        {!seguimientoNativo ? <Link className="volver" to="/android">DESCARGAR APP ANDROID</Link> : null}
         <p className="ayuda version-app">Versión de la app: {__VERSION__}</p>
       </main>
     </>

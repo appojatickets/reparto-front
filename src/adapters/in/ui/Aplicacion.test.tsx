@@ -50,6 +50,21 @@ beforeEach(() => { window.history.pushState({}, '', '/'); });
 afterEach(() => { window.history.pushState({}, '', '/'); });
 
 describe('entrada y protección por rol', () => {
+  it('la descarga Android es pública y no exige entrar a GitHub', async () => {
+    const url = 'https://github.com/appojatickets/reparto-front/releases/download/android-v4/reparto.apk';
+    montar({ ruta: '/android', casos: { consultarAndroid: () => Promise.resolve({ tipo: 'lista', apk: { version: 'android-v4', url, tamanoBytes: 5_000_000 } }) } });
+    expect(await screen.findByRole('link', { name: 'DESCARGAR APP ANDROID' })).toHaveAttribute('href', url);
+    expect(screen.queryByLabelText('Usuario')).toBeNull();
+    expect(screen.getByText(/¿Usas iPhone/)).toBeInTheDocument();
+  });
+
+  it('sin APK de distribución mantiene disponible la web y no ofrece un enlace roto', async () => {
+    montar({ ruta: '/android', casos: { consultarAndroid: () => Promise.resolve({ tipo: 'preparando' }) } });
+    expect(await screen.findByText(/La descarga Android se está preparando/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'DESCARGAR APP ANDROID' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'SEGUIR EN REPARTO WEB' })).toHaveAttribute('href', '/');
+  });
+
   it('sin sesión se redirige a /entrar', async () => {
     montar({ ruta: '/clientes' });
     expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeInTheDocument();
@@ -78,8 +93,8 @@ describe('entrada y protección por rol', () => {
   it('el chofer ve solo su ruta: sin enlaces de clientes, pines, importación ni usuarios', async () => {
     montar({ sesion: CHOFER });
     expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
-    // Lo único que enlaza es «mi perfil» (la cabecera y el saludo): ningún enlace a clientes, pines, importación ni usuarios.
-    for (const enlace of screen.getAllByRole('link')) expect(enlace).toHaveAttribute('href', '/perfil');
+    // Perfil y descarga pública; ningún acceso a gestión de clientes, pines o usuarios.
+    for (const enlace of screen.getAllByRole('link')) expect(['/perfil', '/android']).toContain(enlace.getAttribute('href'));
   });
 
   it('el despachador ve clientes y pines, no importación ni usuarios', async () => {

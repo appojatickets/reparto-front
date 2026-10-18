@@ -29,3 +29,7 @@ Las zonas de mapa sin conexión dependen de los recursos guardados en cada entor
 ## Validación
 
 Pruebas de separación de dominios HTTP, restauración y cierre de sesión, cancelación y controles de activación/detención. Pruebas Java de límites de jornada y antigüedad del GPS. Check, build y cap sync locales. Compilación completa y prueba Java en GitHub Actions porque el entorno local no puede descargar Gradle y no tiene SDK/JDK 21. Prueba física pendiente: pantalla apagada, Waze abierto, pérdida de red, cierre de sesión y fin de jornada.
+
+## Actualización ADR 0035
+
+La capa propia se migró a Kotlin. La descarga de distribución se realiza desde `/android`, con releases firmadas mediante secreto permanente. Véase ADR 0035 para el flujo vigente; los APK debug siguen disponibles como pilotos separados.

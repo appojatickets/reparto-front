@@ -1,3 +1,4 @@
+import type { ConsultarAndroid } from '../../../application/ports/descarga-android';
 import type { SeguimientoNativo } from '../../../application/ports/seguimiento-nativo';
 import { createContext, useContext, type ReactNode } from 'react';
 import type { PantallaEncendida, Ubicacion } from '../../../application/ports/ubicacion';
@@ -21,6 +22,7 @@ import type { crearQuitarFotoPerfil, crearSubirFotoPerfil } from '../../../appli
 
 /** Lo que la interfaz recibe de `main`: la API (para consultas simples) y los casos de uso con lógica propia. */
 export type Casos = {
+  readonly consultarAndroid?: ConsultarAndroid;
   readonly seguimientoNativo?: SeguimientoNativo;
   readonly api: ApiClient;
   readonly iniciarSesion: ReturnType<typeof crearIniciarSesion>;

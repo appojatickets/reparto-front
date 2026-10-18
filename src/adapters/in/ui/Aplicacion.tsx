@@ -1,3 +1,4 @@
+import { PaginaAndroid } from './paginas/PaginaAndroid';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { Marco, RutaProtegida } from './componentes/estructura';
 import { PaginaEstado } from './paginas/PaginaEstado';
@@ -37,6 +38,7 @@ export const Aplicacion = () => (
       <ProveedorSesion>
         <AvisoServidorDespertando />
         <Routes>
+          <Route path="/android" element={<PaginaAndroid />} />
           <Route path="/entrar" element={<PaginaLogin />} />
           <Route element={<RutaProtegida><Marco /></RutaProtegida>}>
             <Route index element={<PaginaInicio />} />

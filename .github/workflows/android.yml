@@ -9,7 +9,7 @@ on:
       - 'public/**'
       - 'package*.json'
       - 'capacitor.config.json'
-      - 'scripts/build-android.mjs'
+      - 'scripts/*android*'
       - '.github/workflows/android.yml'
 permissions:
   contents: read
@@ -20,6 +20,8 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    outputs:
+      signed: ${{ steps.signing.outputs.configured }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,7 +41,7 @@ jobs:
       - run: npm run android:sync
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL || 'https://reparto-back.onrender.com' }}
-      - run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+      - run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
         working-directory: android
       - uses: actions/upload-artifact@v4
         with:
@@ -47,3 +49,49 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
           if-no-files-found: error
+      - name: Preparar firma permanente
+        id: signing
+        run: python scripts/cargar-firma-android.py
+        env:
+          ANDROID_SIGNING_BUNDLE: ${{ secrets.ANDROID_SIGNING_BUNDLE }}
+      - name: Compilar APK de distribución
+        if: steps.signing.outputs.configured == 'true'
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+      - name: Verificar firma y preparar descarga
+        if: steps.signing.outputs.configured == 'true'
+        run: |
+          mkdir -p android-distribucion
+          cp android/app/build/outputs/apk/release/app-release.apk android-distribucion/reparto.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs android-distribucion/reparto.apk
+          cd android-distribucion
+          sha256sum reparto.apk > reparto.apk.sha256
+      - uses: actions/upload-artifact@v4
+        if: steps.signing.outputs.configured == 'true'
+        with:
+          name: reparto-android-firmado
+          path: android-distribucion/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Limpiar firma del runner
+        if: always()
+        run: rm -f "$RUNNER_TEMP/reparto-release.p12"
+  publicar:
+    needs: apk
+    if: github.ref == 'refs/heads/main' && needs.apk.outputs.signed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: reparto-android-firmado
+          path: descarga
+      - name: Publicar descarga Android
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: android-v${{ github.run_number }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          gh release create "$RELEASE_TAG" descarga/reparto.apk descarga/reparto.apk.sha256 --target "$RELEASE_SHA" --title "Reparto Android $RELEASE_TAG" --notes "App Android con GPS de jornada. Android 8 o posterior. Instalación y actualizaciones desde la web de Reparto." --latest
