@@ -833,3 +833,9 @@ html[data-vista='normal'] .parada-num {
   font-weight: 700;
   text-decoration: underline;
 }
+
+/* Mapa del recorrido: tamaño usable en el teléfono y marcadores con contraste. */
+.mapa-ruta { width: 100%; height: min(65vh, 560px); min-height: 320px; border-radius: 12px; overflow: hidden; }
+.mapa-pin { border: 3px solid white; border-radius: 50%; width: 40px; height: 40px; color: white; font-weight: 800; font-size: 17px; box-shadow: 0 2px 8px #0006; cursor: pointer; }
+.mapa-pin:focus-visible { outline: 4px solid #facc15; }
+.maplibregl-popup-content { color: #111827; font-size: 15px; max-width: 260px; }

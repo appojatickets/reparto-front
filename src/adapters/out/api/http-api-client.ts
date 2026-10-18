@@ -286,6 +286,12 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
       return mapear(r, (d) => d.dias);
     },
 
+    verTrazado: async (camionId, fecha, signal) => {
+      const r = await ejecutar(() => client.GET('/v1/rutas/trazado', { params: { query: { camionId, fecha } }, signal: AbortSignal.any([timeout(signal), AbortSignal.timeout(45_000)]) }), { repetible: true, signal });
+      if (!r.ok) return r;
+      if (r.value.tramos.some((t) => t.coordenadas.some((p) => p.length !== 2 || !p.every(Number.isFinite)))) return err({ kind: 'UNEXPECTED' });
+      return ok({ ...r.value, tramos: r.value.tramos.map((t) => ({ ...t, coordenadas: t.coordenadas.map((p): readonly [number, number] => [p[0] ?? 0, p[1] ?? 0]) })) });
+    },
     verRuta: (camionId, fecha) => ejecutar(() => client.GET('/v1/rutas', { params: { query: { camionId, fecha } }, signal: timeout() }), { repetible: true }),
     marcaDeRuta: async (camionId, fecha) => {
       const r = await ejecutar(() => client.GET('/v1/rutas/marca', { params: { query: { camionId, fecha } }, signal: timeout() }), { repetible: true });

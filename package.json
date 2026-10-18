@@ -22,6 +22,7 @@
     "check": "npm run lint && npm run typecheck && npm run test && npm run arch && npm run secretos"
   },
   "dependencies": {
+    "maplibre-gl": "^6.15.0",
     "openapi-fetch": "^0.17.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

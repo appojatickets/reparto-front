@@ -371,3 +371,5 @@ export type PanelAnalitica = {
   };
   readonly ultimaEjecucion?: { readonly iniciadoEn: string; readonly terminadoEn: string; readonly resumen: ResumenAnalisis };
 };
+
+export type TrazadoMapa = { readonly version?: number; readonly perfil: string; readonly tramos: readonly { readonly coordenadas: readonly (readonly [number, number])[]; readonly porCalles: boolean }[] };

@@ -1,3 +1,4 @@
+import { borrarMapa, leerMapa } from './componentes/mapa-cache';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Result } from '../../../domain/result';
 import type { UsuarioSesion } from '../../../application/modelos';
@@ -30,7 +31,10 @@ export const ProveedorSesion = ({ children }: { readonly children: ReactNode }) 
   useEffect(() => {
     let vigente = true;
     void restaurarSesion().then((e) => {
-      if (vigente) setEstado(e);
+      if (vigente) {
+        if (e.tipo === 'sin_sesion' || (e.tipo === 'sesion' && leerMapa()?.usuarioId !== e.usuario.id)) borrarMapa();
+        setEstado(e);
+      }
     });
     return () => {
       vigente = false;
@@ -40,6 +44,7 @@ export const ProveedorSesion = ({ children }: { readonly children: ReactNode }) 
   // La API avisa por este evento cuando el servidor rechaza también la renovación: hay que volver a entrar.
   useEffect(() => {
     const alExpirar = (): void => {
+      borrarMapa();
       setEstado({ tipo: 'sin_sesion' });
     };
     window.addEventListener(EVENTO_SESION_EXPIRADA, alExpirar);
@@ -51,12 +56,13 @@ export const ProveedorSesion = ({ children }: { readonly children: ReactNode }) 
   const entrar = useCallback(
     async (username: string, pin: string) => {
       const r = await iniciarSesion(username, pin);
-      if (r.ok) setEstado({ tipo: 'sesion', usuario: r.value });
+      if (r.ok) { if (leerMapa()?.usuarioId !== r.value.id) borrarMapa(); setEstado({ tipo: 'sesion', usuario: r.value }); }
       return r;
     },
     [iniciarSesion],
   );
   const salir = useCallback(() => {
+    borrarMapa();
     cerrarSesion();
     setEstado({ tipo: 'sin_sesion' });
   }, [cerrarSesion]);

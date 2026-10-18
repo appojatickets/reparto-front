@@ -71,7 +71,7 @@ export const PaginaClientes = () => {
 
   return (
     <Pagina titulo="Buscar cliente">
-      <Campo etiqueta="Nombre o dirección" ayuda={`Escribe al menos ${LARGO_MINIMO_BUSQUEDA} letras. Sirve dictar con el micrófono del teclado.`} type="search" value={texto} onChange={(e) => { setTexto(e.target.value); }} autoComplete="off" autoCapitalize="none" spellCheck={false} autoFocus />
+      <Campo etiqueta="Nombre o dirección" ayuda={`Escribe al menos ${LARGO_MINIMO_BUSQUEDA} caracteres del nombre o dirección, o un RUT. Sirve dictar con el micrófono del teclado.`} type="search" value={texto} onChange={(e) => { setTexto(e.target.value); }} autoComplete="off" autoCapitalize="none" spellCheck={false} autoFocus />
       {!listo ? <Aviso>Los resultados aparecen al escribir.</Aviso> : null}
       {listo && !actual ? <Cargando texto="Buscando…" /> : null}
       {actual?.error ? <Aviso tipo="error">{actual.error}</Aviso> : null}

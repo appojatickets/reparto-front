@@ -27,7 +27,11 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { navigateFallback: '/index.html' },
+      workbox: { navigateFallback: '/index.html', runtimeCaching: [{
+        // Solo recursos abiertos al navegar. Sin precarga masiva ni servidores de tiles de OSM.
+        urlPattern: /^https:\/\/tiles\.openfreemap\.org\//,
+        handler: 'CacheFirst', options: { cacheName: 'reparto-calles-v1', expiration: { maxEntries: 250, maxAgeSeconds: 30 * 86400 }, cacheableResponse: { statuses: [200] } },
+      }] },
     }),
   ],
 });

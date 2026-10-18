@@ -1,3 +1,4 @@
+import { MapaRuta } from '../componentes/MapaRuta';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { reordenarParadas } from '../../../../domain/arrastre';
@@ -558,6 +559,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
         </>
       ) : (
         <>
+          <MapaRuta vista={vista} />
           <Resumen v={vista} />
           {vista.paradas.length > 0 ? (
             <Boton variante="secundario" aria-pressed={verHoras} onClick={cambiarHoras}>{verHoras ? 'OCULTAR HORAS ESTIMADAS' : 'VER HORAS ESTIMADAS'}</Boton>

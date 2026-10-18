@@ -1,0 +1,56 @@
+import { useEffect, useRef, useState } from 'react';
+import { Map, Marker, NavigationControl, Popup, LngLatBounds, setWorkerUrl } from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import type { VistaRuta, TrazadoMapa } from '../../../../application/modelos';
+import { enlaceNavegar } from '../../../../domain/enlaces';
+
+setWorkerUrl(workerUrl);
+export const COLORES = ['#1d4ed8', '#b45309', '#7e22ce', '#047857', '#be123c', '#0e7490'];
+const color = (i: number): string => COLORES[i % COLORES.length] ?? '#1d4ed8';
+
+export default function MapaInteractivo({ vista, trazado }: { readonly vista: VistaRuta; readonly trazado: TrazadoMapa }) {
+  const contenedor = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    if (!contenedor.current) return;
+    let mapa: Map;
+    try {
+      mapa = new Map({ container: contenedor.current, style: 'https://tiles.openfreemap.org/styles/liberty', center: [-70.65, -33.5], zoom: 10, attributionControl: { compact: true } });
+    } catch { return; }
+    mapa.addControl(new NavigationControl(), 'top-right');
+    mapa.on('error', () => { setError('Algunas calles no están disponibles. Sin conexión solo se ven las zonas abiertas anteriormente.'); });
+    const limites = new LngLatBounds();
+    const agregar = (lng: number, lat: number, numero: string, titulo: string, detalle: string, tono: string, destino?: Parameters<typeof enlaceNavegar>[0]) => {
+      const boton = document.createElement('button');
+      boton.type = 'button'; boton.className = 'mapa-pin'; boton.style.backgroundColor = tono;
+      boton.textContent = numero; boton.setAttribute('aria-label', `${numero}. ${titulo}`);
+      const contenido = document.createElement('div');
+      const nombre = document.createElement('strong'); nombre.textContent = titulo;
+      const direccion = document.createElement('p'); direccion.textContent = detalle;
+      contenido.append(nombre, direccion);
+      if (destino) {
+        const enlace = document.createElement('a'); enlace.textContent = 'Abrir navegación';
+        enlace.href = enlaceNavegar(destino, 'google'); enlace.target = '_blank'; enlace.rel = 'noreferrer'; contenido.append(enlace);
+      }
+      new Marker({ element: boton }).setLngLat([lng, lat]).setPopup(new Popup({ offset: 20 }).setDOMContent(contenido)).addTo(mapa);
+      limites.extend([lng, lat]);
+    };
+    if (vista.deposito) agregar(vista.deposito.lng, vista.deposito.lat, 'D', vista.deposito.nombre ?? 'Depósito', 'Salida y regreso', '#111827');
+    vista.paradas.forEach((p, i) => {
+      if (p.lng === undefined || p.lat === undefined) return;
+      agregar(p.lng, p.lat, String(i + 1), p.cliente, `${p.direccion}, ${p.comuna}${p.ubicacionAproximada ? ' · Ubicación aproximada' : ''}`, p.ubicacionAproximada ? '#9a3412' : color(i), p);
+    });
+    if (!limites.isEmpty()) mapa.fitBounds(limites, { padding: 65, maxZoom: 15, duration: 0 });
+    mapa.on('load', () => {
+      trazado.tramos.forEach((t, i) => {
+        if (t.coordenadas.length < 2) return;
+        const id = `tramo-${i}`;
+        mapa.addSource(id, { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: t.coordenadas.map((p) => [...p]) } } });
+        mapa.addLayer({ id, type: 'line', source: id, paint: { 'line-color': color(i), 'line-width': 5, 'line-opacity': 0.85, ...(t.porCalles ? {} : { 'line-dasharray': [2, 2] }) } });
+      });
+    });
+    return () => { mapa.remove(); };
+  }, [vista, trazado]);
+  return <><div ref={contenedor} className="mapa-ruta" role="region" aria-label="Mapa interactivo de las entregas en orden" />{error ? <p role="status" className="ayuda">{error}</p> : null}</>;
+}

@@ -1,3 +1,4 @@
+import { MapaGuardadoOffline } from './MapaRuta';
 import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import type { ReactNode } from 'react';
 import { ETIQUETA_ROL, puedeHacer, type Accion } from '../../../../domain/rol';
@@ -56,6 +57,7 @@ export const RutaProtegida = ({ accion, children }: { readonly accion?: Accion; 
         <main className="screen">
           <Pagina titulo="Sin conexión">
             <Aviso tipo="error">No hay señal para verificar tu sesión.</Aviso>
+            <MapaGuardadoOffline />
             <Boton onClick={reintentar}>REINTENTAR</Boton>
           </Pagina>
         </main>
