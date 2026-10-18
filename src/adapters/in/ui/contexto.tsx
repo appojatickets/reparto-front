@@ -1,3 +1,4 @@
+import type { SeguimientoNativo } from '../../../application/ports/seguimiento-nativo';
 import { createContext, useContext, type ReactNode } from 'react';
 import type { PantallaEncendida, Ubicacion } from '../../../application/ports/ubicacion';
 import type { TemaStore } from '../../../application/ports/tema-store';
@@ -20,6 +21,7 @@ import type { crearQuitarFotoPerfil, crearSubirFotoPerfil } from '../../../appli
 
 /** Lo que la interfaz recibe de `main`: la API (para consultas simples) y los casos de uso con lógica propia. */
 export type Casos = {
+  readonly seguimientoNativo?: SeguimientoNativo;
   readonly api: ApiClient;
   readonly iniciarSesion: ReturnType<typeof crearIniciarSesion>;
   readonly restaurarSesion: ReturnType<typeof crearRestaurarSesion>;

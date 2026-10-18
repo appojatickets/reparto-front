@@ -8,7 +8,7 @@ const ban = (patterns) => ({
 });
 
 export default tseslint.config(
-  { ignores: ['scripts/*.mjs', 'dist', 'coverage', 'node_modules', 'playwright-report', 'test-results', 'dev-dist', 'src/adapters/out/api/schema.d.ts'] },
+  { ignores: ['android/**', 'scripts/*.mjs', 'dist', 'coverage', 'node_modules', 'playwright-report', 'test-results', 'dev-dist', 'src/adapters/out/api/schema.d.ts'] },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   reactHooks.configs.flat.recommended,

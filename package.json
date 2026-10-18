@@ -19,9 +19,16 @@
     "api:generate": "openapi-typescript openapi/openapi.json -o src/adapters/out/api/schema.d.ts",
     "api:check": "npm run api:generate && git diff --exit-code src/adapters/out/api/schema.d.ts",
     "e2e": "playwright test",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run arch && npm run secretos"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run arch && npm run secretos",
+    "android:sync": "npm run build:android && cap sync android",
+    "android:open": "cap open android",
+    "build:android": "node scripts/build-android.mjs",
+    "android:apk": "npm run android:sync && cd android && ./gradlew testDebugUnitTest assembleDebug"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/geolocation": "^8.2.4",
     "maplibre-gl": "^6.15.0",
     "openapi-fetch": "^0.17.0",
     "react": "^19.3.0",
@@ -35,6 +42,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@capacitor/cli": "^8.5.3",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^7.0.1",

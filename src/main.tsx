@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { StrictMode } from 'react';
 import { registerSW } from 'virtual:pwa-register';
 import { createRoot } from 'react-dom/client';
@@ -37,9 +38,13 @@ const apiUrl = import.meta.env.VITE_API_URL;
 if (!apiUrl) throw new Error('Falta VITE_API_URL');
 
 // Adaptadores de salida
-const store = crearSesionStore();
+const esAndroid = Capacitor.getPlatform() === 'android';
+const android = esAndroid ? await import('./adapters/out/android/bridge') : undefined;
+const nativo = android ? await (await import('./adapters/out/android/sesion-y-http')).crearSesionYHttpAndroid(android.nativeBridge, apiUrl) : undefined;
+const store = nativo?.store ?? crearSesionStore();
 const api = createHttpApiClient({
   baseUrl: apiUrl,
+  ...(nativo ? { fetch: nativo.fetch } : {}),
   store,
   alExpirarSesion: () => window.dispatchEvent(new Event(EVENTO_SESION_EXPIRADA)),
   alEsperarServidor: (activo) => window.dispatchEvent(new CustomEvent(EVENTO_SERVIDOR_DESPERTANDO, { detail: activo })),
@@ -48,6 +53,11 @@ const api = createHttpApiClient({
 // Casos de uso con sus puertos inyectados
 const casos: Casos = {
   api,
+  ...(android ? { seguimientoNativo: {
+    estado: () => android.nativeBridge.status(),
+    iniciar: (jornadaId: string) => android.nativeBridge.start({ jornadaId }),
+    detener: () => android.nativeBridge.stop(),
+  } } : {}),
   iniciarSesion: crearIniciarSesion({ api, store }),
   restaurarSesion: crearRestaurarSesion({ api, store }),
   cerrarSesion: crearCerrarSesion({ store }),
@@ -63,7 +73,7 @@ const casos: Casos = {
   exportacion: crearExportacionStore(),
   ahora: () => new Date(),
   voz: crearVozWeb(),
-  ubicacion: crearUbicacionWeb(),
+  ubicacion: esAndroid ? (await import('./adapters/out/android/ubicacion-android')).crearUbicacionAndroid() : crearUbicacionWeb(),
   pantalla: crearPantallaEncendida(),
   permisos: crearPermisosWeb(),
   vista: crearVistaStore(),
@@ -74,7 +84,7 @@ const casos: Casos = {
 const deps = { api, timer: browserTimer, wakingAfterMs: 3000 };
 
 // Si hay una versión nueva de la app, se baja y la página se recarga sola (con «autoUpdate»); además se busca al volver a la app y cada media hora.
-registerSW({
+if (!esAndroid) registerSW({
   immediate: true,
   onRegisteredSW: (_url, registro) => {
     if (!registro) return;

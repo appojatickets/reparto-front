@@ -45,3 +45,7 @@ datos/
 .DS_Store
 Thumbs.db
 .idea/
+
+*.jks
+*.keystore
+android/local.properties

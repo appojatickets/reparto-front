@@ -1,0 +1,46 @@
+name: Android APK de pruebas
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'src/**'
+      - 'public/**'
+      - 'package*.json'
+      - 'capacitor.config.json'
+      - 'scripts/build-android.mjs'
+      - '.github/workflows/android.yml'
+permissions:
+  contents: read
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - run: npm ci
+      - run: npm run android:sync
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://reparto-back.onrender.com' }}
+      - run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+        working-directory: android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reparto-android-pruebas
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+          if-no-files-found: error

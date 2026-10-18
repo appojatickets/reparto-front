@@ -1,3 +1,4 @@
+import { SeguimientoAndroid } from './SeguimientoAndroid';
 import { useEffect, useMemo, useState } from 'react';
 import { crearSeguimiento } from '../../../../application/use-cases/seguimiento';
 import type { ErrorUbicacion } from '../../../../application/ports/ubicacion';
@@ -16,7 +17,7 @@ type EstadoGps = { readonly tipo: 'activo'; readonly pantalla: boolean } | { rea
  * Límite de una app web: si el chofer pasa a Waze o Maps, el navegador pausa el GPS hasta que vuelve a la app.
  * Muestra una línea chica con el estado del GPS, para que el chofer sepa si se está registrando.
  */
-export const SeguimientoDelCamion = () => {
+const SeguimientoWeb = () => {
   const { api, ubicacion, ahora, pantalla } = useCasos();
   const seguimiento = useMemo(() => crearSeguimiento({ api, ubicacion, ahora }), [api, ubicacion, ahora]);
   const [estado, setEstado] = useState<EstadoGps>({ tipo: 'iniciando' });
@@ -68,4 +69,9 @@ export const SeguimientoDelCamion = () => {
         ? 'Sin señal de GPS por ahora.'
         : 'Buscando GPS…';
   return <p className={`estado-gps estado-gps--${estado.tipo}`} role="status" aria-label="Estado del GPS">{texto}</p>;
+};
+
+export const SeguimientoDelCamion = () => {
+  const { seguimientoNativo } = useCasos();
+  return seguimientoNativo ? <SeguimientoAndroid /> : <SeguimientoWeb />;
 };
