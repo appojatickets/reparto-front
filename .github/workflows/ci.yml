@@ -21,6 +21,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run test:coverage
       - run: npm run arch
+      - name: Sin secretos ni datos personales en el repo
+        run: npm run secretos
       - name: Cliente generado coincide con openapi/openapi.json
         run: npm run api:check
       - run: npm run build

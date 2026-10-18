@@ -1,8 +1,9 @@
+import { MapaRuta } from '../componentes/MapaRuta';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { reordenarParadas } from '../../../../domain/arrastre';
 import { enlaceNavegar, enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
-import { horaDeMinutos } from '../../../../domain/hora';
+import { horaAproximada, horaDeMinutos } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
 import { llegoAlDeposito } from '../../../../domain/deposito';
@@ -15,6 +16,8 @@ import { useArrastre } from '../arrastre';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
 import { AccionesParada, AtajoCerrado, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
+import { Contribuyentes } from '../componentes/Contribuyentes';
+import { EmergenciasDelDia } from '../componentes/EmergenciasDelDia';
 import { FotoFachada } from '../componentes/FotoFachada';
 import { InsigniasDeVerificacion } from '../componentes/InsigniasDeVerificacion';
 import { useDiaDeReparto } from '../componentes/dia';
@@ -22,6 +25,8 @@ import { useUsuario } from '../sesion';
 import { Aviso, Boton, Cargando, Direccion, ErrorCarga, Insignia, Pagina, Selector } from '../componentes/ui';
 
 const REFRESCO_MS = 3 * 60 * 1000;
+/** Cada cuánto se mira si alguien más del camión cambió la ruta (consulta liviana; solo con la app a la vista). */
+const SINCRONIZAR_MS = 8_000;
 /** Cada cuánto se mira si el camión ya llegó al depósito (solo con la pantalla abierta y después de haber entregado algo). */
 const MIRAR_DEPOSITO_MS = 90 * 1000;
 
@@ -67,7 +72,11 @@ const AvisoAproximadas = ({ paradas }: { readonly paradas: readonly ParadaDeRuta
  * Una fila de la lista de paradas: número, nombre y comuna (y a qué hora llega). Al tocarla se despliega con el resto de los datos y las
  * acciones; así el chofer ve toda su ruta de un vistazo y solo abre la parada que le toca.
  */
-const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, alFijarPin, abierta, alAbrir, esSiguiente }: {
+const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, alFijarPin, abierta, alAbrir, esSiguiente, horario, hora }: {
+  /** Hora aproximada de llegada («10:10»); solo si se pidió verla. */
+  readonly hora?: string | undefined;
+  /** Si según su horario ya cerró (o no atiende hoy), lo que dice el sistema; la parada sigue en la ruta, al final. */
+  readonly horario?: string | undefined;
   readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void; readonly enCamion: boolean;
   /** Deja esta parada en la posición indicada (lo mismo que arrastrarla). */
   readonly mover: (posicion: number) => void;
@@ -90,8 +99,10 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
           {p.ubicacionAproximada ? <span className="parada-marca parada-marca--aproximada">SIN UBICACIÓN PRECISA</span> : null}
+          {horario !== undefined ? <span className="parada-marca">POSIBLEMENTE CERRADO</span> : null}
           <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} />
         </span>
+        {hora !== undefined ? <span className="parada-hora" aria-label={`Llegada aproximada ${hora}`}>~{hora}</span> : null}
       </button>
       <div className="parada-atajos">
         <Boton
@@ -118,9 +129,11 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
         <div className="parada-detalle" id={idDetalle}>
           {!mismoTexto(p.cliente, p.direccion) ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
           <FotoFachada localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} conPin={p.lat !== undefined && p.lng !== undefined} />
+          {p.tieneFoto === true && p.lat !== undefined ? <Contribuyentes localId={p.localId} /> : null}
           {p.folio ? <span>Factura {p.folio}</span> : null}
           <Etiquetas i={p} />
           {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
+          {horario !== undefined ? <span className="ayuda">{horario} Sigue en tu ruta, al final: si está abierto, entrégalo igual.</span> : null}
           {p.ubicacionAproximada ? <AvisoUbicacion p={p} puedeAbrirFicha={puedeHacer(usuario.rol, 'buscar-clientes', usuario.editor)} /> : null}
           {p.nota ? <span>Nota: {p.nota}</span> : null}
           {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
@@ -189,7 +202,7 @@ const DeshacerHecha = ({ h, alCambiar }: { readonly h: { readonly facturaId: str
 const Resumen = ({ v }: { readonly v: VistaRuta }) => (
   <div className="tarjeta" aria-label="Resumen de la ruta">
     <span>Paradas: <strong>{v.paradas.length}</strong></span>
-    <Insignia>{v.modo === 'manual' ? 'ACOMODADA A MANO' : v.modo === 'carga' ? 'EN TU ORDEN DE CARGA' : 'ORDEN SUGERIDO'}</Insignia>
+    <Insignia>{v.modo === 'manual' ? 'AUTOMÁTICO · ACOMODADA A MANO' : v.modo === 'carga' ? 'ORDEN MANUAL' : 'ORDEN AUTOMÁTICO'}</Insignia>
   </div>
 );
 
@@ -229,15 +242,15 @@ const ListaItems = ({ titulo, items, children }: { readonly titulo: string; read
   );
 
 /**
- * La última parada de toda ruta: volver a la empresa (el depósito configurado). Está anclada: no se mueve ni se entrega, solo marca adónde se
- * vuelve y a qué hora se llega. Al hacer la última entrega se destaca: ya no queda nada y es hora de volver.
+ * La última parada de toda ruta: volver a la empresa (el depósito configurado). Está anclada: no se mueve ni se entrega, marca adónde se
+ * vuelve y a qué hora se llega (siempre a la vista, aunque las horas de las paradas estén ocultas), y ofrece IR con Waze o Google Maps. Al hacer la última entrega se destaca: ya no queda nada y es hora de volver.
  */
-const FilaDeposito = ({ v, enCamion }: { readonly v: VistaRuta; readonly enCamion: boolean }) => {
+const FilaDeposito = ({ v }: { readonly v: VistaRuta }) => {
   const deposito = v.deposito;
   if (!deposito || !v.planificada || (v.paradas.length === 0 && v.hechas.length === 0)) return null;
   const nombre = deposito.nombre?.trim() ? deposito.nombre.trim().toUpperCase() : 'LA EMPRESA';
   const terminaste = v.paradas.length === 0;
-  const destino = { direccion: deposito.nombre ?? 'Depósito', comuna: '', lat: deposito.lat, lng: deposito.lng };
+  const destino = { direccion: nombre, comuna: '', lat: deposito.lat, lng: deposito.lng };
   return (
     <div className={`parada parada--deposito${terminaste ? ' parada--deposito-final' : ''}`} aria-label="Volver a la empresa">
       <div className="parada-fila parada-fila--fija">
@@ -245,22 +258,20 @@ const FilaDeposito = ({ v, enCamion }: { readonly v: VistaRuta; readonly enCamio
         <span className="parada-nombre">
           {terminaste ? <strong>Terminaste las entregas</strong> : null}
           <strong>{terminaste ? `VUELVE A ${nombre}` : `VOLVER A ${nombre}`}</strong>
-          <span className="comuna">{v.regreso !== undefined && !terminaste ? `Llegada estimada ${horaDeMinutos(v.regreso)} · ` : ''}Última parada: no se mueve</span>
+          {v.regreso !== undefined && !terminaste ? <span className="comuna">Llegada aproximada {horaAproximada(v.regreso)}</span> : null}
         </span>
       </div>
-      {enCamion ? (
-        <div className="parada-atajos">
-          <a className="big-button big-button--primario atajo" href={enlaceNavegar(destino, 'google')} target="_blank" rel="noreferrer" aria-label={`IR A ${nombre} CON GOOGLE MAPS`}>IR</a>
-          <a className="big-button big-button--secundario atajo" href={enlaceNavegar(destino, 'waze')} target="_blank" rel="noreferrer" aria-label={`IR A ${nombre} CON WAZE`}>WAZE</a>
-        </div>
-      ) : null}
+      <div className="fila-botones" role="group" aria-label={`Ir a ${nombre} con`}>
+        <a className="big-button big-button--primario" href={enlaceNavegar(destino, 'waze')} target="_blank" rel="noreferrer" aria-label={`IR A ${nombre} CON WAZE`}>IR CON WAZE</a>
+        <a className="big-button big-button--primario" href={enlaceNavegar(destino, 'google')} target="_blank" rel="noreferrer" aria-label={`IR A ${nombre} CON GOOGLE MAPS`}>IR CON GOOGLE MAPS</a>
+      </div>
     </div>
   );
 };
 
 /** Todo el estado de UN camión y día vive aquí: al cambiar de camión o de día se vuelve a montar y parte limpio. */
 export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; readonly fecha: string }) => {
-  const { api, ubicacion, armado: armadoStore } = useCasos();
+  const { api, ubicacion, armado: armadoStore, horas: horasStore } = useCasos();
   const cargar = useCallback(() => api.verRuta(camionId, fecha), [api, camionId, fecha]);
   const { estado, recargar, refrescar } = useCarga(cargar);
   const [actualizada, setActualizada] = useState<VistaRuta | undefined>();
@@ -279,13 +290,23 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     armadoStore.guardar(a);
     setPreferencia(a);
   };
+  /** Las horas estimadas de llegada se ven solo si la persona lo pide (se recuerda en el teléfono). */
+  const [verHoras, setVerHoras] = useState(() => horasStore.cargar());
+  const cambiarHoras = (): void => {
+    horasStore.guardar(!verHoras);
+    setVerHoras(!verHoras);
+  };
   /** Después de entregar o avisar: se vuelve a pedir la ruta (la parada hecha sale de la lista y las horas se corren). */
+  const marcaVista = useRef<string | undefined>(undefined);
   const recargarVista = (): void => {
+    // Lo que se pide ahora ya trae lo último: la próxima marca se toma como base para no recargar dos veces por el mismo cambio.
+    marcaVista.current = undefined;
     setActualizada(undefined);
     refrescar();
   };
 
   const vista = actualizada ?? (estado.tipo === 'ok' ? estado.datos : undefined);
+  const cierranPorHorario = new Map((vista?.enRiesgo ?? []).flatMap((r) => (r.conflictos[0]?.startsWith('Según su horario') ? [[r.facturaId, r.conflictos[0]] as const] : [])));
 
   const aplicar = async (llamada: () => ReturnType<typeof api.planificarRuta>, alFallar?: () => void): Promise<void> => {
     setOcupado(true);
@@ -314,12 +335,17 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     if (version === undefined) return;
     void aplicar(() => api.operarRuta(camionId, fecha, version, operacion));
   };
-  /** El chofer elige cómo armar su ruta: se recuerda y, si ya hay ruta, se rehace de esa forma. */
-  const cambiarArmado = (a: Armado): void => {
-    elegirPreferencia(a);
-    if (!vista?.planificada) return;
-    if (a === 'carga') void planificar('carga');
-    else operar({ tipo: 'ordenar' });
+  /** PASAR A MANUAL: se congela el orden que se ve; desde ahí nada se reordena solo. Es lo que el chofer prefiere desde entonces. */
+  const pasarAManual = (): void => {
+    elegirPreferencia('carga');
+    operar({ tipo: 'fijar' });
+  };
+  /** Volver a AUTOMÁTICO: el sistema ordena lo que queda (se pide confirmar porque cambia el orden que la persona dejó). */
+  const [confirmarAutomatico, setConfirmarAutomatico] = useState(false);
+  const pasarAAutomatico = (): void => {
+    setConfirmarAutomatico(false);
+    elegirPreferencia('calcular');
+    operar({ tipo: 'ordenar' });
   };
   /** Aviso de lo último que se movió, para quien no ve la lista (lector de pantalla) y como confirmación. */
   const [anuncio, setAnuncio] = useState<string | undefined>();
@@ -397,6 +423,29 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     void aplicar(() => api.operarRuta(camionId, fecha, version, { tipo: 'primero', facturaId }));
   };
 
+  /**
+   * El camión es dueño de la ruta y varias personas la usan a la vez (chofer y ayudante, o quien despacha): se mira seguido una marca liviana y,
+   * si alguien más movió la ruta, cargó una factura o entregó, se recarga la ruta completa.
+   */
+  useEffect(() => {
+    let activo = true;
+    const mirar = async (): Promise<void> => {
+      if (document.visibilityState !== 'visible') return;
+      const r = await api.marcaDeRuta(camionId, fecha);
+      if (!activo || !r.ok) return;
+      const antes = marcaVista.current;
+      marcaVista.current = r.value;
+      if (antes !== undefined && antes !== r.value) recargarVista();
+    };
+    void mirar();
+    const cada = setInterval(() => { void mirar(); }, SINCRONIZAR_MS);
+    return () => {
+      activo = false;
+      clearInterval(cada);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recargarVista solo usa setters estables
+  }, [api, camionId, fecha]);
+
   /** La lista se mantiene al día sola: cada pocos minutos y al volver a la app (por ejemplo desde Waze) se recalculan las horas. */
   useEffect(() => {
     const actualizar = (): void => {
@@ -455,7 +504,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
             <span>Sin hacer: <strong>{r.pendientes}</strong></span>
           </div>
         ) : null}
-        {(r?.pendientes ?? 0) > 0 ? <Aviso>La lista quedó limpia. Lo que no se alcanzó a entregar volvió a «Facturas del día» sin camión; mañana la ruta se arma de cero.</Aviso> : null}
+        {r?.sigueElCamion ? <Aviso>Tu compañero sigue en el camión: la ruta y lo pendiente quedan para él, y el día del camión se cierra cuando termine el último.</Aviso> : null}
+        {(r?.pendientes ?? 0) > 0 && !r?.sigueElCamion ? <Aviso>La lista quedó limpia. Lo que no se alcanzó a entregar volvió a «Facturas del día» sin camión; mañana la ruta se arma de cero.</Aviso> : null}
         <Link className="big-button big-button--primario" to="/">VOLVER AL INICIO</Link>
       </section>
     );
@@ -496,9 +546,9 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               <strong>¿Cómo armo tu ruta?</strong>
               <span>Lo recuerdo para la próxima vez y lo puedes cambiar cuando quieras.</span>
               <Boton disabled={ocupado} onClick={() => { elegirPreferencia('calcular'); void planificar('calcular'); }}>CALCULAR MI RUTA</Boton>
-              <p className="ayuda">El sistema la ordena según cercanía, horarios y prioridades.</p>
+              <p className="ayuda">Ruta automática: el sistema la ordena según cercanía, horarios y prioridades.</p>
               <Boton variante="secundario" disabled={ocupado} onClick={() => { elegirPreferencia('carga'); void planificar('carga'); }}>LAS AGREGO EN ORDEN</Boton>
-              <p className="ayuda">Si te sabes el recorrido: va en el orden en que cargues las facturas.</p>
+              <p className="ayuda">Ruta manual: si te sabes el recorrido, va en el orden en que cargues las facturas y nada se mueve solo. Lo que haces queda guardado para que el sistema aprenda de tu experiencia.</p>
             </div>
           ) : (
             <>
@@ -509,7 +559,11 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
         </>
       ) : (
         <>
+          <MapaRuta vista={vista} />
           <Resumen v={vista} />
+          {vista.paradas.length > 0 ? (
+            <Boton variante="secundario" aria-pressed={verHoras} onClick={cambiarHoras}>{verHoras ? 'OCULTAR HORAS ESTIMADAS' : 'VER HORAS ESTIMADAS'}</Boton>
+          ) : null}
           {enCamion && vista.paradas.length > 0 ? <a className="big-button big-button--secundario" href={enlaceRutaGoogleMaps(vista.paradas.map((x) => ({ direccion: x.direccion, comuna: x.comuna, lat: x.lat, lng: x.lng }))) ?? '#'} target="_blank" rel="noreferrer">LAS PRÓXIMAS {Math.min(vista.paradas.length, 9)} EN GOOGLE MAPS</a> : null}
           {vista.paradas.length >= 2 && vista.modo !== 'carga' ? (
             <Selector etiqueta="Primera entrega (el resto se ordena desde ahí)" value="" disabled={ocupado} onChange={(e) => { elegirPrimera(e.target.value); }}>
@@ -517,18 +571,32 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               {vista.paradas.map((p) => <option key={p.facturaId} value={p.facturaId}>{`${p.posicion + 1}. ${p.cliente} · ${p.comuna}`}</option>)}
             </Selector>
           ) : null}
-          <div className="tarjeta" role="group" aria-label="Cómo se arma la ruta">
-            <strong>Cómo se arma la ruta</strong>
+          <div className="tarjeta" role="group" aria-label="Orden de la ruta">
+            <strong>Orden de la ruta</strong>
             <div className="fila-botones">
-              <Boton variante={vista.modo === 'carga' ? 'secundario' : 'primario'} aria-pressed={vista.modo !== 'carga'} disabled={ocupado} onClick={() => { if (vista.modo === 'carga') cambiarArmado('calcular'); else elegirPreferencia('calcular'); }}>CALCULAR MI RUTA</Boton>
-              <Boton variante={vista.modo === 'carga' ? 'primario' : 'secundario'} aria-pressed={vista.modo === 'carga'} disabled={ocupado} onClick={() => { if (vista.modo === 'carga') return; if (vista.modo === 'manual') setConfirmarCarga(true); else cambiarArmado('carga'); }}>LAS AGREGO EN ORDEN</Boton>
+              <Boton variante={vista.modo === 'carga' ? 'secundario' : 'primario'} aria-pressed={vista.modo !== 'carga'} disabled={ocupado} onClick={() => { if (vista.modo === 'carga') setConfirmarAutomatico(true); }}>AUTOMÁTICO</Boton>
+              <Boton variante={vista.modo === 'carga' ? 'primario' : 'secundario'} aria-pressed={vista.modo === 'carga'} disabled={ocupado} onClick={() => { if (vista.modo !== 'carga') pasarAManual(); }}>MANUAL</Boton>
             </div>
-            {vista.modo === 'carga' ? <span className="ayuda">Va en el orden en que cargaste las facturas; lo nuevo entra al final y nada se mueve solo.</span> : null}
+            <span className="ayuda">
+              {vista.modo === 'carga'
+                ? 'Manual: la ruta va como tú la dejaste y nada se mueve solo. Lo que cargues después entra al final. Si un local está cerrado y lo dejas para más tarde, baja de lugar.'
+                : 'Automático: el sistema ordena lo que queda cada vez que algo cambia. Toca MANUAL para congelar el orden que ves y moverlo tú.'}
+            </span>
+            {confirmarAutomatico ? (
+              <>
+                <Aviso tipo="error">El sistema volverá a ordenar lo que queda y puede cambiar el orden que dejaste.</Aviso>
+                <div className="fila-botones">
+                  <Boton variante="peligro" disabled={ocupado} onClick={pasarAAutomatico}>SÍ, ORDENAR AUTOMÁTICO</Boton>
+                  <Boton variante="secundario" onClick={() => { setConfirmarAutomatico(false); }}>NO, DEJARLA MANUAL</Boton>
+                </div>
+              </>
+            ) : null}
+            {vista.modo === 'carga' ? <Boton variante="secundario" disabled={ocupado} onClick={() => { setConfirmarCarga(true); }}>VOLVER AL ORDEN EN QUE CARGUÉ</Boton> : null}
             {confirmarCarga ? (
               <>
-                <Aviso tipo="error">Esto descarta lo que acomodaste a mano y deja la ruta en el orden en que cargaste las facturas.</Aviso>
+                <Aviso tipo="error">Esto descarta lo que acomodaste y deja la ruta en el orden en que cargaste las facturas.</Aviso>
                 <div className="fila-botones">
-                  <Boton variante="peligro" disabled={ocupado} onClick={() => { cambiarArmado('carga'); }}>SÍ, EN MI ORDEN DE CARGA</Boton>
+                  <Boton variante="peligro" disabled={ocupado} onClick={() => { elegirPreferencia('carga'); void planificar('carga'); }}>SÍ, EN MI ORDEN DE CARGA</Boton>
                   <Boton variante="secundario" onClick={() => { setConfirmarCarga(false); }}>NO, DEJARLA</Boton>
                 </div>
               </>
@@ -551,6 +619,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           <AvisoAproximadas paradas={vista.paradas} />
           <p role="status" className="ayuda">Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar.</p>
           {anuncio ? <p role="status" className="ayuda">{anuncio}</p> : null}
+          {/* El horario es una estimación: lo que según él ya cerró no sale de la ruta, queda al final y se avisa. */}
           <ol ref={lista} className={`paradas${arrastre.arrastrando ? ' paradas--arrastrando' : ''}`} aria-label="Paradas en orden">
             {vista.paradas.map((p, i) => (
               <FilaParada
@@ -566,12 +635,14 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
                 alCambiar={recargarVista}
                 alFijarPin={(cliente) => { setAnuncio(`La ubicación de ${cliente} quedó guardada con tu GPS.`); }}
                 esSiguiente={i === 0}
+                horario={cierranPorHorario.get(p.facturaId)}
+                hora={verHoras ? horaAproximada(p.llegada) : undefined}
                 abierta={(abierta ?? vista.paradas[0]?.facturaId) === p.facturaId}
                 alAbrir={() => { setAbierta((actual) => ((actual ?? vista.paradas[0]?.facturaId) === p.facturaId ? null : p.facturaId)); }}
               />
             ))}
           </ol>
-          <FilaDeposito v={vista} enCamion={enCamion} />
+          <FilaDeposito v={vista} />
         </>
       )}
 
@@ -585,6 +656,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           </ul>
         </section>
       ) : null}
+
+      <EmergenciasDelDia camionId={camionId} fecha={fecha} version={vista} />
 
       {vista.planificada ? <ListaItems titulo="Entregas nuevas sin ordenar" items={vista.nuevas} /> : null}
       {vista.planificada && vista.nuevas.length > 0 && !enCamion ? (

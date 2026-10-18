@@ -3,7 +3,7 @@ import type { Page, Request } from '@playwright/test';
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-headers': 'authorization,content-type',
-  'access-control-allow-methods': 'GET,POST,PUT,PATCH,OPTIONS',
+  'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
 };
 
 export type Respuesta = { status: number; json?: unknown };

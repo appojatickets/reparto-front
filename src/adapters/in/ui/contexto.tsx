@@ -1,7 +1,8 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import type { Ubicacion } from '../../../application/ports/ubicacion';
+import type { PantallaEncendida, Ubicacion } from '../../../application/ports/ubicacion';
 import type { TemaStore } from '../../../application/ports/tema-store';
 import type { ArmadoStore } from '../../../application/ports/armado-store';
+import type { HorasStore } from '../../../application/ports/horas-store';
 import type { VistaStore } from '../../../application/ports/vista-store';
 import type { Permisos } from '../../../application/ports/permisos';
 import type { Voz } from '../../../application/ports/voz';
@@ -15,6 +16,7 @@ import type { crearImportarEnlaces } from '../../../application/use-cases/import
 import type { crearImportarClientesEnLotes } from '../../../application/use-cases/importar-clientes';
 import type { crearCerrarSesion, crearIniciarSesion, crearRestaurarSesion } from '../../../application/use-cases/sesion';
 import type { crearSubirFotoLocal } from '../../../application/use-cases/subir-foto';
+import type { crearQuitarFotoPerfil, crearSubirFotoPerfil } from '../../../application/use-cases/subir-foto-perfil';
 
 /** Lo que la interfaz recibe de `main`: la API (para consultas simples) y los casos de uso con lógica propia. */
 export type Casos = {
@@ -32,6 +34,9 @@ export type Casos = {
   readonly buscarDireccion: ReturnType<typeof crearBuscarDireccion>;
   readonly completarComunas: ReturnType<typeof crearCompletarComunas>;
   readonly subirFotoLocal: ReturnType<typeof crearSubirFotoLocal>;
+  /** Mi foto de perfil: subir una nueva (devuelve cuándo quedó puesta) o quitarla. */
+  readonly subirFotoPerfil: ReturnType<typeof crearSubirFotoPerfil>;
+  readonly quitarFotoPerfil: ReturnType<typeof crearQuitarFotoPerfil>;
   /** Guarda un archivo de texto en el dispositivo (la exportación de datos). */
   readonly descarga: Descarga;
   /** Columnas y formato de la última exportación, recordados en el dispositivo. */
@@ -42,12 +47,16 @@ export type Casos = {
   readonly voz: Voz;
   /** GPS del teléfono (una lectura al llegar o entregar, y una por minuto mientras la app está abierta). */
   readonly ubicacion: Ubicacion;
+  /** Mantener la pantalla encendida mientras el chofer usa la app (sin esto el navegador deja de leer el GPS). */
+  readonly pantalla?: PantallaEncendida;
   /** Permisos de ubicación y micrófono, que se piden al abrir la app. */
   readonly permisos: Permisos;
   /** Vista elegida (grande o normal), recordada en el teléfono. */
   readonly vista: VistaStore;
   /** Cómo prefiere armar su ruta el chofer (calcularla o agregarla en orden), recordado en el teléfono. */
   readonly armado: ArmadoStore;
+  /** Si se ven las horas estimadas de llegada en la ruta, recordado en el teléfono (apagado por defecto). */
+  readonly horas: HorasStore;
   /** Colores elegidos (claro u oscuro), recordados en el teléfono. */
   readonly tema: TemaStore;
 };

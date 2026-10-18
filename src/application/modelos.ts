@@ -1,9 +1,16 @@
+import type { AporteAlLocal } from '../domain/aportes';
 import type { PinRespaldo } from '../domain/respaldo-pin';
 import type { Motivo } from '../domain/motivos';
 import type { Rol } from '../domain/rol';
 import type { FilaClienteCruda } from '../domain/tabla';
 
-export type UsuarioSesion = { readonly id: string; readonly username: string; readonly nombre: string; readonly rol: Rol; readonly editor: boolean };
+/** `fotoEn` dice cuándo puso su foto de perfil (no viene si no tiene); también sirve para saber si cambió. */
+export type UsuarioSesion = { readonly id: string; readonly username: string; readonly nombre: string; readonly rol: Rol; readonly editor: boolean; readonly fotoEn?: string };
+
+/** Lo que la API cuenta de una persona, sin los campos que la interfaz no usa. */
+export const usuarioSesionDe = (d: { readonly id: string; readonly username: string; readonly nombre: string; readonly rol: Rol; readonly editor: boolean; readonly fotoEn?: string | undefined }): UsuarioSesion => ({
+  id: d.id, username: d.username, nombre: d.nombre, rol: d.rol, editor: d.editor, ...(d.fotoEn !== undefined ? { fotoEn: d.fotoEn } : {}),
+});
 export type Tokens = { readonly accessToken: string; readonly refreshToken: string };
 
 export type EstadoPin = 'pendiente' | 'sugerido' | 'validado';
@@ -106,6 +113,9 @@ export type ReporteDelLocal = {
 export type ReportesDelLocal = { readonly total: number; readonly reportes: readonly ReporteDelLocal[] };
 export type AccionReporteLocal = 'verificar_pin' | 'corregido' | 'descartar';
 
+/** Alguien que aportó a un local con foto y pin: su nombre, su foto de perfil (si tiene) y qué aportó. */
+export type Contribuyente = { readonly usuarioId: string; readonly nombre: string; readonly fotoEn?: string; readonly aportes: readonly AporteAlLocal[]; readonly entregas: number };
+
 export type UsuarioAdmin = UsuarioSesion & { readonly activo: boolean };
 export type NuevoUsuario = { readonly nombre: string; readonly apellidoPaterno: string; readonly apellidoMaterno?: string; readonly rol: Rol; readonly pin: string };
 
@@ -178,6 +188,19 @@ export type CambiosFactura = {
 };
 export type FiltroFacturas = { readonly fecha?: string; readonly incluirAnuladas?: boolean; readonly incluirHechas?: boolean };
 
+/** Una parada de emergencia del camión (mecánico, vulcanización u otra ayuda): no es una entrega. */
+export type ParadaEmergencia = {
+  readonly id: string;
+  readonly camionId: string;
+  readonly tipo: 'mecanico' | 'vulcanizacion' | 'otro';
+  readonly texto?: string;
+  readonly lat?: number;
+  readonly lng?: number;
+  readonly precisionM?: number;
+  readonly creadoEn: string;
+};
+export type AvisoEmergencia = { readonly tipo: 'mecanico' | 'vulcanizacion' | 'otro'; readonly texto?: string; readonly lat?: number; readonly lng?: number; readonly precisionM?: number };
+
 export type EventoEntrega = {
   readonly tipo: 'llegada' | 'entregado' | 'cerrado' | 'espera' | 'no_entregado' | 'vuelve_mas_tarde';
   readonly lat?: number;
@@ -185,6 +208,8 @@ export type EventoEntrega = {
   readonly precisionM?: number;
   readonly motivo?: 'cerrado' | 'no_recibe' | 'direccion' | 'otro';
   readonly minutos?: number;
+  /** Solo al entregar: queda entregada pero la posición no se usa ni se toca el pin del local. */
+  readonly sinPin?: boolean;
 };
 export type ResultadoEvento = { readonly estado: EstadoEntrega; readonly pinFijado: boolean };
 
@@ -194,6 +219,8 @@ export type ConfigEmpresa = {
   readonly horaLimiteRegresoMin: number;
   /** Por dónde parte la ruta (ADR 0038 del back); sin indicar, lo decide el sistema. */
   readonly ordenInicio?: OrdenInicio;
+  /** Si la ruta usa lo aprendido sobre cuándo suele estar cerrado cada local (ADR 0050 del back); sin indicar, se usa. */
+  readonly usarCierresAprendidos?: boolean;
 };
 export type OrdenInicio = 'automatico' | 'lejano' | 'cercano';
 
@@ -256,10 +283,12 @@ export type OperacionRuta =
   /** Arrastrar y soltar: la parada queda en `posicion` (0 = la primera) de la lista de paradas en orden. */
   | { readonly tipo: 'mover'; readonly facturaId: string; readonly posicion: number }
   | { readonly tipo: 'ordenar' | 'insertar' }
+  /** PASAR A MANUAL: se congela el orden que se ve y desde ahí nada se reordena solo. */
+  | { readonly tipo: 'fijar' }
   | { readonly tipo: 'salida'; readonly salidaMin: number };
 
 /** Lo que quedó del día al terminar la ruta (las pendientes no se alcanzaron a entregar y quedan en su día). */
-export type ResumenJornada = { readonly fecha: string; readonly camionId: string; readonly desde: string; readonly hasta: string; readonly entregadas: number; readonly noEntregadas: number; readonly pendientes: number };
+export type ResumenJornada = { readonly fecha: string; readonly camionId: string; readonly desde: string; readonly hasta: string; readonly entregadas: number; readonly noEntregadas: number; readonly pendientes: number; readonly sigueElCamion?: boolean };
 export type PersonaDeCamion = { readonly nombre: string; readonly usuarioId?: string };
 /** Lo que dice la planilla del día de un camión: quiénes van, qué comunas hace y con qué vendedores (ADR 0036 del back). */
 export type AsignacionDia = {
@@ -315,7 +344,7 @@ export type PanelAnalitica = {
   /** Locales con el pin verificado (fijo), por verificar (se ajusta con las entregas) y sin pin. */
   readonly pines: { readonly verificados: number; readonly porVerificar: number; readonly sinPin: number };
   readonly porDia: readonly { readonly fecha: string; readonly jornadas: number; readonly atendidas: number; readonly sinHacer: number }[];
-  readonly calidad: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly distSugeridaM: number; readonly distRealM: number; readonly inversiones: number }[];
+  readonly calidad: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly distSugeridaM: number; readonly distRealM: number; readonly inversiones: number; readonly origen: 'sistema' | 'chofer'; readonly cambios: number; readonly entregadas?: number; readonly inversionesSalida?: number; readonly salioComoSugeria?: boolean }[];
   readonly aprendido: {
     readonly ritmo: readonly ParametroAprendido[];
     readonly capacidad: readonly ParametroAprendido[];
@@ -325,5 +354,22 @@ export type PanelAnalitica = {
   readonly cierres: readonly { readonly localId: string; readonly cerrados: number; readonly intentos: number; readonly horasCerrado: readonly number[]; readonly etiqueta?: EtiquetaLocal }[];
   /** Locales donde se avisó la entrega con buen GPS lejos del pin. */
   readonly pinesDudosos: readonly { readonly localId: string; readonly distanciaM: number; readonly visitas: number; readonly fuente?: string; readonly etiqueta?: EtiquetaLocal }[];
+  /** Cuánto de cada día de reparto quedó con GPS (ADR 0052 del back). */
+  readonly coberturaGps?: readonly { readonly fecha: string; readonly camionId: string; readonly camion?: string; readonly minutosConGps: number; readonly minutosEnRuta: number }[];
+  /** Cuántos locales ya tienen hora habitual y cuántos tienen franjas de cierre probable: lo que la ruta puede usar (ADR 0051 del back). */
+  readonly fichas?: { readonly locales: number; readonly conHoraHabitual: number; readonly conCierreProbable: number };
+  /** ¿La ficha aprendida de los locales acierta? Probada con lo ya ocurrido, solo con días anteriores (ADR 0049 del back). */
+  readonly bancoFicha?: {
+    readonly cierre: { readonly evaluadas: number; readonly cerradas: number; readonly anticipadas: number; readonly falsasAlarmas: number; readonly aciertos: number };
+    readonly hora: { readonly evaluadas: number; readonly dentroDelRango: number };
+  };
+  /** El cierre que deduce el GPS frente al botón CERRADO (ADR 0046 del back). */
+  readonly cierresGps?: {
+    readonly visitas: number; readonly atendidas: number; readonly cerradoDeducido: number; readonly sinDesenlace: number; readonly botonCerrado: number; readonly botonSinRecorrido: number; readonly botonSinDesenlace: number;
+    readonly coinciden: number; readonly soloGps: number; readonly soloGpsConfirmados: number; readonly soloBoton: number; readonly medianaMinCerradoBoton?: number; readonly medianaMinAtendidas?: number;
+    readonly casos: readonly { readonly tipo: 'solo_gps' | 'solo_boton'; readonly facturaId: string; readonly localId: string; readonly fecha: string; readonly minutos: number; readonly entregadaDespues: boolean; readonly camion?: string; readonly etiqueta?: EtiquetaLocal }[];
+  };
   readonly ultimaEjecucion?: { readonly iniciadoEn: string; readonly terminadoEn: string; readonly resumen: ResumenAnalisis };
 };
+
+export type TrazadoMapa = { readonly version?: number; readonly perfil: string; readonly tramos: readonly { readonly coordenadas: readonly (readonly [number, number])[]; readonly porCalles: boolean }[] };

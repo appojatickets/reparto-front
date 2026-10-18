@@ -1,14 +1,17 @@
+import type { FichaAprendida } from '../../domain/ficha';
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
 import type {
-  AsignacionDia, CambiosFactura, FilaPlanillaEnviada, LocalDeLista, ResultadoFilaPlanilla, ResumenComuna, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
-  PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
+  TrazadoMapa, AsignacionDia, CambiosFactura, FilaPlanillaEnviada, LocalDeLista, ResultadoFilaPlanilla, ResumenComuna, Camion, EstadoBusquedaPines, FilaExportacion, FotosParaRevision, MotivoFoto, FiltroExportacion, ResultadoPinEnlace, Vendedor, ConfigEmpresa, EventoEntrega, AvisoEmergencia, ParadaEmergencia, Factura, FilaCliente, FiltroFacturas, Jornada, LocalDetalle, NuevaFactura, OperacionRuta, NuevoUsuario, PropuestaPin, ReportesDelLocal, TipoReporteLocal, AccionReporteLocal,
+  Contribuyente, PinesParaRevisar, ResultadoBusqueda, ResultadoImportacion, PanelAnalitica, PuntoGps, ResultadoPosiciones, ResumenAnalisis, ResumenJornada, Tokens, TipoFoto, ResultadoEvento, UsuarioAdmin, UsuarioSesion, VistaRuta,
 } from '../modelos';
 
 export type HealthReport = {
   readonly status: 'ok' | 'degraded';
   readonly database: 'ok' | 'error';
   readonly timestamp: string;
+  /** El commit que corre en el servidor. */
+  readonly version?: string;
 };
 
 /** `HTTP`: el servidor respondió con un error de negocio (`status`, `codigo` y un `mensaje` ya en español). */
@@ -29,6 +32,7 @@ export interface SaludApi {
 }
 
 export interface ApiClient extends SaludApi {
+  verTrazado(camionId: string, fecha: string, signal?: AbortSignal): R<TrazadoMapa>;
   iniciarSesion(username: string, pin: string): R<{ tokens: Tokens; usuario: UsuarioSesion }>;
   yo(): R<UsuarioSesion & { readonly empresaId: string }>;
 
@@ -37,6 +41,8 @@ export interface ApiClient extends SaludApi {
   crearCliente(fila: FilaCliente): R<{ clienteId: string; localId: string; existente: boolean }>;
   importarClientes(filas: readonly FilaCliente[]): R<ResultadoImportacion>;
   obtenerLocal(localId: string): R<LocalDetalle>;
+  /** Lo que se aprendió del local con sus entregas: hora habitual de entrega y probabilidad de cerrado por franja. */
+  fichaAprendida(localId: string): R<FichaAprendida>;
   /** Cuántos locales hay por comuna, cuántos con pin verificado y cuántos sin pin. */
   resumenComunas(): R<readonly ResumenComuna[]>;
   /** Locales de una comuna, o los que coinciden con un texto (razón social, RUT o dirección); primero los de pin por verificar. */
@@ -51,6 +57,15 @@ export interface ApiClient extends SaludApi {
   solicitarUrlSubida(localId: string, tipo: TipoFoto): R<{ path: string; url: string }>;
   registrarFoto(localId: string, path: string): R<void>;
   urlFoto(localId: string): R<{ url: string; expiraEnSegundos: number }>;
+
+  /** Mi foto de perfil: pedir la URL de subida, registrar la foto ya subida o quitarla. Cualquiera con sesión puede. */
+  solicitarUrlSubidaPerfil(tipo: TipoFoto): R<{ path: string; url: string }>;
+  registrarFotoPerfil(path: string): R<void>;
+  quitarFotoPerfil(): R<void>;
+  /** La foto de perfil de una persona de la empresa (URL firmada de pocos minutos). 404 si no tiene. */
+  urlFotoUsuario(usuarioId: string): R<{ url: string; expiraEnSegundos: number }>;
+  /** Quiénes aportaron a un local con foto y pin (más de una entrega, o pin verificado). Vacío si el local aún no cumple. */
+  contribuyentesDeLocal(localId: string): R<readonly Contribuyente[]>;
 
   listarPropuestas(estado: PropuestaPin['estado']): R<readonly PropuestaPin[]>;
   resolverPropuesta(id: string, accion: 'aceptar' | 'rechazar'): R<void>;
@@ -115,6 +130,10 @@ export interface ApiClient extends SaludApi {
   guardarConfig(config: ConfigEmpresa): R<ConfigEmpresa>;
 
   registrarEvento(facturaId: string, evento: EventoEntrega): R<ResultadoEvento>;
+  /** Kit de emergencia: anota que el camión va a un mecánico, una vulcanización u otra ayuda (no es una entrega). */
+  registrarEmergencia(aviso: AvisoEmergencia): R<ParadaEmergencia>;
+  /** Las paradas de emergencia de ese día (del camión pedido, o todas si quien pregunta es despacho). */
+  listarEmergencias(fecha: string, camionId?: string): R<readonly ParadaEmergencia[]>;
   /** Informa dónde está el camión mientras la app está abierta; el servidor anota solo la llegada si se queda junto al pin de una entrega. */
   enviarPosiciones(puntos: readonly PuntoGps[]): R<ResultadoPosiciones>;
   /** Solo admin: qué datos se guardan, qué aprendió el sistema y cuánto se parece la ruta sugerida a la manejada. */
@@ -126,6 +145,8 @@ export interface ApiClient extends SaludApi {
   guardarHorario(localId: string, dias: readonly DiaApi[]): R<readonly DiaApi[]>;
 
   verRuta(camionId: string, fecha: string): R<VistaRuta>;
+  /** Marca liviana del estado de la ruta del camión: cambia si cualquiera de quienes lo comparten la mueve, carga una factura o avisa una entrega. */
+  marcaDeRuta(camionId: string, fecha: string): R<string>;
   /** `orden: 'carga'` arma la ruta en el orden en que se cargaron las facturas (sin calcularla). */
   planificarRuta(camionId: string, fecha: string, salidaMin?: number, orden?: 'calcular' | 'carga'): R<VistaRuta>;
   operarRuta(camionId: string, fecha: string, version: number, operacion: OperacionRuta): R<VistaRuta>;

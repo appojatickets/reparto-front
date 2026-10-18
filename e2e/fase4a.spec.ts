@@ -131,9 +131,9 @@ test.describe('fase 4a: el chofer', () => {
     await pregunta.getByRole('button', { name: 'LAS AGREGO EN ORDEN' }).click();
     await expect(page.getByRole('listitem', { name: 'Parada 2' })).toBeVisible();
     expect(pedido).toMatchObject({ camionId: CAMION.id, orden: 'carga' });
-    const selector = page.getByRole('group', { name: 'Cómo se arma la ruta' });
-    await expect(selector.getByRole('button', { name: 'LAS AGREGO EN ORDEN' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.getByText('EN TU ORDEN DE CARGA')).toBeVisible();
+    const selector = page.getByRole('group', { name: 'Orden de la ruta' });
+    await expect(selector.getByRole('button', { name: 'MANUAL' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText('ORDEN MANUAL', { exact: true })).toBeVisible();
     await sinViolaciones(page);
     for (const b of await page.getByRole('button').all()) expect((await b.boundingBox())?.height ?? 64).toBeGreaterThanOrEqual(63);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);

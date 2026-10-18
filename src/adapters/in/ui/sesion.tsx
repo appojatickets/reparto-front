@@ -1,3 +1,4 @@
+import { borrarMapa, leerMapa } from './componentes/mapa-cache';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Result } from '../../../domain/result';
 import type { UsuarioSesion } from '../../../application/modelos';
@@ -15,6 +16,8 @@ type ValorSesion = {
   readonly estado: EstadoSesionUI;
   readonly entrar: (username: string, pin: string) => Promise<Result<UsuarioSesion, string>>;
   readonly salir: () => void;
+  /** Mi foto de perfil cambió (o se quitó con `undefined`): la cabecera y el inicio la muestran enseguida. */
+  readonly cambiarFoto: (fotoEn: string | undefined) => void;
   readonly reintentar: () => void;
 };
 
@@ -28,7 +31,10 @@ export const ProveedorSesion = ({ children }: { readonly children: ReactNode }) 
   useEffect(() => {
     let vigente = true;
     void restaurarSesion().then((e) => {
-      if (vigente) setEstado(e);
+      if (vigente) {
+        if (e.tipo === 'sin_sesion' || (e.tipo === 'sesion' && leerMapa()?.usuarioId !== e.usuario.id)) borrarMapa();
+        setEstado(e);
+      }
     });
     return () => {
       vigente = false;
@@ -38,6 +44,7 @@ export const ProveedorSesion = ({ children }: { readonly children: ReactNode }) 
   // La API avisa por este evento cuando el servidor rechaza también la renovación: hay que volver a entrar.
   useEffect(() => {
     const alExpirar = (): void => {
+      borrarMapa();
       setEstado({ tipo: 'sin_sesion' });
     };
     window.addEventListener(EVENTO_SESION_EXPIRADA, alExpirar);
@@ -49,21 +56,29 @@ export const ProveedorSesion = ({ children }: { readonly children: ReactNode }) 
   const entrar = useCallback(
     async (username: string, pin: string) => {
       const r = await iniciarSesion(username, pin);
-      if (r.ok) setEstado({ tipo: 'sesion', usuario: r.value });
+      if (r.ok) { if (leerMapa()?.usuarioId !== r.value.id) borrarMapa(); setEstado({ tipo: 'sesion', usuario: r.value }); }
       return r;
     },
     [iniciarSesion],
   );
   const salir = useCallback(() => {
+    borrarMapa();
     cerrarSesion();
     setEstado({ tipo: 'sin_sesion' });
   }, [cerrarSesion]);
+  const cambiarFoto = useCallback((fotoEn: string | undefined) => {
+    setEstado((e) => {
+      if (e.tipo !== 'sesion') return e;
+      const { id, username, nombre, rol, editor } = e.usuario;
+      return { tipo: 'sesion', usuario: { id, username, nombre, rol, editor, ...(fotoEn !== undefined ? { fotoEn } : {}) } };
+    });
+  }, []);
   const reintentar = useCallback(() => {
     setEstado({ tipo: 'cargando' });
     setIntento((n) => n + 1);
   }, []);
 
-  const valor = useMemo(() => ({ estado, entrar, salir, reintentar }), [estado, entrar, salir, reintentar]);
+  const valor = useMemo(() => ({ estado, entrar, salir, cambiarFoto, reintentar }), [estado, entrar, salir, cambiarFoto, reintentar]);
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 };
 

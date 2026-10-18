@@ -56,7 +56,7 @@ const SIGLAS: Readonly<Record<string, string>> = { spa: 'SpA', eirl: 'EIRL', 'e.
 
 const mayuscula = (p: string): string => (p === '' ? p : (p.charAt(0).toLocaleUpperCase('es-CL') + p.slice(1)));
 
-/** «rosa del carmen gonzalez osses» → «Rosa del Carmen Gonzalez Osses»; spa → SpA, eirl → EIRL. */
+/** «luisa del pilar herrera vidal» → «Luisa del Pilar Herrera Vidal»; spa → SpA, eirl → EIRL. */
 export const ordenarTexto = (texto: string): string =>
   texto
     .replace(/\s+/g, ' ')

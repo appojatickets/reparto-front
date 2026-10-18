@@ -1,14 +1,15 @@
+import { MapaGuardadoOffline } from './MapaRuta';
 import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import type { ReactNode } from 'react';
-import { puedeHacer, type Accion } from '../../../../domain/rol';
+import { ETIQUETA_ROL, puedeHacer, type Accion } from '../../../../domain/rol';
 import { useSesion } from '../sesion';
 import { CambiarTema } from '../tema';
 import { CambiarVista } from '../vista';
+import { Avatar } from './Avatar';
+import { KitEmergencia } from './KitEmergencia';
 import { PermisosAlAbrir } from './PermisosAlAbrir';
 import { SeguimientoDelCamion } from './SeguimientoDelCamion';
 import { Boton, Cargando, Pagina, Aviso } from './ui';
-
-const ETIQUETA_ROL = { admin: 'Administración', despachador: 'Despacho', chofer: 'Chofer', ayudante: 'Ayudante' } as const;
 
 /** Cabecera común: quién eres y SALIR siempre a mano. */
 export const Marco = () => {
@@ -18,10 +19,13 @@ export const Marco = () => {
   return (
     <>
       <header className="cabecera">
-        <div>
-          <strong>{estado.usuario.nombre}</strong>
-          <span className="rol"> · {ETIQUETA_ROL[estado.usuario.rol]}</span>
-        </div>
+        <Link className="quien" to="/perfil" aria-label={`Mi perfil: ${estado.usuario.nombre}, ${ETIQUETA_ROL[estado.usuario.rol]}`}>
+          <Avatar usuarioId={estado.usuario.id} nombre={estado.usuario.nombre} fotoEn={estado.usuario.fotoEn} />
+          <span>
+            <strong>{estado.usuario.nombre}</strong>
+            <span className="rol"> · {ETIQUETA_ROL[estado.usuario.rol]}</span>
+          </span>
+        </Link>
         <div className="fila-botones">
           <CambiarVista />
           <CambiarTema />
@@ -30,9 +34,12 @@ export const Marco = () => {
       </header>
       <main className="screen">
         <PermisosAlAbrir />
+        {estado.usuario.rol === 'chofer' || estado.usuario.rol === 'ayudante' ? <KitEmergencia /> : null}
         {estado.usuario.rol === 'chofer' || estado.usuario.rol === 'ayudante' ? <SeguimientoDelCamion /> : null}
         {pathname !== '/' ? <Link className="volver" to="/">← INICIO</Link> : null}
         <Outlet />
+        {/* Para saber si el teléfono ya tiene la última versión publicada (es el commit que Vercel desplegó). */}
+        <p className="ayuda version-app">Versión de la app: {__VERSION__}</p>
       </main>
     </>
   );
@@ -50,6 +57,7 @@ export const RutaProtegida = ({ accion, children }: { readonly accion?: Accion; 
         <main className="screen">
           <Pagina titulo="Sin conexión">
             <Aviso tipo="error">No hay señal para verificar tu sesión.</Aviso>
+            <MapaGuardadoOffline />
             <Boton onClick={reintentar}>REINTENTAR</Boton>
           </Pagina>
         </main>

@@ -28,6 +28,22 @@ export const diferenciaPromedio = (calidad: readonly { readonly distSugeridaM: n
   return validas.reduce((s, c) => s + (c.distRealM - c.distSugeridaM) / c.distSugeridaM, 0) / validas.length;
 };
 
+export type CalidadDelDia = { readonly distSugeridaM: number; readonly distRealM: number; readonly origen: 'sistema' | 'chofer'; readonly cambios: number };
+
+/**
+ * Los días en orden manual (el chofer cargó «en orden»): su recorrido es experiencia pura y se mide con lo que el sistema habría sugerido.
+ * `mejores` = días en que el chofer recorrió menos (o lo mismo) que el sistema; `sinCambios` = días en que nadie movió nada a mano.
+ */
+export const resumenDeExperiencia = (calidad: readonly CalidadDelDia[]): { readonly dias: number; readonly sinCambios: number; readonly mejores: number; readonly diferencia: number | undefined } => {
+  const delChofer = calidad.filter((c) => c.origen === 'chofer');
+  return {
+    dias: delChofer.length,
+    sinCambios: delChofer.filter((c) => c.cambios === 0).length,
+    mejores: delChofer.filter((c) => c.distRealM <= c.distSugeridaM).length,
+    diferencia: diferenciaPromedio(delChofer),
+  };
+};
+
 export const textoDeDiferencia = (d: number): string => {
   const pct = Math.round(d * 100);
   return Math.abs(pct) < 1 ? 'Lo manejado fue igual de largo que lo sugerido.' : pct > 0 ? `Lo manejado fue ${pct} % más largo que lo sugerido.` : `Lo manejado fue ${-pct} % más corto que lo sugerido.`;

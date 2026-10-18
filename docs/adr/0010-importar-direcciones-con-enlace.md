@@ -4,11 +4,11 @@ Estado: aceptada. Pedido del dueño, 2026-10-05: cargar cientos de clientes pega
 
 ## Formato
 ```
-Avenida Portales 4180, San Bernardo
-https://maps.app.goo.gl/Unz8sebYG5ooFVh66
+Avenida Central 1500, San Bernardo
+https://maps.app.goo.gl/Abc123xyz9
 
-Los Suspiros 16463 San Bernardo
-https://www.google.com/maps/search/?api=1&query=Los+Suspiros+16463+San+Bernardo%2C+Chile
+Los Aromos 1200 San Bernardo
+https://www.google.com/maps/search/?api=1&query=Los+Aromos+1200+San+Bernardo%2C+Chile
 ```
 La comuna va al final de la dirección (con o sin coma). La línea en blanco es opcional; una dirección sin enlace también entra; un enlace de búsqueda sin línea de dirección usa la dirección que lleva dentro.
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { accionesDe, type Accion } from '../../../../domain/rol';
+import { Avatar } from '../componentes/Avatar';
 import { Pagina } from '../componentes/ui';
 import { useCasos } from '../contexto';
 import { useUsuario } from '../sesion';
@@ -22,6 +23,7 @@ const ENTRADAS: Partial<Record<Accion, { readonly a: string; readonly texto: str
   reportes: { a: '/admin/reportes', texto: 'REPORTES' },
   fotos: { a: '/admin/fotos', texto: 'REVISAR FOTOS' },
   analitica: { a: '/admin/analitica', texto: 'ANALÍTICA' },
+  estado: { a: '/admin/estado', texto: 'ESTADO DEL SISTEMA' },
   vendedores: { a: '/admin/vendedores', texto: 'VENDEDORES' },
   usuarios: { a: '/admin/usuarios', texto: 'USUARIOS' },
 };
@@ -56,6 +58,10 @@ export const PaginaInicio = () => {
   });
   return (
     <Pagina titulo={`Hola, ${usuario.nombre.split(' ')[0] ?? usuario.nombre}`}>
+      <Link className="saludo" to="/perfil">
+        <Avatar usuarioId={usuario.id} nombre={usuario.nombre} fotoEn={usuario.fotoEn} tamano="mediano" />
+        <span>{usuario.fotoEn !== undefined ? 'MI PERFIL' : 'PONER MI FOTO'}</span>
+      </Link>
       {acciones.includes('mi-ruta') ? <InicioChofer /> : null}
       {enlaces.length > 0 ? (
         <ul className="menu">

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { aQuienAplica, textoDeFuentePin, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, textoDeDiferencia, textoDeHoras, textoDeRitmo } from '../../../../domain/analitica';
+import { aQuienAplica, textoDeFuentePin, diferenciaPromedio, kilometros, nivelDeConfianza, proporcion, resumenDeExperiencia, textoDeDiferencia, textoDeHoras, textoDeRitmo } from '../../../../domain/analitica';
 import { fechaYHoraEnChile } from '../../../../domain/foto-reporte';
 import { mensajeDeError } from '../../../../application/mensajes';
 import { useCasos } from '../contexto';
@@ -44,7 +44,10 @@ export const PaginaAnalitica = () => {
       {estado.tipo === 'ok' ? (() => {
         const p = estado.datos;
         const c = p.cobertura;
-        const dif = diferenciaPromedio(p.calidad);
+        const delSistema = p.calidad.filter((q) => q.origen === 'sistema');
+        const delChofer = p.calidad.filter((q) => q.origen === 'chofer');
+        const dif = diferenciaPromedio(delSistema);
+        const exp = resumenDeExperiencia(p.calidad);
         return (
           <>
             <h2>Qué datos se están guardando</h2>
@@ -117,14 +120,46 @@ export const PaginaAnalitica = () => {
               <Aviso>Se compara cuando hay jornadas terminadas con al menos 3 entregas avisadas desde la parada.</Aviso>
             ) : (
               <>
+                {delSistema.length === 0 ? <Aviso>Aún no hay jornadas con el orden calculado por el sistema para comparar.</Aviso> : null}
                 {dif !== undefined ? <Aviso tipo={dif > 0.05 ? 'error' : 'exito'}>{textoDeDiferencia(dif)}</Aviso> : null}
                 <ul className="tarjetas">
-                  {p.calidad.map((q) => (
+                  {delSistema.map((q) => (
                     <Dato key={`${q.fecha}-${q.camionId}`} titulo={`${q.fecha} · ${q.camion ?? 'camión'}`} valor={`${kilometros(q.distSugeridaM)} sugerido · ${kilometros(q.distRealM)} manejado`} ayuda={`${q.inversiones} cambios de orden respecto de lo sugerido`} />
                   ))}
                 </ul>
               </>
             )}
+
+            {p.calidad.some((q) => q.entregadas !== undefined) ? (
+              <>
+                <h2>Lo entregado frente a la ruta con que salió el camión</h2>
+                <ul className="tarjetas">
+                  {p.calidad.filter((q) => q.entregadas !== undefined).map((q) => (
+                    <Dato
+                      key={`salida-${q.fecha}-${q.camionId}`}
+                      titulo={`${q.fecha} · ${q.camion ?? 'camión'}`}
+                      valor={`${q.entregadas ?? 0} entregadas · ${q.inversionesSalida ?? 0} ${q.inversionesSalida === 1 ? 'par' : 'pares'} fuera de orden`}
+                      ayuda={q.salioComoSugeria === true ? 'Salió con el orden que sugirió el sistema.' : q.salioComoSugeria === false ? 'Salió con un orden distinto del sugerido (acomodado a mano o en el orden de carga).' : ''}
+                    />
+                  ))}
+                </ul>
+              </>
+            ) : null}
+
+            {delChofer.length > 0 ? (
+              <>
+                <h2>Días en orden manual: la experiencia del chofer</h2>
+                <p>Cuando el chofer carga «en orden», el recorrido lo decide su experiencia. Cada uno de esos días queda guardado y se mide contra lo que el sistema habría sugerido con las mismas paradas: es lo que sirve para afinar la ruta automática.</p>
+                <Aviso tipo="exito">
+                  {`${exp.dias} ${exp.dias === 1 ? 'día' : 'días'} en orden manual (${exp.sinCambios} sin mover nada a mano). En ${exp.mejores} ${exp.mejores === 1 ? 'recorrió' : 'recorrieron'} igual o menos que lo que habría sugerido el sistema.${exp.diferencia !== undefined ? ` ${textoDeDiferencia(exp.diferencia).replace('Lo manejado', 'En promedio lo manejado').replace('lo sugerido', 'lo que habría sugerido el sistema')}` : ''}`}
+                </Aviso>
+                <ul className="tarjetas">
+                  {delChofer.map((q) => (
+                    <Dato key={`${q.fecha}-${q.camionId}`} titulo={`${q.fecha} · ${q.camion ?? 'camión'}`} valor={`${kilometros(q.distRealM)} manejado · ${kilometros(q.distSugeridaM)} habría sugerido el sistema`} ayuda={q.cambios === 0 ? 'Nadie movió nada a mano: orden puro del chofer.' : `${q.cambios} ${q.cambios === 1 ? 'parada movida' : 'paradas movidas'} a mano.`} />
+                  ))}
+                </ul>
+              </>
+            ) : null}
 
             {p.pinesDudosos.length > 0 ? (
               <>
@@ -135,6 +170,45 @@ export const PaginaAnalitica = () => {
                     <Dato key={d.localId} titulo={d.etiqueta ? `${d.etiqueta.razonSocial} · ${d.etiqueta.comuna}` : d.localId} valor={`a ${d.distanciaM >= 1000 ? kilometros(d.distanciaM) : `${d.distanciaM} m`} del pin`} ayuda={`${d.visitas} ${d.visitas === 1 ? 'entrega' : 'entregas'}${d.fuente ? ` · el pin vino de: ${textoDeFuentePin(d.fuente)}` : ''}`} />
                   ))}
                 </ul>
+              </>
+            ) : null}
+
+            {p.bancoFicha && (p.bancoFicha.cierre.evaluadas > 0 || p.bancoFicha.hora.evaluadas > 0) ? (
+              <>
+                <h2>¿Lo aprendido de cada local acierta?</h2>
+                <p>Se repasa lo que ya pasó: para cada visita se arma lo aprendido del local solo con días anteriores y se compara con lo que ocurrió. Si acierta bastante más que «siempre abierto», vale la pena que la ruta lo use. Todavía no lo usa.</p>
+                <ul className="tarjetas">
+                  <Dato titulo="Cierres que anticipó" valor={`${p.bancoFicha.cierre.anticipadas} de ${p.bancoFicha.cierre.cerradas}`} ayuda={`${p.bancoFicha.cierre.falsasAlarmas} veces dijo cerrado y estaba abierto.`} />
+                  <Dato titulo="Aciertos al decir abierto o cerrado" valor={proporcion(p.bancoFicha.cierre.aciertos, p.bancoFicha.cierre.evaluadas)} ayuda={`Si dijera siempre «abierto» acertaría ${proporcion(p.bancoFicha.cierre.evaluadas - p.bancoFicha.cierre.cerradas, p.bancoFicha.cierre.evaluadas)}: lo aprendido tiene que superar eso.`} />
+                  <Dato titulo="Entrega dentro de su hora habitual" valor={proporcion(p.bancoFicha.hora.dentroDelRango, p.bancoFicha.hora.evaluadas)} ayuda="Con el rango de horas en que suele entregarse cada local (media hora de margen)." />
+                </ul>
+                {p.bancoFicha.cierre.evaluadas < 20 ? <Aviso>Todavía son pocas visitas para concluir algo; sigue juntando días de reparto.</Aviso> : null}
+              </>
+            ) : null}
+
+            {p.cierresGps && p.cierresGps.visitas > 0 ? (
+              <>
+                <h2>Cerrado: lo que dice el GPS frente al botón</h2>
+                <p>El sistema prueba una idea: si el camión se queda poco junto al local, se va sin entregar y después vuelve, estaba cerrado. Aquí se compara con lo que avisan los choferes con el botón CERRADO. Todavía no cambia ninguna ruta.</p>
+                <ul className="tarjetas">
+                  <Dato titulo="Coinciden (GPS y botón dicen cerrado)" valor={`${p.cierresGps.coinciden} de ${p.cierresGps.botonCerrado - p.cierresGps.botonSinDesenlace} avisos de cerrado con segundo intento`} ayuda="Si es alto, la regla ve lo que ven los choferes." />
+                  <Dato titulo="Cerrado solo según el GPS" valor={`${p.cierresGps.soloGps}`} ayuda={`${p.cierresGps.soloGpsConfirmados} se entregaron después. Son cierres que nadie avisó con el botón.`} />
+                  <Dato titulo="Cerrado solo según el botón" valor={`${p.cierresGps.soloBoton}`} ayuda="El chofer avisó cerrado pero el camión se quedó más de lo esperado y volvió: revisar el umbral." />
+                  <Dato titulo="Avisos de cerrado sin recorrido GPS" valor={`${p.cierresGps.botonSinRecorrido}`} ayuda="Cuánto del GPS se está perdiendo (app cerrada, sin pin)." />
+                  {p.cierresGps.medianaMinCerradoBoton !== undefined && p.cierresGps.medianaMinAtendidas !== undefined ? (
+                    <Dato titulo="Permanencia típica" valor={`${String(p.cierresGps.medianaMinCerradoBoton).replace('.', ',')} min cerrado · ${String(p.cierresGps.medianaMinAtendidas).replace('.', ',')} min atendido`} ayuda="Si se separan bien, la regla de tiempo corto es válida." />
+                  ) : null}
+                </ul>
+                {p.cierresGps.casos.length > 0 ? (
+                  <>
+                    <h3>Casos para revisar</h3>
+                    <ul className="tarjetas">
+                      {p.cierresGps.casos.map((c) => (
+                        <Dato key={`${c.facturaId}-${c.fecha}-${c.tipo}`} titulo={`${c.fecha} · ${c.etiqueta ? `${c.etiqueta.razonSocial} · ${c.etiqueta.comuna}` : c.localId}`} valor={`${c.tipo === 'solo_gps' ? 'Solo el GPS dice cerrado' : 'Solo el botón dice cerrado'} (${c.minutos} min)`} ayuda={c.entregadaDespues ? 'Se entregó después.' : ''} />
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
               </>
             ) : null}
 

@@ -11,6 +11,7 @@ const Formulario = ({ config }: { readonly config: ConfigEmpresa }) => {
   const [coordenadas, setCoordenadas] = useState(config.deposito ? textoCoordenadas(config.deposito) : '');
   const [nombre, setNombre] = useState(config.deposito?.nombre ?? '');
   const [ordenInicio, setOrdenInicio] = useState<OrdenInicio>(config.ordenInicio ?? 'automatico');
+  const [usarAprendido, setUsarAprendido] = useState(config.usarCierresAprendidos !== false);
   const [error, setError] = useState<string | undefined>();
   const [guardado, setGuardado] = useState(false);
   const [ocupado, setOcupado] = useState(false);
@@ -31,6 +32,7 @@ const Formulario = ({ config }: { readonly config: ConfigEmpresa }) => {
       salidaPorDefectoMin: config.salidaPorDefectoMin,
       horaLimiteRegresoMin: config.horaLimiteRegresoMin,
       ordenInicio,
+      usarCierresAprendidos: usarAprendido,
     });
     setOcupado(false);
     if (r.ok) setGuardado(true);
@@ -54,6 +56,11 @@ const Formulario = ({ config }: { readonly config: ConfigEmpresa }) => {
         <option value="cercano">Por lo más cercano al depósito</option>
       </Selector>
       <p className="ayuda">Es una preferencia: un local que cierra temprano se atiende antes aunque quede cerca.</p>
+      <Selector etiqueta="Usar lo aprendido sobre cierres en la ruta" value={usarAprendido ? 'si' : 'no'} onChange={(e) => { setUsarAprendido(e.target.value === 'si'); }}>
+        <option value="si">Sí: dejar para después los locales que suelen estar cerrados a esa hora</option>
+        <option value="no">No: armar la ruta sin usar lo aprendido sobre cierres</option>
+      </Selector>
+      <p className="ayuda">Solo cuenta cuando hay evidencia suficiente (3 o más visitas y probabilidad alta). Nunca saca una parada de la ruta; solo avisa y la deja para más tarde si se puede.</p>
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
       <Boton type="submit" disabled={ocupado}>{ocupado ? 'GUARDANDO…' : 'GUARDAR'}</Boton>
       {guardado ? <Aviso tipo="exito">Configuración guardada.</Aviso> : null}

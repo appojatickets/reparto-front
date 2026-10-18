@@ -1,6 +1,7 @@
 import createClient from 'openapi-fetch';
 import { err, ok, type Result } from '../../../domain/result';
 import type { ApiClient, ApiError, HealthReport } from '../../../application/ports/api-client';
+import { usuarioSesionDe } from '../../../application/modelos';
 import type { SesionStore } from '../../../application/ports/sesion-store';
 import type { paths } from './schema';
 
@@ -141,7 +142,7 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
 
     async iniciarSesion(username, pin) {
       const r = await ejecutar(() => client.POST('/v1/auth/login', { body: { username, pin }, signal: timeout() }), { renovar: false, repetible: true });
-      return mapear(r, (d) => ({ tokens: { accessToken: d.accessToken, refreshToken: d.refreshToken }, usuario: { id: d.usuario.id, username: d.usuario.username, nombre: d.usuario.nombre, rol: d.usuario.rol, editor: d.usuario.editor } }));
+      return mapear(r, (d) => ({ tokens: { accessToken: d.accessToken, refreshToken: d.refreshToken }, usuario: usuarioSesionDe(d.usuario) }));
     },
     yo: () => ejecutar(() => client.GET('/v1/me', { signal: timeout() }), { repetible: true }),
 
@@ -156,6 +157,7 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
       return mapear(r, (d) => d.comunas);
     },
     listarLocales: (filtro) => ejecutar(() => client.GET('/v1/locales', { params: { query: { ...(filtro.comuna ? { comuna: filtro.comuna } : {}), ...(filtro.texto ? { texto: filtro.texto } : {}), ...(filtro.limite ? { limite: filtro.limite } : {}) } }, signal: timeout() }), { repetible: true }),
+    fichaAprendida: (id) => ejecutar(() => client.GET('/v1/locales/{id}/ficha-aprendida', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
     obtenerLocal: (id) => ejecutar(() => client.GET('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
     corregirCliente: async (id, cambios) => sinCuerpo(await ejecutar(() => client.PATCH('/v1/clientes/{id}', { params: { path: { id } }, body: cambios, signal: timeout() }))),
     eliminarLocal: async (id) => sinCuerpo(await ejecutar(() => client.DELETE('/v1/locales/{id}', { params: { path: { id } }, signal: timeout() }))),
@@ -163,6 +165,14 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
 
     solicitarUrlSubida: (localId, tipo) => ejecutar(() => client.POST('/v1/archivos/url-subida', { body: { localId, tipo }, signal: timeout() }), { repetible: true }),
     registrarFoto: async (id, path) => sinCuerpo(await ejecutar(() => client.PUT('/v1/locales/{id}/foto', { params: { path: { id } }, body: { path }, signal: timeout() }), { repetible: true })),
+    solicitarUrlSubidaPerfil: (tipo) => ejecutar(() => client.POST('/v1/me/foto/url-subida', { body: { tipo }, signal: timeout() }), { repetible: true }),
+    registrarFotoPerfil: async (path) => sinCuerpo(await ejecutar(() => client.PUT('/v1/me/foto', { body: { path }, signal: timeout() }), { repetible: true })),
+    quitarFotoPerfil: async () => sinCuerpo(await ejecutar(() => client.DELETE('/v1/me/foto', { signal: timeout() }))),
+    async contribuyentesDeLocal(id) {
+      const r = await ejecutar(() => client.GET('/v1/locales/{id}/contribuyentes', { params: { path: { id } }, signal: timeout() }), { repetible: true });
+      return mapear(r, (d) => d.contribuyentes);
+    },
+    urlFotoUsuario: (id) => ejecutar(() => client.GET('/v1/usuarios/{id}/foto-url', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
     urlFoto: (id) => ejecutar(() => client.GET('/v1/locales/{id}/foto-url', { params: { path: { id } }, signal: timeout() }), { repetible: true }),
 
     async listarPropuestas(estado) {
@@ -260,6 +270,11 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
     enviarPosiciones: (puntos) => ejecutar(() => client.POST('/v1/jornada/posiciones', { body: { puntos: puntos.map((p) => ({ ...p })) }, signal: timeout() })),
     analitica: () => ejecutar(() => client.GET('/v1/analitica', { signal: timeout() }), { repetible: true }),
     ejecutarAnalisis: () => ejecutar(() => client.POST('/v1/analitica/ejecutar', { signal: timeout() })),
+    registrarEmergencia: (aviso) => ejecutar(() => client.POST('/v1/emergencias', { body: aviso, signal: timeout() })),
+    listarEmergencias: async (fecha, camionId) => {
+      const r = await ejecutar(() => client.GET('/v1/emergencias', { params: { query: { fecha, ...(camionId !== undefined ? { camionId } : {}) } }, signal: timeout() }), { repetible: true });
+      return r.ok ? ok(r.value.emergencias) : r;
+    },
     registrarEvento: (facturaId, evento) => ejecutar(() => client.POST('/v1/entregas/{id}/eventos', { params: { path: { id: facturaId } }, body: evento, signal: timeout() })),
 
     async obtenerHorario(localId) {
@@ -271,7 +286,17 @@ export const createHttpApiClient = ({ baseUrl, store, alExpirarSesion, timeoutMs
       return mapear(r, (d) => d.dias);
     },
 
+    verTrazado: async (camionId, fecha, signal) => {
+      const r = await ejecutar(() => client.GET('/v1/rutas/trazado', { params: { query: { camionId, fecha } }, signal: AbortSignal.any([timeout(signal), AbortSignal.timeout(45_000)]) }), { repetible: true, signal });
+      if (!r.ok) return r;
+      if (r.value.tramos.some((t) => t.coordenadas.some((p) => p.length !== 2 || !p.every(Number.isFinite)))) return err({ kind: 'UNEXPECTED' });
+      return ok({ ...r.value, tramos: r.value.tramos.map((t) => ({ ...t, coordenadas: t.coordenadas.map((p): readonly [number, number] => [p[0] ?? 0, p[1] ?? 0]) })) });
+    },
     verRuta: (camionId, fecha) => ejecutar(() => client.GET('/v1/rutas', { params: { query: { camionId, fecha } }, signal: timeout() }), { repetible: true }),
+    marcaDeRuta: async (camionId, fecha) => {
+      const r = await ejecutar(() => client.GET('/v1/rutas/marca', { params: { query: { camionId, fecha } }, signal: timeout() }), { repetible: true });
+      return r.ok ? ok(r.value.marca) : r;
+    },
     planificarRuta: (camionId, fecha, salidaMin, orden) => ejecutar(() => client.POST('/v1/rutas/planificar', { body: { camionId, fecha, ...(salidaMin !== undefined ? { salidaMin } : {}), ...(orden !== undefined ? { orden } : {}) }, signal: timeout() })),
     operarRuta: (camionId, fecha, version, operacion) => ejecutar(() => client.POST('/v1/rutas/operaciones', { body: { camionId, fecha, version, operacion }, signal: timeout() })),
   };

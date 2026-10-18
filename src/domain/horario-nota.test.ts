@@ -60,8 +60,8 @@ describe('horario escrito en la nota', () => {
   });
 
   it('un teléfono en la nota no se toma por una hora', () => {
-    expect(horarioDeNota('9 am a 10 pm horario continuo | 56964210408 Rodrigo romero | En la carretera cartel verde')).toEqual([t('9:00', '22:00')]);
-    expect(horarioDeNota('56964210408 Rodrigo')).toBeUndefined();
+    expect(horarioDeNota('9 am a 10 pm horario continuo | 56912345678 Mario reyes | En la carretera cartel verde')).toEqual([t('9:00', '22:00')]);
+    expect(horarioDeNota('56912345678 Mario')).toBeUndefined();
   });
 
   it.each(['A la chilena', 'Almacén la torre', 'Maps lo marca cerrado temporalmente', 'A primera hora , abren temprano', 'Se repone', 'Cierra a las 2', 'De 2 a 4', 'Local 24 horas', 'De 10 pm a 2 am'])('si no queda claro no adivina: «%s»', (nota) => {

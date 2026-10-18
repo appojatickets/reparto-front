@@ -10,6 +10,7 @@ import { crearImportarEnlaces } from './application/use-cases/importar-enlaces';
 import { crearImportarClientesEnLotes } from './application/use-cases/importar-clientes';
 import { crearCerrarSesion, crearIniciarSesion, crearRestaurarSesion } from './application/use-cases/sesion';
 import { crearSubirFotoLocal } from './application/use-cases/subir-foto';
+import { crearQuitarFotoPerfil, crearSubirFotoPerfil } from './application/use-cases/subir-foto-perfil';
 import { createHttpApiClient } from './adapters/out/api/http-api-client';
 import { subidaHttp } from './adapters/out/almacen/subida-http';
 import { imagenesCanvas } from './adapters/out/imagen/comprimir-canvas';
@@ -18,11 +19,13 @@ import { browserTimer } from './adapters/out/timer/browser-timer';
 import { App } from './adapters/in/ui/App';
 import { Aplicacion } from './adapters/in/ui/Aplicacion';
 import { crearPermisosWeb } from './adapters/out/permisos/permisos-web';
+import { crearPantallaEncendida } from './adapters/out/pantalla/wake-lock';
 import { crearUbicacionWeb } from './adapters/out/ubicacion/geolocalizacion';
 import { crearDescargaNavegador } from './adapters/out/descarga/descarga-navegador';
 import { crearExportacionStore } from './adapters/out/exportacion/local-storage-exportacion';
 import { crearTemaStore } from './adapters/out/tema/local-storage-tema';
 import { crearArmadoStore } from './adapters/out/armado/local-storage-armado';
+import { crearHorasStore } from './adapters/out/horas/local-storage-horas';
 import { crearVistaStore } from './adapters/out/vista/local-storage-vista';
 import { crearVozWeb } from './adapters/out/voz/voz-web';
 import { ProveedorCasos, type Casos } from './adapters/in/ui/contexto';
@@ -54,14 +57,18 @@ const casos: Casos = {
   completarComunas: crearCompletarComunas({ geocodificador: crearNominatim(), timer: browserTimer }),
   buscarDireccion: crearBuscarDireccion({ geocodificador: crearNominatim() }),
   subirFotoLocal: crearSubirFotoLocal({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),
+  subirFotoPerfil: crearSubirFotoPerfil({ api, imagenes: imagenesCanvas, subida: subidaHttp() }),
+  quitarFotoPerfil: crearQuitarFotoPerfil({ api }),
   descarga: crearDescargaNavegador(),
   exportacion: crearExportacionStore(),
   ahora: () => new Date(),
   voz: crearVozWeb(),
   ubicacion: crearUbicacionWeb(),
+  pantalla: crearPantallaEncendida(),
   permisos: crearPermisosWeb(),
   vista: crearVistaStore(),
   armado: crearArmadoStore(),
+  horas: crearHorasStore(),
   tema: crearTemaStore(),
 };
 const deps = { api, timer: browserTimer, wakingAfterMs: 3000 };

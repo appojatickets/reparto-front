@@ -67,7 +67,7 @@ describe('mapearClientes', () => {
 describe('filas que solo traen el pin', () => {
   it('se completan con «Ubicación en el mapa» y la comuna más cercana al pin; las demás no se tocan', () => {
     const { filas, completadas } = completarConPin([
-      { razonSocial: 'Ventas de Alimentos Dafna', lat: '-33.797267', lng: '-70.776552' },
+      { razonSocial: 'Ventas de Alimentos Sol', lat: '-33.797267', lng: '-70.776552' },
       { razonSocial: 'Kiosko Sol', direccion: 'Calle 1 100', comuna: 'Maipú' },
       { razonSocial: 'Sin nada' },
       { razonSocial: 'Con dirección', direccion: 'Avenida Irarrazabal S/N', lat: '-33.599886', lng: '-70.893808' },

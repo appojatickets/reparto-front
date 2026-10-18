@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { horaDeMinutos, horaDelDia, minutosDeHora } from './hora';
+import { horaAproximada, horaDeMinutos, horaDelDia, minutosDeHora } from './hora';
+
+describe('hora aproximada', () => {
+  it('se redondea a los 5 minutos y nunca lleva decimales', () => {
+    expect(horaAproximada(607.7747575)).toBe('10:10');
+    expect(horaAproximada(610)).toBe('10:10');
+    expect(horaAproximada(702.4)).toBe('11:40');
+    expect(horaAproximada(1498)).toBe('01:00');
+  });
+});
 
 describe('hora del día', () => {
   it('convierte HH:MM a minutos y de vuelta', () => {

@@ -47,7 +47,7 @@ describe('importarClientesEnLotes', () => {
 describe('subirFotoLocal', () => {
   const foto = { blob: new Blob(['x']), tipo: 'webp' as const };
   const montar = (extra: { imagenes?: Imagenes; subida?: SubidaDeArchivos; api?: Parameters<typeof fakeApi>[0] } = {}) => {
-    const imagenes: Imagenes = extra.imagenes ?? { comprimir: () => Promise.resolve(ok(foto)) };
+    const imagenes: Imagenes = extra.imagenes ?? { comprimir: () => Promise.resolve(ok(foto)), recortarAvatar: () => Promise.resolve(ok(foto)) };
     const subirMock = vi.fn(() => Promise.resolve(ok(undefined)));
     const subida: SubidaDeArchivos = extra.subida ?? { subir: subirMock };
     const registrar = vi.fn(() => Promise.resolve(ok(undefined)));
@@ -64,7 +64,7 @@ describe('subirFotoLocal', () => {
 
   it('si falla comprimir, no toca la red', async () => {
     const solicitar = vi.fn();
-    const { subir } = montar({ imagenes: { comprimir: () => Promise.resolve(err({ detalle: 'x' })) }, api: { solicitarUrlSubida: solicitar } });
+    const { subir } = montar({ imagenes: { comprimir: () => Promise.resolve(err({ detalle: 'x' })), recortarAvatar: () => Promise.resolve(err({ detalle: 'x' })) }, api: { solicitarUrlSubida: solicitar } });
     expect((await subir('l1', new Blob())).ok).toBe(false);
     expect(solicitar).not.toHaveBeenCalled();
   });
