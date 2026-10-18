@@ -175,6 +175,8 @@ test.describe('accesibilidad móvil', () => {
     await page.getByLabel('Usuario').fill('admin');
     await page.getByLabel('Clave (6 números)').fill('482915');
     await page.getByRole('button', { name: 'ENTRAR' }).click();
+    // Esperar el fin del ingreso: los enlaces de /entrar se desmontan al navegar.
+    await expect(page.getByRole('button', { name: 'SALIR' })).toBeVisible();
     for (const enlace of await page.getByRole('link').all()) expect((await enlace.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(64);
     expect((await page.getByRole('button', { name: 'SALIR' }).boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(64);
   });
