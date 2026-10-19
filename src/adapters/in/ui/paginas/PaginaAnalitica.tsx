@@ -239,6 +239,7 @@ export const PaginaAnalitica = () => {
               </>
             ) : null}
 
+            {p.ultimaEjecucion?.resumen.patronesRecorrido?.length ? <section className="tarjeta"><h3>Secuencias aprendidas del recorrido</h3><p>Al menos 3 días distintos y 70 % de coincidencia. Ayudan a ordenar; no confirman entregas ni explican la causa de un desvío.</p>{p.ultimaEjecucion.resumen.patronesRecorrido.slice(0,30).map((patron,i)=><p key={i}>{patron.tipo==='inicio_comuna'?`Si salen ${patron.etiquetas?.join(' y ') ?? 'estas comunas'}, parte por ${patron.etiquetas?.at(-1) ?? 'la habitual'}`:patron.etiquetas?.join(' → ') ?? 'Secuencia de locales'} · {patron.dias} días · {Math.round(patron.frecuencia*100)} % · {patron.dia===null?'Todos los días':['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][patron.dia]} · {patron.ambito==='global'?'Equipo':patron.ambito.startsWith('usuario:')?'Persona':'Camión'}</p>)}</section> : null}
             {p.ultimaEjecucion && p.ultimaEjecucion.resumen.pinesProponidos > 0 ? <Aviso>El sistema propuso mover {p.ultimaEjecucion.resumen.pinesProponidos} pines que las visitas contradicen: están en «Pines de locales» para que los revises.</Aviso> : null}
           </>
         );

@@ -95,7 +95,7 @@ describe('entrada y protección por rol', () => {
     montar({ sesion: CHOFER });
     expect(await screen.findByRole('heading', { name: '¿Qué camión manejas hoy?' })).toBeInTheDocument();
     // Perfil y descarga pública; ningún acceso a gestión de clientes, pines o usuarios.
-    for (const enlace of screen.getAllByRole('link')) expect(['/perfil', '/android']).toContain(enlace.getAttribute('href'));
+    for (const enlace of screen.getAllByRole('link')) expect(['/perfil', '/android', '/desempeno']).toContain(enlace.getAttribute('href'));
   });
 
   it('el despachador ve clientes y pines, no importación ni usuarios', async () => {
@@ -2196,7 +2196,7 @@ describe('acciones completas en la parada (chofer editor)', () => {
       await abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [] }))) }, {}, CHOFER);
       await userEvent.click(await screen.findByRole('button', { name: 'TERMINAR MI DÍA' }));
       expect(terminarRuta).not.toHaveBeenCalled();
-      expect(screen.getByRole('button', { name: 'SÍ, TERMINAR' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'CONFIRMAR REBAJES Y TERMINAR' })).toBeInTheDocument();
     });
   });
 
@@ -2692,7 +2692,7 @@ describe('acciones completas en la parada (chofer editor)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'NO, SEGUIR' }));
     expect(screen.getByRole('button', { name: 'TERMINAR RUTA' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'TERMINAR RUTA' }));
-    await userEvent.click(screen.getByRole('button', { name: 'SÍ, TERMINAR' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'CONFIRMAR REBAJES Y TERMINAR' }));
     const fin = await screen.findByRole('region', { name: 'Ruta terminada' });
     expect(terminarRuta).toHaveBeenCalledTimes(1);
     expect(fin).toHaveTextContent('Entregadas: 1');
@@ -2730,19 +2730,21 @@ describe('acciones completas en la parada (chofer editor)', () => {
     const terminarRuta = vi.fn(() => Promise.resolve(ok({ ...resumen, sigueElCamion: true })));
     await abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [], hechas: [hechaA] }))) });
     await userEvent.click(await screen.findByRole('button', { name: 'TERMINAR RUTA' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'CONFIRMAR REBAJES Y TERMINAR' }));
     const fin = await screen.findByRole('region', { name: 'Ruta terminada' });
     expect(within(fin).getByText(/Tu compañero sigue en el camión/)).toBeInTheDocument();
     expect(within(fin).queryByText(/La lista quedó limpia/)).toBeNull();
   });
 
-  it('sin nada pendiente, TERMINAR RUTA termina directo; un error se avisa y deja seguir', async () => {
+  it('sin nada pendiente, confirma rebajes antes del cierre; un error se avisa y deja reintentar', async () => {
     const terminarRuta = vi.fn()
       .mockResolvedValueOnce(http(500, { mensaje: 'Algo falló.' }))
       .mockResolvedValueOnce(ok({ ...resumen, pendientes: 0 }));
     await abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [], hechas: [hechaA] }))) });
     await userEvent.click(await screen.findByRole('button', { name: 'TERMINAR RUTA' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'CONFIRMAR REBAJES Y TERMINAR' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'TERMINAR RUTA' }));
+    await userEvent.click(screen.getByRole('button', { name: 'CONFIRMAR REBAJES Y TERMINAR' }));
     expect(await screen.findByRole('region', { name: 'Ruta terminada' })).toBeInTheDocument();
     expect(screen.queryByText(/Lo que no se alcanzó a entregar/)).toBeNull();
   });
@@ -2765,9 +2767,11 @@ describe('acciones completas en la parada (chofer editor)', () => {
     expect(screen.queryByRole('status', { name: 'Llegaste al depósito' })).toBeNull();
   });
 
-  it('al llegar al depósito sin nada pendiente, la ruta termina sola', async () => {
+  it('al llegar al depósito sin pendientes, pide confirmar rebajes antes de terminar', async () => {
     const terminarRuta = vi.fn(() => Promise.resolve(ok({ ...resumen, pendientes: 0 })));
     await abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [], hechas: [hechaA], deposito: { lat: -33.607, lng: -70.5296 } }))) }, { ubicacion: enDeposito });
+    expect(terminarRuta).not.toHaveBeenCalled();
+    await userEvent.click(await screen.findByRole('button', { name: 'CONFIRMAR REBAJES Y TERMINAR' }));
     expect(await screen.findByRole('region', { name: 'Ruta terminada' })).toBeInTheDocument();
     expect(terminarRuta).toHaveBeenCalledTimes(1);
   });

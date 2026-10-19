@@ -1,3 +1,5 @@
+import { VisitasGps } from '../componentes/VisitasGps';
+import { ControlCajas, EVENTO_CAJAS } from '../componentes/ControlCajas';
 import { RutaGoogleMaps } from '../componentes/RutaGoogleMaps';
 import { MapaRuta } from '../componentes/MapaRuta';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
@@ -395,7 +397,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
     setErrorFin(undefined);
     const r = await api.terminarRuta();
     setTerminando(false);
-    if (r.ok) setTerminada({ resumen: r.value });
+    if (r.ok) {setTerminada({ resumen: r.value });window.dispatchEvent(new Event(EVENTO_CAJAS));}
     else setErrorFin(mensajeDeError(r.error));
   };
 
@@ -424,8 +426,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   useEffect(() => {
     if (!llegoAlDep || pendientes > 0 || terminada || terminando || terminoSola.current) return;
     terminoSola.current = true;
-    void terminarRuta();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- una sola vez, cuando se cumple la condición
+    setConfirmandoFin(true);
+
   }, [llegoAlDep, pendientes, terminada, terminando]);
 
   /** Elegir por cuál se empieza: esa parada queda primera y el resto se vuelve a ordenar desde ahí (también si la ruta estaba acomodada a mano). */
@@ -531,12 +533,13 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           <strong>Llegaste al depósito. ¿Terminaste la ruta?</strong>
           <span>Quedan {pendientes} entregas sin hacer: si terminas, la lista se limpia y esas entregas vuelven a «Facturas del día» sin camión.</span>
           <div className="fila-botones">
-            <Boton disabled={terminando} onClick={() => void terminarRuta()}>SÍ, TERMINAR LA RUTA</Boton>
+            <ControlCajas cierre alCerrar={terminarRuta} />
             <Boton variante="secundario" onClick={() => { setAvisoDescartado(true); }}>NO, SIGO</Boton>
           </div>
         </div>
       ) : null}
       {aviso ? <Aviso tipo="error">{aviso}</Aviso> : null}
+      {enCamion ? <VisitasGps alActualizar={recargarVista} /> : null}
       {compacta && ultimaEntrega ? <div className="tarjeta"><p role="status">Entrega guardada: {ultimaEntrega.cliente}</p><DeshacerHecha h={ultimaEntrega} alCambiar={() => { setUltimaEntrega(undefined); recargarVista(); }} /></div> : null}
       {!vista.planificada ? (
         <>
@@ -693,13 +696,13 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       {enCamion && (simple || vista.hechas.length > 0 || pendientes > 0) ? (
         <section className="pagina" aria-label="Terminar la ruta">
           {!confirmandoFin ? (
-            <Boton variante="secundario" disabled={terminando} onClick={() => { if (simple || pendientes > 0) setConfirmandoFin(true); else void terminarRuta(); }}>{terminando ? 'TERMINANDO…' : (simple ? 'TERMINAR MI DÍA' : 'TERMINAR RUTA')}</Boton>
+            <Boton variante="secundario" disabled={terminando} onClick={() => { setConfirmandoFin(true); }}>{terminando ? 'TERMINANDO…' : (simple ? 'TERMINAR MI DÍA' : 'TERMINAR RUTA')}</Boton>
           ) : (
             <div className="tarjeta">
               <p>Entregadas: {vista.hechas.filter((h) => h.estado === 'entregada').length} · No entregadas: {vista.hechas.filter((h) => h.estado === 'no_entregada').length}</p>
-              <Aviso tipo="error">Quedan {pendientes} entregas sin hacer. Si terminas, la lista se limpia y esas entregas vuelven a «Facturas del día» sin camión.</Aviso>
+              <p>{pendientes > 0 ? `Quedan ${pendientes} entregas sin hacer. Si terminas, la lista se limpia y esas entregas vuelven a «Facturas del día» sin camión.` : 'No quedan entregas pendientes. Confirma los rebajes antes de cerrar.'}</p>
               <div className="fila-botones">
-                <Boton variante="peligro" disabled={terminando} onClick={() => void terminarRuta()}>SÍ, TERMINAR</Boton>
+                <ControlCajas cierre alCerrar={terminarRuta} />
                 <Boton variante="secundario" onClick={() => { setConfirmandoFin(false); }}>NO, SEGUIR</Boton>
               </div>
             </div>

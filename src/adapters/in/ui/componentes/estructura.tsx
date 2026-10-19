@@ -1,3 +1,4 @@
+import { ControlCajas } from './ControlCajas';
 import { useCasos } from '../contexto';
 import { MapaGuardadoOffline } from './MapaRuta';
 import { Link, Navigate, Outlet, useLocation } from 'react-router';
@@ -33,6 +34,7 @@ export const Marco = () => {
           <summary>MI CUENTA</summary>
           <div className="fila-botones">
           <Link className="volver" to="/perfil">EDITAR MI PERFIL</Link>
+          <Link className="volver" to="/desempeno">{estado.usuario.rol === 'admin' ? 'DESEMPEÑO DEL EQUIPO' : 'MI DESEMPEÑO'}</Link>
           <CambiarVista />
           <CambiarTema />
           <Boton variante="secundario" onClick={salir}>SALIR</Boton>
@@ -44,6 +46,7 @@ export const Marco = () => {
         {esDeCamion(estado.usuario.rol) ? simple ? <details className="opciones-simples"><summary>EMERGENCIA</summary><KitEmergencia /></details> : <KitEmergencia /> : null}
         {estado.usuario.rol === 'chofer' || estado.usuario.rol === 'ayudante' ? <SeguimientoDelCamion simple={simple} /> : null}
         {pathname !== '/' ? <Link className="volver" to="/">← INICIO</Link> : null}
+        {simple ? <details className="opciones-simples"><summary>CAJAS DE MI JORNADA</summary><ControlCajas /></details> : null}
         <Outlet />
         {/* Para saber si el teléfono ya tiene la última versión publicada (es el commit que Vercel desplegó). */}
         {!seguimientoNativo ? <Link className="volver" to="/android">DESCARGAR APP ANDROID</Link> : null}

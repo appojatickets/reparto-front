@@ -324,6 +324,7 @@ export type ClaveAprendida = 'ritmo' | 'servicio_min' | 'capacidad_paradas' | 'd
 export type ParametroAprendido = { readonly clave: ClaveAprendida; readonly ambito: string; readonly valor: number; readonly muestras: number; readonly confianza: number; readonly camion?: string };
 export type EtiquetaLocal = { readonly razonSocial: string; readonly direccion: string; readonly comuna: string };
 export type ResumenAnalisis = {
+ readonly patronesRecorrido?:readonly {readonly etiquetas?:readonly string[];readonly tipo:'local'|'comuna'|'inicio_comuna';readonly antes:readonly string[];readonly despues:string;readonly ambito:string;readonly dia:number|null;readonly dias:number;readonly frecuencia:number}[];
   readonly eventos: number;
   readonly jornadas: number;
   readonly parametros: number;
@@ -381,3 +382,6 @@ export type PanelAnalitica = {
 };
 
 export type TrazadoMapa = { readonly version?: number; readonly perfil: string; readonly tramos: readonly { readonly coordenadas: readonly (readonly [number, number])[]; readonly porCalles: boolean }[] };
+
+export type CajasActuales = { readonly bultos?:number|null; readonly registrada:boolean; readonly cargadasCamion: number; readonly cargadasUsuario: number; readonly porCerrado: number; readonly rebajes: number; readonly rebajesCamion: number | null; readonly revision: number; readonly cerrada: boolean };
+export type DesempenoCajas = { readonly kmCamion?:number; readonly bultosCamion?:number|null; readonly jornadaId: string; readonly usuarioId: string; readonly usuario: string; readonly camionId: string; readonly camion: string; readonly fecha: string; readonly desde: string; readonly hasta: string | null; readonly cargadas: number; readonly porCerrado: number; readonly rebajes: number; readonly tarifa: number; readonly cerrada: boolean; readonly cargaId: string; readonly cargadasCamion: number; readonly rebajesCamion: number | null; readonly km: number; readonly comunas: readonly string[] };

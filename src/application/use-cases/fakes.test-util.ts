@@ -9,6 +9,8 @@ export const sinImplementar = (): never => {
 };
 
 export const fakeApi = (extra: Partial<ApiClient> = {}): ApiClient => ({
+  visitasPendientes: () => Promise.resolve(ok([])),
+  obtenerCajas: () => Promise.resolve(ok({ registrada:true,cargadasCamion:0,cargadasUsuario:0,porCerrado:0,rebajes:0,rebajesCamion:null,revision:1,cerrada:false })), guardarCajas: sinImplementar, cerrarCajas: () => Promise.resolve(ok(true)), desempenoCajas: () => Promise.resolve(ok([])),
   getHealth: sinImplementar, iniciarSesion: sinImplementar, yo: sinImplementar, buscarClientes: sinImplementar, crearCliente: sinImplementar,
   importarClientes: sinImplementar, obtenerLocal: sinImplementar, actualizarLocal: sinImplementar, solicitarUrlSubida: sinImplementar,
   registrarFoto: sinImplementar, urlFoto: sinImplementar, solicitarUrlSubidaPerfil: sinImplementar, registrarFotoPerfil: sinImplementar, quitarFotoPerfil: sinImplementar, urlFotoUsuario: sinImplementar, contribuyentesDeLocal: () => Promise.resolve(ok([])), listarPropuestas: sinImplementar,

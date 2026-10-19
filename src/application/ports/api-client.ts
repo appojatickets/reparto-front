@@ -1,3 +1,4 @@
+import type { CajasActuales, DesempenoCajas } from '../modelos';
 import type { FichaAprendida } from '../../domain/ficha';
 import type { DiaApi } from '../../domain/horario-semanal';
 import type { Result } from '../../domain/result';
@@ -32,6 +33,11 @@ export interface SaludApi {
 }
 
 export interface ApiClient extends SaludApi {
+  visitasPendientes(): Promise<Result<readonly {readonly facturaId:string;readonly localId:string;readonly cliente:string;readonly llegada:string;readonly estado:'en_local'|'sin_confirmar'}[],ApiError>>;
+  obtenerCajas(): Promise<Result<CajasActuales | null, ApiError>>;
+  guardarCajas(entrada: { bultos?:number;cargadasCamion: number; cargadasUsuario: number; revision: number }): Promise<Result<CajasActuales | null, ApiError>>;
+  cerrarCajas(entrada: { porCerrado: number; rebajes: number; rebajesCamion: number }): Promise<Result<boolean, ApiError>>;
+  desempenoCajas(mes: string): Promise<Result<readonly DesempenoCajas[], ApiError>>;
   verTrazado(camionId: string, fecha: string, signal?: AbortSignal): R<TrazadoMapa>;
   iniciarSesion(username: string, pin: string): R<{ tokens: Tokens; usuario: UsuarioSesion }>;
   yo(): R<UsuarioSesion & { readonly empresaId: string }>;

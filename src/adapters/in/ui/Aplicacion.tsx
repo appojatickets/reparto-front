@@ -1,3 +1,4 @@
+import { PaginaDesempeno } from './paginas/PaginaDesempeno';
 import { AvisoActualizacionAndroid } from './componentes/AvisoActualizacionAndroid';
 import { PaginaAndroid } from './paginas/PaginaAndroid';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
@@ -44,6 +45,7 @@ export const Aplicacion = () => (
           <Route path="/entrar" element={<PaginaLogin />} />
           <Route element={<RutaProtegida><Marco /></RutaProtegida>}>
             <Route index element={<PaginaInicio />} />
+            <Route path="desempeno" element={<PaginaDesempeno />} />
             <Route path="perfil" element={<PaginaPerfil />} />
             <Route path="cargar" element={<RutaProtegida accion="cargar-facturas"><PaginaCargar /></RutaProtegida>} />
             <Route path="mi-ruta" element={<RutaProtegida accion="mi-ruta"><PaginaMiRuta /></RutaProtegida>} />

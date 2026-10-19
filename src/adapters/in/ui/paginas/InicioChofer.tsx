@@ -1,3 +1,4 @@
+import { EVENTO_CAJAS } from '../componentes/ControlCajas';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { useUsuario } from '../sesion';
@@ -26,6 +27,7 @@ const ElegirCamion = ({ alElegir }: { readonly alElegir: () => void }) => {
     setOcupado(false);
     if (r.ok) {
       try { localStorage.setItem(`reparto:ultimo-camion:${usuario.id}`, c.id); } catch { /* La jornada sigue guardada en el servidor. */ }
+      window.dispatchEvent(new Event(EVENTO_CAJAS));
       alElegir();
     }
     else setError(mensajeDeError(r.error));

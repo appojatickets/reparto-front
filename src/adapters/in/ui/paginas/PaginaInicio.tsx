@@ -62,6 +62,7 @@ export const PaginaInicio = () => {
         <Avatar usuarioId={usuario.id} nombre={usuario.nombre} fotoEn={usuario.fotoEn} tamano="mediano" />
         <span>{usuario.fotoEn !== undefined ? 'MI PERFIL' : 'PONER MI FOTO'}</span>
       </Link>
+      <Link className="tarjeta-enlace" to="/desempeno">{usuario.rol === 'admin' ? 'DESEMPEÑO DEL EQUIPO Y CAMIONES' : 'MI DESEMPEÑO · CAJAS Y ACUMULADO'}</Link>
       {acciones.includes('mi-ruta') ? <InicioChofer /> : null}
       {enlaces.length > 0 ? (
         <ul className="menu">
