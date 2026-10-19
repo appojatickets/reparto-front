@@ -4,7 +4,7 @@ import { crearSesionYHttpAndroid } from './sesion-y-http';
 const tokens = { accessToken: 'access-prueba', refreshToken: 'refresh-prueba', expiraEnSegundos: 3600 };
 const montar = () => {
   const bridge = {
-    configure: vi.fn<NativeBridge['configure']>(() => Promise.resolve()),
+    requestNotifications: vi.fn(() => Promise.resolve()), appInfo: vi.fn(() => Promise.resolve({ codigo: 11, paquete: 'cl.reparto.app' })), configure: vi.fn<NativeBridge['configure']>(() => Promise.resolve()),
     session: vi.fn<NativeBridge['session']>(() => Promise.resolve({ tokens })),
     clear: vi.fn<NativeBridge['clear']>(() => Promise.resolve()),
     request: vi.fn<NativeBridge['request']>(() => Promise.resolve({ status: 200, body: '{"ok":true}', tokens })),

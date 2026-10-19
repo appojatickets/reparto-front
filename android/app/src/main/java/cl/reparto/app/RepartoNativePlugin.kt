@@ -6,7 +6,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.pm.PackageInfoCompat
 import com.getcapacitor.JSObject
 import com.getcapacitor.PermissionState
 import com.getcapacitor.Plugin
@@ -23,6 +25,27 @@ import org.json.JSONObject
     Permission(alias = "notifications", strings = [Manifest.permission.POST_NOTIFICATIONS])
 ])
 class RepartoNativePlugin : Plugin() {
+    @PluginMethod
+    fun appInfo(call: PluginCall) = respond(call, "No se pudo consultar la versión instalada") {
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        val result = JSObject()
+        result.put("codigo", PackageInfoCompat.getLongVersionCode(info))
+        result.put("paquete", context.packageName)
+        call.resolve(result)
+    }
+
+    @PluginMethod
+    fun requestNotifications(call: PluginCall) {
+        if (Build.VERSION.SDK_INT >= 33 && getPermissionState("notifications") == PermissionState.PROMPT) {
+            requestPermissionForAlias("notifications", call, "notificationsChecked")
+        } else if (Build.VERSION.SDK_INT >= 33 && getPermissionState("notifications") == PermissionState.PROMPT_WITH_RATIONALE) {
+            requestPermissionForAlias("notifications", call, "notificationsChecked")
+        } else call.resolve()
+    }
+
+    @PermissionCallback
+    private fun notificationsChecked(call: PluginCall) { call.resolve() }
+
     @PluginMethod
     fun configure(call: PluginCall) = respond(call, "No se pudo configurar la API Android") {
         NativeApi(context).configure(call.getString("apiUrl") ?: "")
@@ -132,6 +155,7 @@ class RepartoNativePlugin : Plugin() {
         val locations = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         result.put("ubicacionActiva", locations.isProviderEnabled(LocationManager.GPS_PROVIDER) || locations.isProviderEnabled(LocationManager.NETWORK_PROVIDER))
         result.put("permisoUbicacion", ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+        result.put("permisoNotificaciones", NotificationManagerCompat.from(context).areNotificationsEnabled())
         result.put("activo", TrackingService.active)
         result.put("pendientes", store.get("queue")?.let { JSONArray(it).length() } ?: 0)
         result.put("ultimoEnvio", store.get("lastUpload"))

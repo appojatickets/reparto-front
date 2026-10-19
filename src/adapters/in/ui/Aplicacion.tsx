@@ -1,3 +1,4 @@
+import { AvisoActualizacionAndroid } from './componentes/AvisoActualizacionAndroid';
 import { PaginaAndroid } from './paginas/PaginaAndroid';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { Marco, RutaProtegida } from './componentes/estructura';
@@ -37,6 +38,7 @@ export const Aplicacion = () => (
     <BrowserRouter>
       <ProveedorSesion>
         <AvisoServidorDespertando />
+        <AvisoActualizacionAndroid />
         <Routes>
           <Route path="/android" element={<PaginaAndroid />} />
           <Route path="/entrar" element={<PaginaLogin />} />

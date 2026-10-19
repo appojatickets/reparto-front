@@ -14,7 +14,8 @@ export const SeguimientoAndroid = ({ simple = false }: { readonly simple?: boole
     consultar();
     const id = window.setInterval(consultar, 15000);
     document.addEventListener('visibilitychange', consultar);
-    return () => { vigente = false; window.clearInterval(id); document.removeEventListener('visibilitychange', consultar); };
+    window.addEventListener('focus', consultar);
+    return () => { vigente = false; window.clearInterval(id); window.removeEventListener('focus', consultar); document.removeEventListener('visibilitychange', consultar); };
   }, [seguimientoNativo]);
   const cambiar = async (): Promise<void> => {
     if (!seguimientoNativo) return;
@@ -33,6 +34,7 @@ export const SeguimientoAndroid = ({ simple = false }: { readonly simple?: boole
   return <section className="tarjeta" aria-label="GPS de la jornada Android">
     {estado.ubicacionActiva === false ? <Aviso tipo="error">La ubicación del teléfono está apagada. Enciéndela para registrar el recorrido.</Aviso> : null}
     {estado.permisoUbicacion === false ? <Aviso tipo="error">Falta permiso de ubicación precisa. Actívalo en Ajustes del teléfono → Aplicaciones → Reparto → Permisos.</Aviso> : null}
+    {estado.permisoNotificaciones === false ? <Aviso tipo="error">Las notificaciones del GPS están desactivadas. Actívalas en Ajustes del teléfono → Aplicaciones → Reparto → Notificaciones para ver y detener el seguimiento en segundo plano.</Aviso> : null}
     <p role="status">{estado.activo && estado.ubicacionActiva !== false && estado.permisoUbicacion !== false ? (simple ? 'Seguimiento activo' : 'GPS de jornada activado · puede seguir al abrir Waze o bloquear la pantalla.') : estado.activo ? 'Seguimiento pausado: revisa ubicación y permisos.' : 'GPS de jornada detenido.'}</p>
     <details open={!estado.activo || !simple ? true : undefined} className="opciones-simples"><summary>GPS DE JORNADA</summary>
     {estado.activo ? <p className="ayuda">Puntos por enviar: {estado.pendientes}. {estado.ultimoEnvio ? `Último envío: ${new Date(estado.ultimoEnvio).toLocaleTimeString('es-CL')}.` : 'Esperando primera ubicación.'}</p> : <p className="ayuda">Actívalo durante el reparto. Android mostrará una notificación; puedes detenerlo desde ahí. Terminar la jornada o cerrar sesión también lo detiene.</p>}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { EstadoPermisos } from '../../../../application/ports/permisos';
+import type { EstadoPermisos, Permisos } from '../../../../application/ports/permisos';
 import { useCasos } from '../contexto';
 import { Aviso, Boton } from './ui';
 
@@ -9,6 +9,7 @@ export const PermisosAlAbrir = ({ usuarioId = 'actual' }: { readonly usuarioId?:
   const [estado, setEstado] = useState<EstadoPermisos | undefined>();
   const [ocupado, setOcupado] = useState(false);
   const solicitando = useRef(false);
+  const inicio = useRef<{ clave: string; permisos: Permisos; solicitud: Promise<EstadoPermisos> } | undefined>(undefined);
   const clave = `reparto:permisos-preguntados:${usuarioId}`;
   useEffect(() => {
     let vivo = true;
@@ -16,15 +17,19 @@ export const PermisosAlAbrir = ({ usuarioId = 'actual' }: { readonly usuarioId?:
       try { const e = await permisos.estado(); if (vivo && !solicitando.current) setEstado(e); } catch { /* Los botones de entrega y dictado siguen disponibles. */ }
     };
     const iniciar = async (): Promise<void> => {
-      let preguntado = false;
-      try { preguntado = localStorage.getItem(clave) === 'si'; } catch { /* Se consulta al sistema. */ }
-      if (preguntado) { await consultar(); return; }
+      // Cada apertura consulta al sistema: una marca local no prueba que siga autorizado.
+      // El adaptador solicita únicamente lo pendiente, sin repetir permisos concedidos o bloqueados.
       solicitando.current = true;
       setOcupado(true);
       try {
         try { localStorage.setItem(clave, 'si'); } catch { /* Sin persistencia. */ }
-        const e = await permisos.pedir();
+        if (inicio.current?.clave !== clave || inicio.current.permisos !== permisos) {
+          inicio.current = { clave, permisos, solicitud: permisos.pedir() };
+        }
+        const e = await inicio.current.solicitud;
         if (vivo) setEstado(e);
+      } catch {
+        try { const e = await permisos.estado(); if (vivo) setEstado(e); } catch { if (vivo) setEstado({ ubicacion: 'pendiente', microfono: 'pendiente' }); }
       } finally { solicitando.current = false; if (vivo) setOcupado(false); }
     };
     void iniciar().catch(() => undefined);

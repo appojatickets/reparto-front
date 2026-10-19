@@ -55,7 +55,7 @@ const api = createHttpApiClient({
 const casos: Casos = {
   consultarAndroid: crearConsultaAndroid(),
   api,
-  ...(android ? { seguimientoNativo: {
+  ...(android ? { versionAndroid: () => android.nativeBridge.appInfo(), seguimientoNativo: {
     estado: () => android.nativeBridge.status(),
     iniciar: (jornadaId: string) => android.nativeBridge.start({ jornadaId }),
     detener: () => android.nativeBridge.stop(),
@@ -77,7 +77,7 @@ const casos: Casos = {
   voz: crearVozWeb(),
   ubicacion: esAndroid ? (await import('./adapters/out/android/ubicacion-android')).crearUbicacionAndroid() : crearUbicacionWeb(),
   pantalla: crearPantallaEncendida(),
-  permisos: esAndroid ? (await import('./adapters/out/android/permisos-android')).crearPermisosAndroid(crearPermisosWeb(undefined, false)) : crearPermisosWeb(),
+  permisos: android ? (await import('./adapters/out/android/permisos-android')).crearPermisosAndroid(crearPermisosWeb(undefined, false), undefined, () => android.nativeBridge.requestNotifications()) : crearPermisosWeb(),
   vista: crearVistaStore(),
   armado: crearArmadoStore(),
   horas: crearHorasStore(),

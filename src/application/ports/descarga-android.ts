@@ -5,3 +5,7 @@ export type EstadoDescargaAndroid =
   | { readonly tipo: 'preparando' }
   | { readonly tipo: 'sin_conexion' };
 export type ConsultarAndroid = (signal: AbortSignal) => Promise<EstadoDescargaAndroid>;
+
+/** Identidad de la aplicación realmente instalada, leída desde Android. */
+export type VersionInstaladaAndroid = { readonly codigo: number; readonly paquete: string };
+export type ConsultarVersionInstaladaAndroid = () => Promise<VersionInstaladaAndroid>;

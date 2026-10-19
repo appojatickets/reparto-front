@@ -35,4 +35,11 @@ describe('GPS Android durante la jornada', () => {
     expect(screen.queryByText('Seguimiento activo')).toBeNull();
   });
 
+  it('advierte si Android dejó de permitir las notificaciones del servicio', async () => {
+    deps.seguimientoNativo.estado.mockResolvedValue({ activo: true, pendientes: 0, permisoNotificaciones: false });
+    render(<SeguimientoAndroid simple />);
+    expect(await screen.findByText(/Las notificaciones del GPS están desactivadas/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'DETENER GPS DE JORNADA' })).toBeEnabled();
+  });
+
 });

@@ -16,4 +16,15 @@ describe('permisos nativos de ubicación y micrófono web', () => {
     expect(await permisos.estado()).toEqual({ ubicacion: 'denegado', microfono: 'concedido' });
     expect(geo.requestPermissions).not.toHaveBeenCalled();
   });
+  it('solicita las notificaciones al preparar el teléfono, nunca al consultar, y conserva permisos si se bloquean', async () => {
+    const geo = { checkPermissions: vi.fn(() => Promise.resolve({ location: 'granted' as const, coarseLocation: 'granted' as const })), requestPermissions: vi.fn() };
+    const notificaciones = vi.fn(() => Promise.reject(new Error('bloqueadas')));
+    const permisos = crearPermisosAndroid(microfono(), geo, notificaciones);
+    await permisos.estado();
+    expect(notificaciones).not.toHaveBeenCalled();
+    expect(await permisos.pedir()).toEqual({ ubicacion: 'concedido', microfono: 'concedido' });
+    expect(notificaciones).toHaveBeenCalledTimes(1);
+    expect(geo.requestPermissions).not.toHaveBeenCalled();
+  });
+
 });
