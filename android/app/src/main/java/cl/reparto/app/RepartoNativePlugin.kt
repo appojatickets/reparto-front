@@ -3,6 +3,7 @@ package cl.reparto.app
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.os.Build
 import androidx.core.content.ContextCompat
@@ -128,6 +129,9 @@ class RepartoNativePlugin : Plugin() {
     fun status(call: PluginCall) = respond(call, "No se pudo consultar el GPS") {
         val store = SecureStore(context)
         val result = JSObject()
+        val locations = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        result.put("ubicacionActiva", locations.isProviderEnabled(LocationManager.GPS_PROVIDER) || locations.isProviderEnabled(LocationManager.NETWORK_PROVIDER))
+        result.put("permisoUbicacion", ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
         result.put("activo", TrackingService.active)
         result.put("pendientes", store.get("queue")?.let { JSONArray(it).length() } ?: 0)
         result.put("ultimoEnvio", store.get("lastUpload"))

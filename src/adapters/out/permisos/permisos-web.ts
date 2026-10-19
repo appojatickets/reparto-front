@@ -50,14 +50,14 @@ const pedirMicrofono = async (e: Entorno): Promise<EstadoPermiso> => {
 };
 
 /** Los permisos del navegador: se consulta primero y solo se pregunta lo que aún no se ha preguntado. */
-export const crearPermisosWeb = (entorno: Entorno = entornoDelNavegador()): Permisos => {
-  const estado = async (): Promise<EstadoPermisos> => ({ ubicacion: await consultar(entorno, 'geolocation'), microfono: await consultar(entorno, 'microphone') });
+export const crearPermisosWeb = (entorno: Entorno = entornoDelNavegador(), incluirUbicacion = true): Permisos => {
+  const estado = async (): Promise<EstadoPermisos> => ({ ubicacion: incluirUbicacion ? await consultar(entorno, 'geolocation') : 'pendiente', microfono: await consultar(entorno, 'microphone') });
   return {
     estado,
     async pedir() {
       const antes = await estado();
       // De a uno: dos avisos del navegador al mismo tiempo se pisan.
-      const ubicacion = antes.ubicacion === 'pendiente' ? await pedirUbicacion(entorno) : antes.ubicacion;
+      const ubicacion = incluirUbicacion && antes.ubicacion === 'pendiente' ? await pedirUbicacion(entorno) : antes.ubicacion;
       const microfono = antes.microfono === 'pendiente' ? await pedirMicrofono(entorno) : antes.microfono;
       return { ubicacion, microfono };
     },

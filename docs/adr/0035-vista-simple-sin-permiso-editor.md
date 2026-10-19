@@ -9,3 +9,14 @@ Ordenar ruta reúne automático, manual y comenzar por. En manual se ofrecen sub
 Mi cuenta y emergencia agrupan controles secundarios. El micrófono se pide al dictar; no se monta el aviso global de permisos en la vista simple. GPS nativo sigue siendo voluntario y visible. El cierre desde inicio lleva a la ruta, donde se presenta el resumen y se confirma incluso sin pendientes.
 
 Las pruebas de los controles completos corresponden al chofer editor; hay pruebas adicionales de entrega sin GPS, cierre, reordenación manual y primera parada para el usuario simple. La web se actualiza mediante Vercel; el APK incorpora el frontend y necesita una nueva instalación sobre la anterior.
+
+
+## Extensión al editor y actualización del recorrido
+
+A petición del dueño, el editor del camión usa también la presentación compacta. Conserva todas sus acciones en Foto y reportes, Editar local y más opciones y Ordenar ruta. Mi cuenta queda desplegable arriba.
+
+Mantener Subir/Bajar previsualiza posiciones cada vez más rápido, desplaza la lista y actualiza los números del mapa. Soltar guarda una sola operación con la versión original. Cancelar restaura la vista; un conflicto recarga la ruta actual del servidor. MapLibre conserva la instancia y el zoom al cambiar el orden, y reemplaza únicamente los marcadores.
+
+Se solicitan ubicación y micrófono al abrir por primera vez. Se recuerda haber preguntado por usuario, y se vuelve a consultar el permiso real al regresar a la app y cada 15 segundos. Android consulta sus permisos nativos para ubicación. La comprobación de estado del servicio distingue permiso y ubicación del teléfono encendida; se avisa si se apaga o se revoca. El GPS continuo se activa explícitamente y el teléfono conserva los permisos.
+
+El último camión se recuerda por usuario en el dispositivo. Cada jornada nueva exige confirmar el camión propuesto; una jornada ya abierta en el servidor prevalece y actualiza ese recuerdo.

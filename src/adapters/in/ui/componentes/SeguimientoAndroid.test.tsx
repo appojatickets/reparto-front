@@ -28,4 +28,11 @@ describe('GPS Android durante la jornada', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'DETENER GPS DE JORNADA' }));
     expect(await screen.findByText('GPS de jornada detenido.')).toBeInTheDocument();
   });
+  it('avisa si el servicio sigue encendido pero se apagó la ubicación del teléfono', async () => {
+    deps.seguimientoNativo.estado.mockResolvedValue({ activo: true, pendientes: 2, ubicacionActiva: false, permisoUbicacion: true });
+    render(<SeguimientoAndroid simple />);
+    expect(await screen.findByText(/La ubicación del teléfono está apagada/)).toBeInTheDocument();
+    expect(screen.queryByText('Seguimiento activo')).toBeNull();
+  });
+
 });

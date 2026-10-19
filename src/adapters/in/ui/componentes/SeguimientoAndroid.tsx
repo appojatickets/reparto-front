@@ -12,7 +12,7 @@ export const SeguimientoAndroid = ({ simple = false }: { readonly simple?: boole
     let vigente = true;
     const consultar = (): void => { void seguimientoNativo?.estado().then((e) => { if (vigente) setEstado(e); }).catch(() => undefined); };
     consultar();
-    const id = window.setInterval(consultar, 30000);
+    const id = window.setInterval(consultar, 15000);
     document.addEventListener('visibilitychange', consultar);
     return () => { vigente = false; window.clearInterval(id); document.removeEventListener('visibilitychange', consultar); };
   }, [seguimientoNativo]);
@@ -31,7 +31,9 @@ export const SeguimientoAndroid = ({ simple = false }: { readonly simple?: boole
     finally { setOcupado(false); }
   };
   return <section className="tarjeta" aria-label="GPS de la jornada Android">
-    <p role="status">{estado.activo ? (simple ? 'Seguimiento activo' : 'GPS de jornada activado · puede seguir al abrir Waze o bloquear la pantalla.') : 'GPS de jornada detenido.'}</p>
+    {estado.ubicacionActiva === false ? <Aviso tipo="error">La ubicación del teléfono está apagada. Enciéndela para registrar el recorrido.</Aviso> : null}
+    {estado.permisoUbicacion === false ? <Aviso tipo="error">Falta permiso de ubicación precisa. Actívalo en Ajustes del teléfono → Aplicaciones → Reparto → Permisos.</Aviso> : null}
+    <p role="status">{estado.activo && estado.ubicacionActiva !== false && estado.permisoUbicacion !== false ? (simple ? 'Seguimiento activo' : 'GPS de jornada activado · puede seguir al abrir Waze o bloquear la pantalla.') : estado.activo ? 'Seguimiento pausado: revisa ubicación y permisos.' : 'GPS de jornada detenido.'}</p>
     <details open={!estado.activo || !simple ? true : undefined} className="opciones-simples"><summary>GPS DE JORNADA</summary>
     {estado.activo ? <p className="ayuda">Puntos por enviar: {estado.pendientes}. {estado.ultimoEnvio ? `Último envío: ${new Date(estado.ultimoEnvio).toLocaleTimeString('es-CL')}.` : 'Esperando primera ubicación.'}</p> : <p className="ayuda">Actívalo durante el reparto. Android mostrará una notificación; puedes detenerlo desde ahí. Terminar la jornada o cerrar sesión también lo detiene.</p>}
     <Boton variante="secundario" disabled={ocupado} onClick={() => void cambiar()}>{ocupado ? 'ACTUALIZANDO GPS…' : estado.activo ? 'DETENER GPS DE JORNADA' : 'ACTIVAR GPS DE JORNADA'}</Boton>

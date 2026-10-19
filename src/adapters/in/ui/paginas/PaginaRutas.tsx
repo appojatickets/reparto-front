@@ -1,3 +1,4 @@
+import { BotonDesplazar } from '../componentes/BotonDesplazar';
 import { MapaRuta } from '../componentes/MapaRuta';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
@@ -81,7 +82,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
   readonly horario?: string | undefined;
   readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void; readonly enCamion: boolean;
   /** Deja esta parada en la posición indicada (lo mismo que arrastrarla). */
-  readonly mover: (posicion: number) => void;
+  readonly mover: (posicion: number, provisional?: boolean, cancelar?: boolean) => void;
   /** Eventos del asa para arrastrar y cómo se dibuja la fila mientras alguna se arrastra. */
   readonly asa: ReturnType<ReturnType<typeof useArrastre>['asa']>; readonly fila: { readonly clase: string; readonly estilo?: CSSProperties };
   readonly alCambiar: () => void; readonly alFijarPin: (cliente: string) => void; readonly abierta: boolean; readonly alAbrir: () => void; readonly esSiguiente: boolean;
@@ -89,6 +90,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
   const [mas, setMas] = useState(false);
   const usuario = useUsuario();
   const simple = esDeCamion(usuario.rol) && !puedeEditar(usuario.rol, usuario.editor);
+  const compacta = esDeCamion(usuario.rol);
   const motivos = textoMotivos(p.motivos);
   const n = p.posicion + 1;
   const idDetalle = `parada-${p.facturaId}`;
@@ -98,8 +100,8 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
         <span className="parada-num" aria-hidden="true">{n}</span>
         <span className="parada-nombre">
           <strong>{p.cliente}</strong>
-          <span className="comuna">{simple ? `${p.direccion}, ${p.comuna}` : p.comuna}</span>
-          {simple ? <span className="parada-marca">PENDIENTE · TOCA PARA VER FOTO</span> : null}
+          <span className="comuna">{compacta ? `${p.direccion}, ${p.comuna}` : p.comuna}</span>
+          {compacta ? <span className="parada-marca">PENDIENTE · TOCA PARA VER FOTO</span> : null}
           {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
           {p.ubicacionAproximada ? <span className="parada-marca parada-marca--aproximada">SIN UBICACIÓN PRECISA</span> : null}
@@ -109,7 +111,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
         {hora !== undefined ? <span className="parada-hora" aria-label={`Llegada aproximada ${hora}`}>~{hora}</span> : null}
       </button>
       <div className="parada-atajos">
-        {!simple ? <Boton
+        {!compacta || (!simple && ordenando) ? <Boton
           variante="secundario"
           className="atajo asa"
           disabled={ocupado || total < 2}
@@ -125,9 +127,9 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
         >
           <span aria-hidden="true">↕</span> MOVER
         </Boton> : null}
-        {simple && ordenando ? <div className="fila-botones">
-          <Boton variante="secundario" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} onClick={() => { mover(p.posicion - 1); }}>↑ SUBIR</Boton>
-          <Boton variante="secundario" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} onClick={() => { mover(p.posicion + 1); }}>↓ BAJAR</Boton>
+        {compacta && ordenando ? <div className="fila-botones">
+          <BotonDesplazar cliente={p.cliente} posicion={p.posicion} total={total} sentido={-1} ocupado={ocupado} mover={mover} />
+          <BotonDesplazar cliente={p.cliente} posicion={p.posicion} total={total} sentido={1} ocupado={ocupado} mover={mover} />
           <Boton variante="secundario" disabled={ocupado || p.posicion === 0} onClick={() => { mover(0); }}>PONER PRIMERO</Boton>
         </div> : null}
         {enCamion ? <AtajoEntregado p={p} alCambiar={alEntregar} alFijarPin={() => { alFijarPin(p.cliente); }} /> : null}
@@ -137,7 +139,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
       {abierta ? (
         <div className="parada-detalle" id={idDetalle}>
           {!mismoTexto(p.cliente, p.direccion) ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
-          <FotoFachada simple={simple} localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} conPin={p.lat !== undefined && p.lng !== undefined}>{simple ? <NoEncuentroLocal p={p} alCambiar={alCambiar} /> : null}</FotoFachada>
+          <FotoFachada simple={compacta} editor={!simple && compacta} localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} conPin={p.lat !== undefined && p.lng !== undefined}>{compacta ? <NoEncuentroLocal p={p} alCambiar={alCambiar} /> : null}</FotoFachada>
           {!simple && p.tieneFoto === true && p.lat !== undefined ? <Contribuyentes localId={p.localId} /> : null}
           {p.folio ? <span>Factura {p.folio}</span> : null}
           <Etiquetas i={p} />
@@ -146,6 +148,8 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           {p.ubicacionAproximada && !simple ? <AvisoUbicacion p={p} puedeAbrirFicha={puedeHacer(usuario.rol, 'buscar-clientes', usuario.editor)} /> : null}
           {p.nota ? <span>Nota: {p.nota}</span> : null}
           {!simple && motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
+          <details hidden={simple} className="opciones-simples" open={!compacta ? true : undefined}>
+          {!simple ? <summary>{compacta ? "EDITAR LOCAL Y MÁS OPCIONES" : "OPCIONES DE LA PARADA"}</summary> : null}
           {puedeEditar(usuario.rol, usuario.editor) ? <Link className="big-button big-button--secundario" to={`/clientes/${p.localId}`} aria-label={`CORREGIR ESTA DIRECCIÓN ${p.cliente}`}>CORREGIR ESTA DIRECCIÓN</Link> : null}
           {enCamion && !simple ? <AccionesParada p={p} alCambiar={alCambiar} alFijarPin={() => { alFijarPin(p.cliente); }} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
           {!simple ? <div className="fila-botones">
@@ -158,6 +162,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
               <Boton variante="peligro" disabled={ocupado} aria-label={`QUITAR DEL CAMIÓN ${p.cliente}`} onClick={() => { operar({ tipo: 'quitar', facturaId: p.facturaId }); }}>QUITAR DEL CAMIÓN</Boton>
             </div>
           ) : null}
+          </details>
         </div>
       ) : null}
     </li>
@@ -293,6 +298,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   const [abierta, setAbierta] = useState<string | null | undefined>(undefined);
   const { rol, editor } = useUsuario();
   const simple = esDeCamion(rol) && !puedeEditar(rol, editor);
+  const compacta = esDeCamion(rol);
+  const movimiento = useRef<VistaRuta | undefined>(undefined);
   const [ordenando, setOrdenando] = useState(false);
   const [ultimaEntrega, setUltimaEntrega] = useState<{ facturaId: string; cliente: string } | undefined>();
   const enCamion = esDeCamion(rol);
@@ -311,6 +318,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   /** Después de entregar o avisar: se vuelve a pedir la ruta (la parada hecha sale de la lista y las horas se corren). */
   const marcaVista = useRef<string | undefined>(undefined);
   const recargarVista = (): void => {
+    if (movimiento.current) return;
     // Lo que se pide ahora ya trae lo último: la próxima marca se toma como base para no recargar dos veces por el mismo cambio.
     marcaVista.current = undefined;
     setActualizada(undefined);
@@ -365,12 +373,19 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
    * Arrastrar y soltar (o las flechas del asa): la parada queda en su lugar de inmediato y el servidor lo confirma y recalcula las horas.
    * Si no se pudo, vuelve a donde estaba y se avisa.
    */
-  const mover = (facturaId: string, posicion: number): void => {
-    const v = vista;
+  const mover = (facturaId: string, posicion: number, provisional = false, cancelar = false): void => {
+    if (cancelar) { if (movimiento.current) setActualizada(movimiento.current); movimiento.current = undefined; return; }
+    const v = movimiento.current ?? vista;
     const version = v?.version;
     const parada = v?.paradas.find((p) => p.facturaId === facturaId);
     if (!v || version === undefined || !parada || ocupado) return;
-    const anterior = actualizada;
+    if (provisional) {
+      movimiento.current = v;
+      setActualizada({ ...v, paradas: reordenarParadas(v.paradas, facturaId, posicion) });
+      return;
+    }
+    const anterior = movimiento.current ?? actualizada;
+    movimiento.current = undefined;
     const paradas = reordenarParadas(v.paradas, facturaId, posicion);
     setActualizada({ ...v, paradas });
     setAnuncio(`${parada.cliente} quedó en el lugar ${(paradas.find((p) => p.facturaId === facturaId)?.posicion ?? posicion) + 1}.`);
@@ -536,7 +551,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
         </div>
       ) : null}
       {aviso ? <Aviso tipo="error">{aviso}</Aviso> : null}
-      {simple && ultimaEntrega ? <div className="tarjeta"><p role="status">Entrega guardada: {ultimaEntrega.cliente}</p><DeshacerHecha h={ultimaEntrega} alCambiar={() => { setUltimaEntrega(undefined); recargarVista(); }} /></div> : null}
+      {compacta && ultimaEntrega ? <div className="tarjeta"><p role="status">Entrega guardada: {ultimaEntrega.cliente}</p><DeshacerHecha h={ultimaEntrega} alCambiar={() => { setUltimaEntrega(undefined); recargarVista(); }} /></div> : null}
       {!vista.planificada ? (
         <>
           <Aviso>
@@ -573,9 +588,9 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       ) : (
         <>
           <MapaRuta vista={vista} />
-          <Resumen v={vista} simple={simple} />
-          {simple ? <Boton variante="secundario" aria-expanded={ordenando} onClick={() => { setOrdenando(!ordenando); }}>{ordenando ? "LISTO, VOLVER AL REPARTO" : "ORDENAR RUTA"}</Boton> : null}
-          {!simple || ordenando ? <>
+          <Resumen v={vista} simple={compacta} />
+          {compacta ? <Boton variante="secundario" aria-expanded={ordenando} onClick={() => { setOrdenando(!ordenando); }}>{ordenando ? "LISTO, VOLVER AL REPARTO" : "ORDENAR RUTA"}</Boton> : null}
+          {!compacta || ordenando ? <>
           {vista.paradas.length > 0 ? (
             <Boton variante="secundario" aria-pressed={verHoras} onClick={cambiarHoras}>{verHoras ? 'OCULTAR HORAS ESTIMADAS' : 'VER HORAS ESTIMADAS'}</Boton>
           ) : null}
@@ -633,7 +648,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           </> : null}
           {vista.paradas.length === 0 ? <Aviso>Ninguna parada se pudo ubicar en la ruta.</Aviso> : null}
           {!simple ? <AvisoAproximadas paradas={vista.paradas} /> : null}
-          <p role="status" className="ayuda">{simple ? "Toca el nombre para ver la foto y reportar un problema." : "Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar."}</p>
+          <p role="status" className="ayuda">{compacta ? "Toca el nombre para ver la foto y reportar un problema." : "Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar."}</p>
           {anuncio ? <p role="status" className="ayuda">{anuncio}</p> : null}
           {/* El horario es una estimación: lo que según él ya cerró no sale de la ruta, queda al final y se avisa. */}
           <ol ref={lista} className={`paradas${arrastre.arrastrando ? ' paradas--arrastrando' : ''}`} aria-label="Paradas en orden">
@@ -645,7 +660,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
                 total={vista.paradas.length}
                 ocupado={ocupado}
                 operar={operar}
-                mover={(posicion) => { mover(p.facturaId, posicion); }}
+                mover={(posicion, provisional, cancelar) => { mover(p.facturaId, posicion, provisional, cancelar); }}
                 asa={arrastre.asa(p.facturaId)}
                 fila={arrastre.fila(i)}
                 enCamion={enCamion}
@@ -655,8 +670,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
                 esSiguiente={i === 0}
                 horario={cierranPorHorario.get(p.facturaId)}
                 hora={verHoras ? horaAproximada(p.llegada) : undefined}
-                abierta={(abierta ?? (simple ? null : vista.paradas[0]?.facturaId)) === p.facturaId}
-                alAbrir={() => { setAbierta((actual) => ((actual ?? (simple ? null : vista.paradas[0]?.facturaId)) === p.facturaId ? null : p.facturaId)); }}
+                abierta={(abierta ?? (compacta ? null : vista.paradas[0]?.facturaId)) === p.facturaId}
+                alAbrir={() => { setAbierta((actual) => ((actual ?? (compacta ? null : vista.paradas[0]?.facturaId)) === p.facturaId ? null : p.facturaId)); }}
               />
             ))}
           </ol>

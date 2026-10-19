@@ -77,7 +77,7 @@ const casos: Casos = {
   voz: crearVozWeb(),
   ubicacion: esAndroid ? (await import('./adapters/out/android/ubicacion-android')).crearUbicacionAndroid() : crearUbicacionWeb(),
   pantalla: crearPantallaEncendida(),
-  permisos: crearPermisosWeb(),
+  permisos: esAndroid ? (await import('./adapters/out/android/permisos-android')).crearPermisosAndroid(crearPermisosWeb(undefined, false)) : crearPermisosWeb(),
   vista: crearVistaStore(),
   armado: crearArmadoStore(),
   horas: crearHorasStore(),

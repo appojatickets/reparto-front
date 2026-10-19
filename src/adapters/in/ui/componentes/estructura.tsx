@@ -2,7 +2,7 @@ import { useCasos } from '../contexto';
 import { MapaGuardadoOffline } from './MapaRuta';
 import { Link, Navigate, Outlet, useLocation } from 'react-router';
 import type { ReactNode } from 'react';
-import { ETIQUETA_ROL, esDeCamion, puedeEditar, puedeHacer, type Accion } from '../../../../domain/rol';
+import { ETIQUETA_ROL, esDeCamion, puedeHacer, type Accion } from '../../../../domain/rol';
 import { useSesion } from '../sesion';
 import { CambiarTema } from '../tema';
 import { CambiarVista } from '../vista';
@@ -18,7 +18,7 @@ export const Marco = () => {
   const { seguimientoNativo } = useCasos();
   const { pathname } = useLocation();
   if (estado.tipo !== 'sesion') return null;
-  const simple = esDeCamion(estado.usuario.rol) && !puedeEditar(estado.usuario.rol, estado.usuario.editor);
+  const simple = esDeCamion(estado.usuario.rol);
   return (
     <>
       <header className="cabecera">
@@ -40,7 +40,7 @@ export const Marco = () => {
         </details>
       </header>
       <main className="screen">
-        {!simple ? <PermisosAlAbrir /> : null}
+        <PermisosAlAbrir key={estado.usuario.id} usuarioId={estado.usuario.id} />
         {esDeCamion(estado.usuario.rol) ? simple ? <details className="opciones-simples"><summary>EMERGENCIA</summary><KitEmergencia /></details> : <KitEmergencia /> : null}
         {estado.usuario.rol === 'chofer' || estado.usuario.rol === 'ayudante' ? <SeguimientoDelCamion simple={simple} /> : null}
         {pathname !== '/' ? <Link className="volver" to="/">← INICIO</Link> : null}
