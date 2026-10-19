@@ -13,3 +13,7 @@ Android solicita además notificaciones pendientes sin iniciar seguimiento. El e
 ## Verificación
 
 Pruebas de comparación numérica, actualización real frente a versión instalada, aplazamiento, reconexión, piloto, errores, solicitudes por apertura, revocación y notificaciones deshabilitadas. Compilación Android firmada y pruebas web en CI.
+
+## Captura de fachada en Android
+
+El input de fachada mantiene `accept="image/*" capture="environment"` para todos los roles. Capacitor comprueba ACTION_IMAGE_CAPTURE con resolveActivity antes de abrir la cámara; sin visibilidad de ese intent en Android 11+ puede obtener null y abrir la galería como fallback. Se declara únicamente IMAGE_CAPTURE en queries del manifest, sin QUERY_ALL_PACKAGES ni permisos de almacenamiento. La cámara externa escribe mediante el FileProvider ya existente. La foto de perfil sigue utilizando selección de imagen. Esta corrección requiere actualizar el APK; no cambia al desplegar solo la web. La compilación Android valida el manifest, pero la apertura y devolución de una foto requieren comprobación en teléfono.
