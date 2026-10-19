@@ -71,7 +71,7 @@ const SeguimientoWeb = () => {
   return <p className={`estado-gps estado-gps--${estado.tipo}`} role="status" aria-label="Estado del GPS">{texto}</p>;
 };
 
-export const SeguimientoDelCamion = () => {
+export const SeguimientoDelCamion = ({ simple = false }: { readonly simple?: boolean }) => {
   const { seguimientoNativo } = useCasos();
-  return seguimientoNativo ? <SeguimientoAndroid /> : <SeguimientoWeb />;
+  return seguimientoNativo ? <SeguimientoAndroid simple={simple} /> : <SeguimientoWeb />;
 };

@@ -1,10 +1,13 @@
 import { useState, type SyntheticEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
+import { useCasos } from '../contexto';
 import { useSesion } from '../sesion';
 import { Aviso, Boton, Campo, Pagina } from '../componentes/ui';
 
 export const PaginaLogin = () => {
   const { estado, entrar } = useSesion();
+  const { seguimientoNativo } = useCasos();
+  const [mostrarClave, setMostrarClave] = useState(false);
   const navegar = useNavigate();
   const ubicacion = useLocation();
   const [username, setUsername] = useState('');
@@ -30,11 +33,12 @@ export const PaginaLogin = () => {
       <Pagina titulo="Entrar">
         <form className="pagina" onSubmit={(e) => void enviar(e)} noValidate>
           <Campo etiqueta="Usuario" value={username} onChange={(e) => { setUsername(e.target.value); }} autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoFocus />
-          <Campo etiqueta="Clave (6 números)" value={pin} onChange={(e) => { setPin(e.target.value); }} type="password" inputMode="numeric" autoComplete="current-password" />
+          <Campo etiqueta="Clave (6 números)" value={pin} onChange={(e) => { setPin(e.target.value); }} type={mostrarClave ? "text" : "password"} inputMode="numeric" autoComplete="current-password" />
+          <Boton variante="secundario" aria-pressed={mostrarClave} onClick={() => { setMostrarClave(!mostrarClave); }}>{mostrarClave ? "OCULTAR CLAVE" : "MOSTRAR CLAVE"}</Boton>
           {error ? <Aviso tipo="error">{error}</Aviso> : null}
           <Boton type="submit" disabled={enviando}>{enviando ? 'ENTRANDO…' : 'ENTRAR'}</Boton>
         </form>
-        <Link className="big-button big-button--secundario" to="/android">DESCARGAR APP ANDROID</Link>
+        {!seguimientoNativo ? <Link className="big-button big-button--secundario" to="/android">DESCARGAR APP ANDROID</Link> : null}
       </Pagina>
     </main>
   );

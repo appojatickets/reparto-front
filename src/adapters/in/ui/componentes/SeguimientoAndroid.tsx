@@ -3,7 +3,7 @@ import type { EstadoSeguimientoNativo } from '../../../../application/ports/segu
 import { useCasos } from '../contexto';
 import { Aviso, Boton } from './ui';
 
-export const SeguimientoAndroid = () => {
+export const SeguimientoAndroid = ({ simple = false }: { readonly simple?: boolean }) => {
   const { seguimientoNativo, api } = useCasos();
   const [estado, setEstado] = useState<EstadoSeguimientoNativo>({ activo: false, pendientes: 0 });
   const [ocupado, setOcupado] = useState(false);
@@ -31,9 +31,11 @@ export const SeguimientoAndroid = () => {
     finally { setOcupado(false); }
   };
   return <section className="tarjeta" aria-label="GPS de la jornada Android">
-    <p role="status">{estado.activo ? 'GPS de jornada activado · puede seguir al abrir Waze o bloquear la pantalla.' : 'GPS de jornada detenido.'}</p>
+    <p role="status">{estado.activo ? (simple ? 'Seguimiento activo' : 'GPS de jornada activado · puede seguir al abrir Waze o bloquear la pantalla.') : 'GPS de jornada detenido.'}</p>
+    <details open={!estado.activo || !simple ? true : undefined} className="opciones-simples"><summary>GPS DE JORNADA</summary>
     {estado.activo ? <p className="ayuda">Puntos por enviar: {estado.pendientes}. {estado.ultimoEnvio ? `Último envío: ${new Date(estado.ultimoEnvio).toLocaleTimeString('es-CL')}.` : 'Esperando primera ubicación.'}</p> : <p className="ayuda">Actívalo durante el reparto. Android mostrará una notificación; puedes detenerlo desde ahí. Terminar la jornada o cerrar sesión también lo detiene.</p>}
     <Boton variante="secundario" disabled={ocupado} onClick={() => void cambiar()}>{ocupado ? 'ACTUALIZANDO GPS…' : estado.activo ? 'DETENER GPS DE JORNADA' : 'ACTIVAR GPS DE JORNADA'}</Boton>
+    </details>
     {error ? <Aviso tipo="error">{error}</Aviso> : null}
   </section>;
 };

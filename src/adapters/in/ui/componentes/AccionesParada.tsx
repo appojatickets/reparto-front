@@ -1,4 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useUsuario } from '../sesion';
+import { esDeCamion, puedeEditar } from '../../../../domain/rol';
+import { useCallback, useEffect, useState } from 'react';
 import { enlaceNavegar, enlaceWhatsApp, mensajeDireccionNoEncontrada, mensajeLocalCerrado } from '../../../../domain/enlaces';
 import { minutosEnChile } from '../../../../domain/fechas';
 import { horaDelDia } from '../../../../domain/hora';
@@ -144,6 +146,8 @@ export const AtajoEntregado = ({ p, alCambiar, alFijarPin }: { readonly p: Parad
  * Tocarlo de nuevo cierra la lista sin anotar otro aviso.
  */
 export const AtajoCerrado = ({ p, alCambiar, alPosponer }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void }) => {
+  const usuario = useUsuario();
+  const simple = esDeCamion(usuario.rol) && !puedeEditar(usuario.rol, usuario.editor);
   const { ahora } = useCasos();
   const { aviso, setAviso, ocupado, avisar, esperar, volverMasTarde, noEntregado } = useEventosDeParada(p);
   const [abierto, setAbierto] = useState(false);
@@ -167,16 +171,17 @@ export const AtajoCerrado = ({ p, alCambiar, alPosponer }: { readonly p: ParadaD
       {abierto ? (
         <div className="tarjeta parada-panel" aria-label={`Opciones de local cerrado: ${p.cliente}`}>
           <strong>Local cerrado. ¿Qué hacemos?</strong>
-          <AvisoAlVendedor p={p} hora={() => horaDelDia(minutosEnChile(ahora()))} />
+          {simple ? <details className="opciones-simples"><summary>AVISAR AL VENDEDOR</summary><AvisoAlVendedor p={p} hora={() => horaDelDia(minutosEnChile(ahora()))} /></details> : <AvisoAlVendedor p={p} hora={() => horaDelDia(minutosEnChile(ahora()))} />}
           <div className="fila-botones">
-            <Boton variante="secundario" disabled={ocupado} onClick={() => void esperar(10)}>ESPERAR 10 MIN</Boton>
-            <Boton variante="secundario" disabled={ocupado} onClick={() => void volverMasTarde(alPosponer, () => { setAbierto(false); })}>VOLVER MÁS TARDE</Boton>
+            {!simple ? <Boton variante="secundario" disabled={ocupado} onClick={() => void esperar(10)}>ESPERAR 10 MIN</Boton> : null}
+            <Boton variante="secundario" disabled={ocupado} onClick={() => void volverMasTarde(alPosponer, () => { setAbierto(false); })}>{simple ? "SEGUIR Y VOLVER DESPUÉS" : "VOLVER MÁS TARDE"}</Boton>
+            {simple ? <Boton variante="secundario" disabled={ocupado} onClick={() => void noEntregado('cerrado', alCambiar)}>DEJAR PARA OTRO DÍA</Boton> : null}
           </div>
           <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES DE CERRADO ${p.cliente}`} onClick={() => { setMas(!mas); }}>MÁS OPCIONES</Boton>
           {mas ? (
             <div className="fila-botones">
-              {[15, 20].map((m) => <Boton key={m} variante="secundario" disabled={ocupado} onClick={() => void esperar(m)}>{`ESPERAR ${m} MIN`}</Boton>)}
-              <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('cerrado', alCambiar)}>DEJAR PARA OTRO DÍA</Boton>
+              {(simple ? [10, 15, 20] : [15, 20]).map((m) => <Boton key={m} variante="secundario" disabled={ocupado} onClick={() => void esperar(m)}>{`ESPERAR ${m} MIN`}</Boton>)}
+              {!simple ? <Boton variante="peligro" disabled={ocupado} onClick={() => void noEntregado('cerrado', alCambiar)}>DEJAR PARA OTRO DÍA</Boton> : null}
             </div>
           ) : null}
         </div>
@@ -187,9 +192,35 @@ export const AtajoCerrado = ({ p, alCambiar, alPosponer }: { readonly p: ParadaD
 };
 
 /** Atajo de la fila de la ruta: IR abre Google Maps con el destino (Waze sigue en el detalle de la parada). */
-export const AtajoIr = ({ p }: { readonly p: ParadaDeRuta }) => (
-  <a className="big-button big-button--primario atajo" href={enlaceNavegar({ direccion: p.direccion, comuna: p.comuna, lat: p.lat, lng: p.lng }, 'google')} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON GOOGLE MAPS`}>IR</a>
-);
+export const AtajoIr = ({ p }: { readonly p: ParadaDeRuta }) => {
+  const usuario = useUsuario();
+  const simple = esDeCamion(usuario.rol) && !puedeEditar(usuario.rol, usuario.editor);
+  const [preferida, setPreferida] = useState<'google' | 'waze' | undefined>(() => {
+    try { const v = localStorage.getItem('reparto:navegacion'); return v === 'google' || v === 'waze' ? v : undefined; } catch { return undefined; }
+  });
+  const [elegir, setElegir] = useState(false);
+  useEffect(() => {
+    const sincronizar = (): void => {
+      try {
+        const valor = localStorage.getItem('reparto:navegacion');
+        if (valor === 'google' || valor === 'waze') setPreferida(valor);
+      } catch { /* Sigue disponible la elección manual. */ }
+    };
+    window.addEventListener('reparto:navegacion-cambiada', sincronizar);
+    return () => { window.removeEventListener('reparto:navegacion-cambiada', sincronizar); };
+  }, []);
+  const recordar = (v: 'google' | 'waze'): void => {
+    try { localStorage.setItem('reparto:navegacion', v); } catch { /* Funciona sin almacenamiento. */ }
+    setPreferida(v); setElegir(false);
+    window.dispatchEvent(new Event('reparto:navegacion-cambiada'));
+  };
+  if (!simple) return <a className="big-button big-button--primario atajo" href={enlaceNavegar(p, 'google')} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON GOOGLE MAPS`}>IR</a>;
+  return <>
+    {preferida ? <a className="big-button big-button--primario atajo" href={enlaceNavegar(p, preferida)} target="_blank" rel="noreferrer" aria-label={`IR A ${p.cliente} CON ${preferida === 'waze' ? 'WAZE' : 'GOOGLE MAPS'}`}>IR</a> : <Boton className="atajo" onClick={() => { setElegir(true); }}>IR</Boton>}
+    {elegir ? <div className="tarjeta parada-panel"><strong>¿Con qué aplicación quieres ir?</strong>{(['waze', 'google'] as const).map((v) => <a key={v} className="big-button big-button--primario" href={enlaceNavegar(p, v)} target="_blank" rel="noreferrer" onClick={() => { recordar(v); }}>{v === 'waze' ? 'WAZE' : 'GOOGLE MAPS'}</a>)}<Boton variante="secundario" onClick={() => { setElegir(false); }}>CANCELAR</Boton></div> : null}
+    {preferida ? <details className="opciones-simples"><summary>CAMBIAR NAVEGADOR</summary><Boton variante="secundario" onClick={() => { setElegir(true); }}>ELEGIR WAZE O GOOGLE MAPS</Boton></details> : null}
+  </>;
+};
 
 export const AccionesParada = ({ p, alCambiar, alPosponer, alFijarPin }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void; readonly alPosponer: () => void; readonly alFijarPin?: () => void }) => {
   const { ahora } = useCasos();
@@ -265,4 +296,18 @@ export const AccionesParada = ({ p, alCambiar, alPosponer, alFijarPin }: { reado
       {aviso ? <Aviso tipo={aviso.tipo === 'info' ? 'info' : aviso.tipo}>{aviso.texto}</Aviso> : null}
     </div>
   );
+};
+
+/** La dirección puede fallar sin que el local esté cerrado. */
+export const NoEncuentroLocal = ({ p, alCambiar }: { readonly p: ParadaDeRuta; readonly alCambiar: () => void }) => {
+  const [abierto, setAbierto] = useState(false);
+  const { aviso, ocupado, noEntregado } = useEventosDeParada(p);
+  return <>
+    <Boton variante="secundario" aria-expanded={abierto} onClick={() => { setAbierto(!abierto); }}>NO ENCUENTRO EL LOCAL</Boton>
+    {abierto ? <div className="tarjeta">
+      <a className="big-button big-button--secundario" href={enlaceWhatsApp(mensajeDireccionNoEncontrada({ ...p, nombre: razonSocialCargada(p) }))} target="_blank" rel="noreferrer">PEDIR AYUDA AL VENDEDOR</a>
+      <Boton variante="secundario" disabled={ocupado} onClick={() => void noEntregado('direccion', alCambiar)}>DEJAR PENDIENTE POR DIRECCIÓN</Boton>
+    </div> : null}
+    {aviso ? <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso> : null}
+  </>;
 };

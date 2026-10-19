@@ -839,3 +839,10 @@ html[data-vista='normal'] .parada-num {
 .mapa-pin { border: 3px solid white; border-radius: 50%; width: 40px; height: 40px; color: white; font-weight: 800; font-size: 17px; box-shadow: 0 2px 8px #0006; cursor: pointer; }
 .mapa-pin:focus-visible { outline: 4px solid #facc15; }
 .maplibregl-popup-content { color: #111827; font-size: 15px; max-width: 260px; }
+
+/* Controles secundarios accesibles sin desplazar el trabajo principal. */
+.opciones-simples, .cuenta-simple { border: 1px solid currentColor; border-radius: 12px; padding: 8px 12px; }
+.opciones-simples > summary, .cuenta-simple > summary { cursor: pointer; min-height: 48px; display: list-item; align-content: center; font-size: 1rem; font-weight: 700; }
+.opciones-simples[open] > summary, .cuenta-simple[open] > summary { margin-bottom: 12px; }
+.opciones-simples :focus-visible, .cuenta-simple :focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.parada-atajos > .opciones-simples { flex-basis: 100%; }

@@ -80,7 +80,7 @@ const Condiciones = ({ f, alGuardar }: { readonly f: Factura; readonly alGuardar
       <label className="casilla"><input type="checkbox" checked={urgente} onChange={(e) => { setUrgente(e.target.checked); }} /> Urgente</label>
       <AreaTexto etiqueta={`Nota (${nombre})`} value={nota} onChange={(e) => { setNota(e.target.value); }} maxLength={300} />
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
-      <Boton type="submit" disabled={ocupado}>GUARDAR CONDICIONES</Boton>
+      <Boton type="submit" disabled={ocupado}>GUARDAR INDICACIÓN</Boton>
     </form>
   );
 };
@@ -105,7 +105,7 @@ const TarjetaEntrega = ({ f, alCambiar }: { readonly f: Factura; readonly alCamb
       </span>
       {f.nota ? <span>Nota: {f.nota}</span> : null}
       <div className="fila-botones">
-        <Boton variante="secundario" aria-expanded={abierta} aria-label={`CONDICIONES ${f.local.razonSocial}`} onClick={() => { setAbierta(!abierta); }}>CONDICIONES</Boton>
+        <Boton variante="secundario" aria-expanded={abierta} aria-label={`CONDICIONES ${f.local.razonSocial}`} onClick={() => { setAbierta(!abierta); }}>AGREGAR INDICACIÓN</Boton>
         <Boton variante="peligro" aria-label={`QUITAR ${f.local.razonSocial}`} onClick={() => void quitar()}>QUITAR</Boton>
       </div>
       {abierta ? <Condiciones f={f} alGuardar={() => { setAbierta(false); alCambiar(); }} /> : null}

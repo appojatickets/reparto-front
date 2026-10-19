@@ -6,7 +6,7 @@ import { Aviso, Boton, Campo } from './ui';
 
 const TEXTOS: Readonly<Record<TipoReporteLocal, { readonly boton: string; readonly pregunta: string; readonly gracias: string }>> = {
   nombre: { boton: 'REPORTAR EL NOMBRE', pregunta: 'Cómo debería llamarse (opcional)', gracias: 'Gracias. El administrador va a revisar el nombre.' },
-  ubicacion: { boton: 'REPORTAR LA UBICACIÓN', pregunta: 'Qué tiene mal el pin, o dónde queda en realidad (opcional)', gracias: 'Gracias. El administrador va a revisar la ubicación; el pin quedó «por verificar».' },
+  ubicacion: { boton: 'REPORTAR LA UBICACIÓN', pregunta: 'Qué está mal en la dirección o dónde queda el local (opcional)', gracias: 'Gracias. El administrador va a revisar la ubicación; el pin quedó «por verificar».' },
 };
 
 const Uno = ({ localId, cliente, tipo }: { readonly localId: string; readonly cliente: string; readonly tipo: TipoReporteLocal }) => {

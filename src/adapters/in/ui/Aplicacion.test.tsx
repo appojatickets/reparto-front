@@ -12,6 +12,7 @@ import { EVENTO_SERVIDOR_DESPERTANDO } from './despertando';
 import { ProveedorCasos, type Casos } from './contexto';
 
 const CHOFER: UsuarioSesion = { id: 'u1', username: 'jperez', nombre: 'Juan Pérez', rol: 'chofer', editor: false };
+const EDITOR: UsuarioSesion = { ...CHOFER, editor: true };
 const ADMIN: UsuarioSesion = { id: 'u2', username: 'admin', nombre: 'Matías Carrión', rol: 'admin', editor: false };
 const DESPACHADOR: UsuarioSesion = { id: 'u3', username: 'desp', nombre: 'Ana Soto', rol: 'despachador', editor: false };
 
@@ -19,7 +20,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
   window.history.pushState({}, '', opciones.ruta ?? '/');
   const estado: EstadoSesion = opciones.sesion ? { tipo: 'sesion', usuario: opciones.sesion } : { tipo: 'sin_sesion' };
   const casos: Casos = {
-    api: fakeApi(opciones.api),
+    api: fakeApi({ verRuta: () => Promise.resolve(http(503, { mensaje: "Resumen no disponible" })), ...opciones.api }),
     iniciarSesion: vi.fn(() => Promise.resolve(err('Usuario o clave incorrectos. Te quedan 4 intentos.'))),
     restaurarSesion: vi.fn(() => Promise.resolve(estado)),
     cerrarSesion: vi.fn(),
@@ -686,7 +687,7 @@ describe('reportar una foto desde la parada', () => {
   const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
   const parada = { facturaId: 'fA', localId: 'lA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', urgente: false, posicion: 0, llegada: 600, inicioServicio: 600, salida: 608, espera: 0, atraso: 0, motivos: ['MENOR_DESVIO' as const], fijada: false, tieneFoto: true };
   const vista = { camionId: 'c1', fecha: '2026-10-05', planificada: true, modo: 'sugerida' as const, version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, paradas: [parada], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] };
-  const abrirParada = (api: Partial<ApiClient>) => montar({ ruta: '/mi-ruta', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vista)), urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 300 })), ...api } });
+  const abrirParada = (api: Partial<ApiClient>) => montar({ ruta: '/mi-ruta', sesion: EDITOR, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vista)), urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 300 })), ...api } });
 
   it('el chofer reporta la foto con un motivo y una explicación; se confirma', async () => {
     const reportarFoto = vi.fn(() => Promise.resolve(ok(undefined)));
@@ -1687,12 +1688,13 @@ describe('rutas del día', () => {
     expect(within(screen.getByRole('listitem', { name: 'Parada 3' })).getByText(/Ubicación aproximada/)).toBeInTheDocument();
   });
 
-  it('el chofer común no ve el enlace a la ficha (no puede entrar): se le indica el botón UBICACIÓN DEL VENDEDOR', async () => {
+  it('el chofer común ve la advertencia breve sin herramientas de edición', async () => {
     const sinPin = { lat: undefined, lng: undefined, ubicacionAproximada: true, noEncontradaEnMapa: true };
     const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
     montar({ ruta: '/mi-ruta', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, sinPin)] }))) } });
     const a = await screen.findByRole('listitem', { name: 'Parada 1' });
-    expect(within(a).getByText(/botón UBICACIÓN DEL VENDEDOR/)).toBeInTheDocument();
+    expect(within(a).getByText("SIN UBICACIÓN PRECISA")).toBeInTheDocument();
+    expect(within(a).queryByText(/botón UBICACIÓN DEL VENDEDOR/)).toBeNull();
     expect(within(a).queryByRole('link', { name: 'Fijar el pin' })).toBeNull();
   });
 
@@ -1793,15 +1795,16 @@ describe('el chofer: camión del día y carga de entregas', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Camión 3 · AB·1234' }));
     expect(iniciarJornada).toHaveBeenCalledWith('c1');
     expect(await screen.findByText('Camión Camión 3 · AB·1234')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'CARGAR ENTREGAS' })).toHaveAttribute('href', '/cargar');
-    expect(screen.getByRole('link', { name: 'MI RUTA' })).toHaveAttribute('href', '/mi-ruta');
+    expect(screen.getByRole('link', { name: 'AGREGAR ENTREGAS' })).toHaveAttribute('href', '/cargar');
+    expect(screen.getByRole('link', { name: 'CONTINUAR REPARTO' })).toHaveAttribute('href', '/mi-ruta');
   });
 
   it('con jornada puede cambiar de camión o terminar su día', async () => {
     const terminarJornada = vi.fn(() => Promise.resolve(ok(undefined)));
     montar({ sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), terminarJornada, listarCamiones: () => Promise.resolve(ok([CAMION])) } });
-    await userEvent.click(await screen.findByRole('button', { name: 'TERMINAR MI DÍA' }));
-    expect(terminarJornada).toHaveBeenCalledTimes(1);
+    await userEvent.click(await screen.findByText('CAMBIAR CAMIÓN O TERMINAR EL DÍA'));
+    expect(screen.getByRole('link', { name: 'TERMINAR MI DÍA' })).toHaveAttribute('href', '/mi-ruta');
+    expect(terminarJornada).not.toHaveBeenCalled();
   });
 
   it('cambiar de camión vuelve a la elección', async () => {
@@ -2037,7 +2040,7 @@ describe('el chofer: camión del día y carga de entregas', () => {
     await userEvent.type(screen.getByLabelText('Entregar antes de (Minimarket Rabet)'), '13:00');
     await userEvent.click(screen.getByLabelText('Urgente'));
     await userEvent.type(screen.getByLabelText('Nota (Minimarket Rabet)'), 'portón verde');
-    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR CONDICIONES' }));
+    await userEvent.click(screen.getByRole('button', { name: 'GUARDAR INDICACIÓN' }));
     expect(actualizarFactura).toHaveBeenCalledWith('f1', { antesDeMin: 780, urgente: true, nota: 'portón verde' });
     await userEvent.click(screen.getByRole('button', { name: 'QUITAR Minimarket Rabet' }));
     expect(actualizarFactura).toHaveBeenLastCalledWith('f1', { estado: 'anulada' });
@@ -2084,13 +2087,68 @@ describe('el chofer: camión del día y carga de entregas', () => {
   });
 });
 
-describe('acciones en la parada (chofer)', () => {
+describe('acciones completas en la parada (chofer editor)', () => {
   const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
   const paradaDe = (n: string, pos: number, extra: object = {}) => ({ facturaId: `f${n}`, localId: `l${n}`, cliente: `Local ${n}`, direccion: `Calle ${n} 100`, comuna: 'San Bernardo', lat: -33.59, lng: -70.7, urgente: false, posicion: pos, llegada: 600 + pos * 20, inicioServicio: 600 + pos * 20, salida: 608 + pos * 20, espera: 0, atraso: 0, motivos: ['MENOR_DESVIO' as const], fijada: false, ...extra });
   const vistaBase = (extra: object = {}) => ({ camionId: 'c1', fecha: '2026-10-05', planificada: true, modo: 'sugerida' as const, version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, regreso: 800, regresoTardio: false, paradas: [paradaDe('A', 0), paradaDe('B', 1)], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [], ...extra });
-  const abrir = (api: Partial<ApiClient> = {}, casos: Partial<Casos> = {}, sesion = CHOFER) =>
+  const abrir = (api: Partial<ApiClient> = {}, casos: Partial<Casos> = {}, sesion = EDITOR) =>
     montar({ ruta: '/mi-ruta', sesion, casos, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vistaBase())), ...api } });
   const gps = (precisionM = 10) => ({ disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.5901, lng: -70.7002, precisionM }))) });
+
+  describe('vista simple sin permiso de editor', () => {
+    it('deja una sola entrega y cerrado por parada, oculta herramientas y abre la foto al tocar el nombre', async () => {
+      abrir({}, {}, CHOFER);
+      const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
+      expect(within(fila).queryByRole('button', { name: /MOVER/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'AUTOMÁTICO' })).toBeNull();
+      await userEvent.click(within(fila).getByRole('button', { name: /^Local A/ }));
+      expect(within(fila).getAllByRole('button', { name: /ENTREGADA|ENTREGADO/ })).toHaveLength(1);
+      expect(within(fila).getAllByRole('button', { name: /CERRADO/ })).toHaveLength(1);
+      expect(within(fila).queryByRole('button', { name: /UBICACIÓN DEL VENDEDOR/ })).toBeNull();
+      await userEvent.click(within(fila).getByText('REPORTAR UN PROBLEMA'));
+      expect(within(fila).getByRole('button', { name: /REPORTAR EL NOMBRE/ })).toBeInTheDocument();
+    });
+    it('manual permite subir sin arrastrar y guarda la posición con la versión vigente', async () => {
+      const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga', version: 2 }))));
+      abrir({ operarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'carga' }))) }, {}, CHOFER);
+      await userEvent.click(await screen.findByRole('button', { name: 'ORDENAR RUTA' }));
+      expect(screen.getByRole('button', { name: 'MANUAL' })).toHaveAttribute('aria-pressed', 'true');
+      await userEvent.click(screen.getByRole('button', { name: 'SUBIR Local B' }));
+      expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'mover', facturaId: 'fB', posicion: 0 });
+    });
+    it('comenzar por una parada conserva la operación de ordenar las restantes', async () => {
+      const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ version: 2 }))));
+      abrir({ operarRuta }, {}, CHOFER);
+      await userEvent.click(await screen.findByRole('button', { name: 'ORDENAR RUTA' }));
+      await userEvent.selectOptions(screen.getByLabelText(/Comenzar por/), 'fB');
+      expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'primero', facturaId: 'fB' });
+    });
+    it('cerrado ofrece volver o dejar pendiente sin registrarlo como entregado', async () => {
+      const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'pendiente' as const, pinFijado: false })));
+      abrir({ registrarEvento }, {}, CHOFER);
+      await userEvent.click(await screen.findByRole('button', { name: 'CERRADO Local A' }));
+      expect(screen.getByRole('button', { name: 'SEGUIR Y VOLVER DESPUÉS' })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'DEJAR PARA OTRO DÍA' }));
+      expect(registrarEvento).toHaveBeenLastCalledWith('fA', { tipo: 'no_entregado', motivo: 'cerrado' });
+    });
+    it('entrega sin GPS y conserva deshacer en Hechas hoy', async () => {
+      const registrarEvento = vi.fn(() => Promise.resolve(ok({ estado: 'entregada' as const, pinFijado: false })));
+      const verRuta = vi.fn().mockResolvedValueOnce(ok(vistaBase())).mockResolvedValue(ok(vistaBase({ paradas: [], hechas: [{ facturaId: 'fA', cliente: 'Local A', direccion: 'Calle A 100', comuna: 'San Bernardo', estado: 'entregada' }] })));
+      abrir({ registrarEvento, verRuta }, {}, CHOFER);
+      await userEvent.click(await screen.findByRole('button', { name: 'MARCAR ENTREGADA Local A' }));
+      expect(registrarEvento).toHaveBeenCalledWith('fA', { tipo: 'entregado' });
+      const hechas = await screen.findByRole('region', { name: 'Hechas hoy' });
+      await userEvent.click(within(hechas).getByRole('button', { name: /Local A/ }));
+      expect(within(hechas).getByRole('button', { name: 'DESHACER Local A' })).toBeInTheDocument();
+    });
+    it('terminar el día pide confirmar incluso sin pendientes', async () => {
+      const terminarRuta = vi.fn(() => Promise.resolve(ok(null)));
+      abrir({ terminarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [] }))) }, {}, CHOFER);
+      await userEvent.click(await screen.findByRole('button', { name: 'TERMINAR MI DÍA' }));
+      expect(terminarRuta).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'SÍ, TERMINAR' })).toBeInTheDocument();
+    });
+  });
 
   it('la tarjeta de la parada muestra la foto de la fachada si el local la tiene', async () => {
     const urlFoto = vi.fn(() => Promise.resolve(ok({ url: 'https://alm.test/fachada.webp', expiraEnSegundos: 600 })));
@@ -2561,8 +2619,8 @@ describe('acciones en la parada (chofer)', () => {
   });
 
   it('el chofer sin permiso de editor no ve CORREGIR ESTA DIRECCIÓN', async () => {
-    abrir();
-    await screen.findByRole('button', { name: 'ESTÁ CERRADO Local A' });
+    abrir({}, {}, CHOFER);
+    await screen.findByRole('button', { name: 'CERRADO Local A' });
     expect(screen.queryByRole('link', { name: /CORREGIR ESTA DIRECCIÓN/ })).toBeNull();
   });
 
@@ -2682,7 +2740,7 @@ describe('acciones en la parada (chofer)', () => {
 
   it('el ayudante también ve las acciones; el despachador no (solo mira y acomoda)', async () => {
     abrir({}, {}, { id: 'u9', username: 'ayud', nombre: 'Max García', rol: 'ayudante', editor: false });
-    expect(await screen.findByRole('button', { name: 'ENTREGADO Local A' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'MARCAR ENTREGADA Local A' })).toBeInTheDocument();
   });
 
   it('las entregas nuevas del chofer se ordenan solas: la ruta sugerida se reordena entera', async () => {

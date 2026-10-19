@@ -15,7 +15,7 @@ import type { ItemRuta, OperacionRuta, ParadaDeRuta, ResumenJornada, VistaRuta }
 import { useArrastre } from '../arrastre';
 import { useCasos } from '../contexto';
 import { useCarga } from '../hooks';
-import { AccionesParada, AtajoCerrado, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
+import { AccionesParada, NoEncuentroLocal, AtajoCerrado, AtajoEntregado, AtajoIr } from '../componentes/AccionesParada';
 import { Contribuyentes } from '../componentes/Contribuyentes';
 import { EmergenciasDelDia } from '../componentes/EmergenciasDelDia';
 import { FotoFachada } from '../componentes/FotoFachada';
@@ -72,7 +72,9 @@ const AvisoAproximadas = ({ paradas }: { readonly paradas: readonly ParadaDeRuta
  * Una fila de la lista de paradas: número, nombre y comuna (y a qué hora llega). Al tocarla se despliega con el resto de los datos y las
  * acciones; así el chofer ve toda su ruta de un vistazo y solo abre la parada que le toca.
  */
-const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, alFijarPin, abierta, alAbrir, esSiguiente, horario, hora }: {
+const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, alFijarPin, abierta, alAbrir, esSiguiente, horario, hora, ordenando = false, alEntregar }: {
+  readonly ordenando?: boolean;
+  readonly alEntregar: () => void;
   /** Hora aproximada de llegada («10:10»); solo si se pidió verla. */
   readonly hora?: string | undefined;
   /** Si según su horario ya cerró (o no atiende hoy), lo que dice el sistema; la parada sigue en la ruta, al final. */
@@ -86,6 +88,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
 }) => {
   const [mas, setMas] = useState(false);
   const usuario = useUsuario();
+  const simple = esDeCamion(usuario.rol) && !puedeEditar(usuario.rol, usuario.editor);
   const motivos = textoMotivos(p.motivos);
   const n = p.posicion + 1;
   const idDetalle = `parada-${p.facturaId}`;
@@ -95,17 +98,18 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
         <span className="parada-num" aria-hidden="true">{n}</span>
         <span className="parada-nombre">
           <strong>{p.cliente}</strong>
-          <span className="comuna">{p.comuna}</span>
+          <span className="comuna">{simple ? `${p.direccion}, ${p.comuna}` : p.comuna}</span>
+          {simple ? <span className="parada-marca">PENDIENTE · TOCA PARA VER FOTO</span> : null}
           {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
           {p.ubicacionAproximada ? <span className="parada-marca parada-marca--aproximada">SIN UBICACIÓN PRECISA</span> : null}
           {horario !== undefined ? <span className="parada-marca">POSIBLEMENTE CERRADO</span> : null}
-          <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} />
+          {!simple ? <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} /> : null}
         </span>
         {hora !== undefined ? <span className="parada-hora" aria-label={`Llegada aproximada ${hora}`}>~{hora}</span> : null}
       </button>
       <div className="parada-atajos">
-        <Boton
+        {!simple ? <Boton
           variante="secundario"
           className="atajo asa"
           disabled={ocupado || total < 2}
@@ -120,28 +124,33 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           }}
         >
           <span aria-hidden="true">↕</span> MOVER
-        </Boton>
-        {enCamion ? <AtajoEntregado p={p} alCambiar={alCambiar} alFijarPin={() => { alFijarPin(p.cliente); }} /> : null}
+        </Boton> : null}
+        {simple && ordenando ? <div className="fila-botones">
+          <Boton variante="secundario" disabled={ocupado || p.posicion === 0} aria-label={`SUBIR ${p.cliente}`} onClick={() => { mover(p.posicion - 1); }}>↑ SUBIR</Boton>
+          <Boton variante="secundario" disabled={ocupado || p.posicion === total - 1} aria-label={`BAJAR ${p.cliente}`} onClick={() => { mover(p.posicion + 1); }}>↓ BAJAR</Boton>
+          <Boton variante="secundario" disabled={ocupado || p.posicion === 0} onClick={() => { mover(0); }}>PONER PRIMERO</Boton>
+        </div> : null}
+        {enCamion ? <AtajoEntregado p={p} alCambiar={alEntregar} alFijarPin={() => { alFijarPin(p.cliente); }} /> : null}
         {enCamion ? <AtajoCerrado p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
         {enCamion ? <AtajoIr p={p} /> : null}
       </div>
       {abierta ? (
         <div className="parada-detalle" id={idDetalle}>
           {!mismoTexto(p.cliente, p.direccion) ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
-          <FotoFachada localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} conPin={p.lat !== undefined && p.lng !== undefined} />
-          {p.tieneFoto === true && p.lat !== undefined ? <Contribuyentes localId={p.localId} /> : null}
+          <FotoFachada simple={simple} localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} conPin={p.lat !== undefined && p.lng !== undefined}>{simple ? <NoEncuentroLocal p={p} alCambiar={alCambiar} /> : null}</FotoFachada>
+          {!simple && p.tieneFoto === true && p.lat !== undefined ? <Contribuyentes localId={p.localId} /> : null}
           {p.folio ? <span>Factura {p.folio}</span> : null}
           <Etiquetas i={p} />
           {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
           {horario !== undefined ? <span className="ayuda">{horario} Sigue en tu ruta, al final: si está abierto, entrégalo igual.</span> : null}
-          {p.ubicacionAproximada ? <AvisoUbicacion p={p} puedeAbrirFicha={puedeHacer(usuario.rol, 'buscar-clientes', usuario.editor)} /> : null}
+          {p.ubicacionAproximada && !simple ? <AvisoUbicacion p={p} puedeAbrirFicha={puedeHacer(usuario.rol, 'buscar-clientes', usuario.editor)} /> : null}
           {p.nota ? <span>Nota: {p.nota}</span> : null}
-          {motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
+          {!simple && motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
           {puedeEditar(usuario.rol, usuario.editor) ? <Link className="big-button big-button--secundario" to={`/clientes/${p.localId}`} aria-label={`CORREGIR ESTA DIRECCIÓN ${p.cliente}`}>CORREGIR ESTA DIRECCIÓN</Link> : null}
-          {enCamion ? <AccionesParada p={p} alCambiar={alCambiar} alFijarPin={() => { alFijarPin(p.cliente); }} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
-          <div className="fila-botones">
+          {enCamion && !simple ? <AccionesParada p={p} alCambiar={alCambiar} alFijarPin={() => { alFijarPin(p.cliente); }} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
+          {!simple ? <div className="fila-botones">
             <Boton variante="secundario" aria-expanded={mas} aria-label={`MÁS OPCIONES ${p.cliente}`} onClick={() => { setMas(!mas); }}>MÁS</Boton>
-          </div>
+          </div> : null}
           {mas ? (
             <div className="fila-botones">
               <Boton disabled={ocupado} aria-label={`IR PRIMERO ${p.cliente}`} onClick={() => { operar({ tipo: 'primero', facturaId: p.facturaId }); }}>IR PRIMERO</Boton>
@@ -199,10 +208,10 @@ const DeshacerHecha = ({ h, alCambiar }: { readonly h: { readonly facturaId: str
   );
 };
 
-const Resumen = ({ v }: { readonly v: VistaRuta }) => (
+const Resumen = ({ v, simple = false }: { readonly v: VistaRuta; readonly simple?: boolean }) => (
   <div className="tarjeta" aria-label="Resumen de la ruta">
     <span>Paradas: <strong>{v.paradas.length}</strong></span>
-    <Insignia>{v.modo === 'manual' ? 'AUTOMÁTICO · ACOMODADA A MANO' : v.modo === 'carga' ? 'ORDEN MANUAL' : 'ORDEN AUTOMÁTICO'}</Insignia>
+    <Insignia>{simple && (v.modo === 'manual' || v.modo === 'carga') ? 'ORDEN ELEGIDO POR TI' : v.modo === 'manual' ? 'AUTOMÁTICO · ACOMODADA A MANO' : v.modo === 'carga' ? 'ORDEN MANUAL' : 'ORDEN AUTOMÁTICO'}</Insignia>
   </div>
 );
 
@@ -282,7 +291,10 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   const [confirmarCarga, setConfirmarCarga] = useState(false);
   /** Parada desplegada: sin elegir, la siguiente; `null` = todas cerradas. */
   const [abierta, setAbierta] = useState<string | null | undefined>(undefined);
-  const { rol } = useUsuario();
+  const { rol, editor } = useUsuario();
+  const simple = esDeCamion(rol) && !puedeEditar(rol, editor);
+  const [ordenando, setOrdenando] = useState(false);
+  const [ultimaEntrega, setUltimaEntrega] = useState<{ facturaId: string; cliente: string } | undefined>();
   const enCamion = esDeCamion(rol);
   /** Cómo prefiere armar su ruta el chofer (se recuerda en el teléfono); sin elegir, la primera vez se le pregunta. */
   const [preferencia, setPreferencia] = useState<Armado | undefined>(() => armadoStore.cargar());
@@ -524,6 +536,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
         </div>
       ) : null}
       {aviso ? <Aviso tipo="error">{aviso}</Aviso> : null}
+      {simple && ultimaEntrega ? <div className="tarjeta"><p role="status">Entrega guardada: {ultimaEntrega.cliente}</p><DeshacerHecha h={ultimaEntrega} alCambiar={() => { setUltimaEntrega(undefined); recargarVista(); }} /></div> : null}
       {!vista.planificada ? (
         <>
           <Aviso>
@@ -560,13 +573,15 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       ) : (
         <>
           <MapaRuta vista={vista} />
-          <Resumen v={vista} />
+          <Resumen v={vista} simple={simple} />
+          {simple ? <Boton variante="secundario" aria-expanded={ordenando} onClick={() => { setOrdenando(!ordenando); }}>{ordenando ? "LISTO, VOLVER AL REPARTO" : "ORDENAR RUTA"}</Boton> : null}
+          {!simple || ordenando ? <>
           {vista.paradas.length > 0 ? (
             <Boton variante="secundario" aria-pressed={verHoras} onClick={cambiarHoras}>{verHoras ? 'OCULTAR HORAS ESTIMADAS' : 'VER HORAS ESTIMADAS'}</Boton>
           ) : null}
-          {enCamion && vista.paradas.length > 0 ? <a className="big-button big-button--secundario" href={enlaceRutaGoogleMaps(vista.paradas.map((x) => ({ direccion: x.direccion, comuna: x.comuna, lat: x.lat, lng: x.lng })), 8) ?? '#'} target="_blank" rel="noreferrer">LAS PRÓXIMAS {Math.min(vista.paradas.length, 8)} EN GOOGLE MAPS</a> : null}
-          {vista.paradas.length >= 2 && vista.modo !== 'carga' ? (
-            <Selector etiqueta="Primera entrega (el resto se ordena desde ahí)" value="" disabled={ocupado} onChange={(e) => { elegirPrimera(e.target.value); }}>
+          {enCamion && !simple && vista.paradas.length > 0 ? <a className="big-button big-button--secundario" href={enlaceRutaGoogleMaps(vista.paradas.map((x) => ({ direccion: x.direccion, comuna: x.comuna, lat: x.lat, lng: x.lng })), 8) ?? '#'} target="_blank" rel="noreferrer">LAS PRÓXIMAS {Math.min(vista.paradas.length, 8)} EN GOOGLE MAPS</a> : null}
+          {vista.paradas.length >= 2 && (simple || vista.modo !== 'carga') ? (
+            <Selector etiqueta={simple ? (vista.modo === 'carga' ? "Comenzar por… (mantiene el resto de tu orden)" : "Comenzar por… (ordena las demás automáticamente)") : "Primera entrega (el resto se ordena desde ahí)"} value="" disabled={ocupado} onChange={(e) => { elegirPrimera(e.target.value); }}>
               <option value="">Elige por cuál empiezas…</option>
               {vista.paradas.map((p) => <option key={p.facturaId} value={p.facturaId}>{`${p.posicion + 1}. ${p.cliente} · ${p.comuna}`}</option>)}
             </Selector>
@@ -574,7 +589,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           <div className="tarjeta" role="group" aria-label="Orden de la ruta">
             <strong>Orden de la ruta</strong>
             <div className="fila-botones">
-              <Boton variante={vista.modo === 'carga' ? 'secundario' : 'primario'} aria-pressed={vista.modo !== 'carga'} disabled={ocupado} onClick={() => { if (vista.modo === 'carga') setConfirmarAutomatico(true); }}>AUTOMÁTICO</Boton>
+              <Boton variante={vista.modo === 'carga' ? 'secundario' : 'primario'} aria-pressed={vista.modo !== 'carga'} disabled={ocupado} onClick={() => { if (simple || vista.modo === 'carga') setConfirmarAutomatico(true); }}>AUTOMÁTICO</Boton>
               <Boton variante={vista.modo === 'carga' ? 'primario' : 'secundario'} aria-pressed={vista.modo === 'carga'} disabled={ocupado} onClick={() => { if (vista.modo !== 'carga') pasarAManual(); }}>MANUAL</Boton>
             </div>
             <span className="ayuda">
@@ -602,8 +617,8 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               </>
             ) : null}
           </div>
-          {vista.modo !== 'carga' ? <Boton variante="secundario" disabled={ocupado || vista.paradas.length < 2} onClick={() => { elegirPreferencia('calcular'); operar({ tipo: 'ordenar' }); }}>ORDENAR LO QUE QUEDA</Boton> : null}
-          {vista.modo === 'carga' ? null : !confirmar ? (
+          {!simple && vista.modo !== 'carga' ? <Boton variante="secundario" disabled={ocupado || vista.paradas.length < 2} onClick={() => { elegirPreferencia('calcular'); operar({ tipo: 'ordenar' }); }}>ORDENAR LO QUE QUEDA</Boton> : null}
+          {simple || vista.modo === 'carga' ? null : !confirmar ? (
             <Boton variante="secundario" disabled={ocupado} onClick={() => { setConfirmar(true); }}>VOLVER A CALCULAR DESDE CERO</Boton>
           ) : (
             <div className="tarjeta">
@@ -615,9 +630,10 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
             </div>
           )}
 
+          </> : null}
           {vista.paradas.length === 0 ? <Aviso>Ninguna parada se pudo ubicar en la ruta.</Aviso> : null}
-          <AvisoAproximadas paradas={vista.paradas} />
-          <p role="status" className="ayuda">Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar.</p>
+          {!simple ? <AvisoAproximadas paradas={vista.paradas} /> : null}
+          <p role="status" className="ayuda">{simple ? "Toca el nombre para ver la foto y reportar un problema." : "Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar."}</p>
           {anuncio ? <p role="status" className="ayuda">{anuncio}</p> : null}
           {/* El horario es una estimación: lo que según él ya cerró no sale de la ruta, queda al final y se avisa. */}
           <ol ref={lista} className={`paradas${arrastre.arrastrando ? ' paradas--arrastrando' : ''}`} aria-label="Paradas en orden">
@@ -625,6 +641,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               <FilaParada
                 key={p.facturaId}
                 p={p}
+                ordenando={ordenando && vista.modo === 'carga'}
                 total={vista.paradas.length}
                 ocupado={ocupado}
                 operar={operar}
@@ -633,12 +650,13 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
                 fila={arrastre.fila(i)}
                 enCamion={enCamion}
                 alCambiar={recargarVista}
+                alEntregar={() => { setUltimaEntrega({ facturaId: p.facturaId, cliente: p.cliente }); recargarVista(); }}
                 alFijarPin={(cliente) => { setAnuncio(`La ubicación de ${cliente} quedó guardada con tu GPS.`); }}
                 esSiguiente={i === 0}
                 horario={cierranPorHorario.get(p.facturaId)}
                 hora={verHoras ? horaAproximada(p.llegada) : undefined}
-                abierta={(abierta ?? vista.paradas[0]?.facturaId) === p.facturaId}
-                alAbrir={() => { setAbierta((actual) => ((actual ?? vista.paradas[0]?.facturaId) === p.facturaId ? null : p.facturaId)); }}
+                abierta={(abierta ?? (simple ? null : vista.paradas[0]?.facturaId)) === p.facturaId}
+                alAbrir={() => { setAbierta((actual) => ((actual ?? (simple ? null : vista.paradas[0]?.facturaId)) === p.facturaId ? null : p.facturaId)); }}
               />
             ))}
           </ol>
@@ -667,16 +685,17 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
       <ListaItems titulo="No se pueden atender" items={vista.noAtendidas}>
         {(i) => vista.noAtendidas.find((n) => n.facturaId === i.facturaId)?.conflictos.map((c) => <span key={c}>{c}</span>)}
       </ListaItems>
-      <ListaItems titulo="Sin ubicación (falta el pin del local)" items={vista.sinPin}>
-        {(i) => <Link className="tarjeta-enlace" to={`/clientes/${i.localId}`}>FIJAR EL PIN DE {i.cliente}</Link>}
+      <ListaItems titulo={simple ? "Direcciones por revisar" : "Sin ubicación (falta el pin del local)"} items={vista.sinPin}>
+        {(i) => simple ? <span>Avisa a la oficina para revisar esta dirección.</span> : <Link className="tarjeta-enlace" to={`/clientes/${i.localId}`}>FIJAR EL PIN DE {i.cliente}</Link>}
       </ListaItems>
 
-      {enCamion && (vista.hechas.length > 0 || pendientes > 0) ? (
+      {enCamion && (simple || vista.hechas.length > 0 || pendientes > 0) ? (
         <section className="pagina" aria-label="Terminar la ruta">
           {!confirmandoFin ? (
-            <Boton variante="secundario" disabled={terminando} onClick={() => { if (pendientes > 0) setConfirmandoFin(true); else void terminarRuta(); }}>{terminando ? 'TERMINANDO…' : 'TERMINAR RUTA'}</Boton>
+            <Boton variante="secundario" disabled={terminando} onClick={() => { if (simple || pendientes > 0) setConfirmandoFin(true); else void terminarRuta(); }}>{terminando ? 'TERMINANDO…' : (simple ? 'TERMINAR MI DÍA' : 'TERMINAR RUTA')}</Boton>
           ) : (
             <div className="tarjeta">
+              <p>Entregadas: {vista.hechas.filter((h) => h.estado === 'entregada').length} · No entregadas: {vista.hechas.filter((h) => h.estado === 'no_entregada').length}</p>
               <Aviso tipo="error">Quedan {pendientes} entregas sin hacer. Si terminas, la lista se limpia y esas entregas vuelven a «Facturas del día» sin camión.</Aviso>
               <div className="fila-botones">
                 <Boton variante="peligro" disabled={terminando} onClick={() => void terminarRuta()}>SÍ, TERMINAR</Boton>
