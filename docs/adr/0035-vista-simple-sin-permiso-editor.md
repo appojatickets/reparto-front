@@ -20,3 +20,8 @@ Mantener Subir/Bajar previsualiza posiciones cada vez más rápido, desplaza la 
 Se solicitan ubicación y micrófono al abrir por primera vez. Se recuerda haber preguntado por usuario, y se vuelve a consultar el permiso real al regresar a la app y cada 15 segundos. Android consulta sus permisos nativos para ubicación. La comprobación de estado del servicio distingue permiso y ubicación del teléfono encendida; se avisa si se apaga o se revoca. El GPS continuo se activa explícitamente y el teléfono conserva los permisos.
 
 El último camión se recuerda por usuario en el dispositivo. Cada jornada nueva exige confirmar el camión propuesto; una jornada ya abierta en el servidor prevalece y actualiza ese recuerdo.
+
+
+## Restauración del botón Mover en todas las vistas
+
+El dueño prefiere el arrastre original: se retiran Subir/Bajar y su pulsación repetida. Mover queda siempre visible para usuarios comunes, ayudantes, editores y administración, incluso con Ordenar ruta cerrado. Mantener y arrastrar cerca del borde conserva el desplazamiento automático original. Al soltar se guarda una sola operación; Escape o cancelar restaura la posición.

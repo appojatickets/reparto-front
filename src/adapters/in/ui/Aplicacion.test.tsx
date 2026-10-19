@@ -2122,6 +2122,13 @@ describe('acciones completas en la parada (chofer editor)', () => {
   };
   const gps = (precisionM = 10) => ({ disponible: true, actual: vi.fn(() => Promise.resolve(ok({ lat: -33.5901, lng: -70.7002, precisionM }))) });
 
+  it.each([CHOFER, EDITOR, { ...CHOFER, rol: 'ayudante' as const }])('MOVER está siempre disponible para $rol editor=$editor, sin botones Subir/Bajar', async (sesion) => {
+    await abrir({}, {}, sesion);
+    for (const cliente of ['Local A', 'Local B']) expect(screen.getByRole('button', { name: `MOVER ${cliente}` })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^SUBIR Local/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^BAJAR Local/ })).toBeNull();
+  });
+
   it('el editor inicia compacto y conserva foto, correcciones y todas las acciones al desplegar', async () => {
     await act(() => { montar({ ruta: '/mi-ruta', sesion: EDITOR, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vistaBase({ paradas: [paradaDe('A', 0, { tieneFoto: true })] }))), urlFoto: () => Promise.resolve(ok({ url: 'https://alm.test/f.webp', expiraEnSegundos: 300 })) } }); return Promise.resolve(); });
     const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
@@ -2141,7 +2148,7 @@ describe('acciones completas en la parada (chofer editor)', () => {
     it('deja una sola entrega y cerrado por parada, oculta herramientas y abre la foto al tocar el nombre', async () => {
       await abrir({}, {}, CHOFER);
       const fila = await screen.findByRole('listitem', { name: 'Parada 1' });
-      expect(within(fila).queryByRole('button', { name: /MOVER/ })).toBeNull();
+      expect(within(fila).getByRole('button', { name: 'MOVER Local A' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'AUTOMÁTICO' })).toBeNull();
       await userEvent.click(within(fila).getByRole('button', { name: /^Local A/ }));
       expect(within(fila).getAllByRole('button', { name: /ENTREGADA|ENTREGADO/ })).toHaveLength(1);
@@ -2150,12 +2157,13 @@ describe('acciones completas en la parada (chofer editor)', () => {
       await userEvent.click(within(fila).getByText('REPORTAR UN PROBLEMA'));
       expect(within(fila).getByRole('button', { name: /REPORTAR EL NOMBRE/ })).toBeInTheDocument();
     });
-    it('manual permite subir sin arrastrar y guarda la posición con la versión vigente', async () => {
+    it('manual permite mover con el mismo botón y guarda la posición con la versión vigente', async () => {
       const operarRuta = vi.fn(() => Promise.resolve(ok(vistaBase({ modo: 'carga', version: 2 }))));
       await abrir({ operarRuta, verRuta: () => Promise.resolve(ok(vistaBase({ modo: 'carga' }))) }, {}, CHOFER);
       await userEvent.click(await screen.findByRole('button', { name: 'ORDENAR RUTA' }));
       expect(screen.getByRole('button', { name: 'MANUAL' })).toHaveAttribute('aria-pressed', 'true');
-      await userEvent.click(screen.getByRole('button', { name: 'SUBIR Local B' }));
+      screen.getByRole('button', { name: 'MOVER Local B' }).focus();
+      await userEvent.keyboard('{ArrowUp}');
       expect(operarRuta).toHaveBeenCalledWith('c1', '2026-10-05', 1, { tipo: 'mover', facturaId: 'fB', posicion: 0 });
     });
     it('comenzar por una parada conserva la operación de ordenar las restantes', async () => {

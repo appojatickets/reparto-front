@@ -846,5 +846,3 @@ html[data-vista='normal'] .parada-num {
 .opciones-simples[open] > summary, .cuenta-simple[open] > summary { margin-bottom: 12px; }
 .opciones-simples :focus-visible, .cuenta-simple :focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
 .parada-atajos > .opciones-simples { flex-basis: 100%; }
-
-.boton-desplazar { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }

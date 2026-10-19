@@ -1,4 +1,3 @@
-import { BotonDesplazar } from '../componentes/BotonDesplazar';
 import { MapaRuta } from '../componentes/MapaRuta';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
@@ -73,8 +72,7 @@ const AvisoAproximadas = ({ paradas }: { readonly paradas: readonly ParadaDeRuta
  * Una fila de la lista de paradas: número, nombre y comuna (y a qué hora llega). Al tocarla se despliega con el resto de los datos y las
  * acciones; así el chofer ve toda su ruta de un vistazo y solo abre la parada que le toca.
  */
-const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, alFijarPin, abierta, alAbrir, esSiguiente, horario, hora, ordenando = false, alEntregar }: {
-  readonly ordenando?: boolean;
+const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alCambiar, alFijarPin, abierta, alAbrir, esSiguiente, horario, hora, alEntregar }: {
   readonly alEntregar: () => void;
   /** Hora aproximada de llegada («10:10»); solo si se pidió verla. */
   readonly hora?: string | undefined;
@@ -82,7 +80,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
   readonly horario?: string | undefined;
   readonly p: ParadaDeRuta; readonly total: number; readonly ocupado: boolean; readonly operar: (o: OperacionRuta) => void; readonly enCamion: boolean;
   /** Deja esta parada en la posición indicada (lo mismo que arrastrarla). */
-  readonly mover: (posicion: number, provisional?: boolean, cancelar?: boolean) => void;
+  readonly mover: (posicion: number) => void;
   /** Eventos del asa para arrastrar y cómo se dibuja la fila mientras alguna se arrastra. */
   readonly asa: ReturnType<ReturnType<typeof useArrastre>['asa']>; readonly fila: { readonly clase: string; readonly estilo?: CSSProperties };
   readonly alCambiar: () => void; readonly alFijarPin: (cliente: string) => void; readonly abierta: boolean; readonly alAbrir: () => void; readonly esSiguiente: boolean;
@@ -111,7 +109,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
         {hora !== undefined ? <span className="parada-hora" aria-label={`Llegada aproximada ${hora}`}>~{hora}</span> : null}
       </button>
       <div className="parada-atajos">
-        {!compacta || (!simple && ordenando) ? <Boton
+        <Boton
           variante="secundario"
           className="atajo asa"
           disabled={ocupado || total < 2}
@@ -126,12 +124,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           }}
         >
           <span aria-hidden="true">↕</span> MOVER
-        </Boton> : null}
-        {compacta && ordenando ? <div className="fila-botones">
-          <BotonDesplazar cliente={p.cliente} posicion={p.posicion} total={total} sentido={-1} ocupado={ocupado} mover={mover} />
-          <BotonDesplazar cliente={p.cliente} posicion={p.posicion} total={total} sentido={1} ocupado={ocupado} mover={mover} />
-          <Boton variante="secundario" disabled={ocupado || p.posicion === 0} onClick={() => { mover(0); }}>PONER PRIMERO</Boton>
-        </div> : null}
+        </Boton>
         {enCamion ? <AtajoEntregado p={p} alCambiar={alEntregar} alFijarPin={() => { alFijarPin(p.cliente); }} /> : null}
         {enCamion ? <AtajoCerrado p={p} alCambiar={alCambiar} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
         {enCamion ? <AtajoIr p={p} /> : null}
@@ -299,7 +292,6 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   const { rol, editor } = useUsuario();
   const simple = esDeCamion(rol) && !puedeEditar(rol, editor);
   const compacta = esDeCamion(rol);
-  const movimiento = useRef<VistaRuta | undefined>(undefined);
   const [ordenando, setOrdenando] = useState(false);
   const [ultimaEntrega, setUltimaEntrega] = useState<{ facturaId: string; cliente: string } | undefined>();
   const enCamion = esDeCamion(rol);
@@ -318,7 +310,6 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   /** Después de entregar o avisar: se vuelve a pedir la ruta (la parada hecha sale de la lista y las horas se corren). */
   const marcaVista = useRef<string | undefined>(undefined);
   const recargarVista = (): void => {
-    if (movimiento.current) return;
     // Lo que se pide ahora ya trae lo último: la próxima marca se toma como base para no recargar dos veces por el mismo cambio.
     marcaVista.current = undefined;
     setActualizada(undefined);
@@ -373,19 +364,12 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
    * Arrastrar y soltar (o las flechas del asa): la parada queda en su lugar de inmediato y el servidor lo confirma y recalcula las horas.
    * Si no se pudo, vuelve a donde estaba y se avisa.
    */
-  const mover = (facturaId: string, posicion: number, provisional = false, cancelar = false): void => {
-    if (cancelar) { if (movimiento.current) setActualizada(movimiento.current); movimiento.current = undefined; return; }
-    const v = movimiento.current ?? vista;
+  const mover = (facturaId: string, posicion: number): void => {
+    const v = vista;
     const version = v?.version;
     const parada = v?.paradas.find((p) => p.facturaId === facturaId);
     if (!v || version === undefined || !parada || ocupado) return;
-    if (provisional) {
-      movimiento.current = v;
-      setActualizada({ ...v, paradas: reordenarParadas(v.paradas, facturaId, posicion) });
-      return;
-    }
-    const anterior = movimiento.current ?? actualizada;
-    movimiento.current = undefined;
+    const anterior = actualizada;
     const paradas = reordenarParadas(v.paradas, facturaId, posicion);
     setActualizada({ ...v, paradas });
     setAnuncio(`${parada.cliente} quedó en el lugar ${(paradas.find((p) => p.facturaId === facturaId)?.posicion ?? posicion) + 1}.`);
@@ -648,7 +632,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           </> : null}
           {vista.paradas.length === 0 ? <Aviso>Ninguna parada se pudo ubicar en la ruta.</Aviso> : null}
           {!simple ? <AvisoAproximadas paradas={vista.paradas} /> : null}
-          <p role="status" className="ayuda">{compacta ? "Toca el nombre para ver la foto y reportar un problema." : "Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar."}</p>
+          <p role="status" className="ayuda">{compacta ? "Para cambiar el orden, mantén presionado MOVER y arrastra la parada. Cerca del borde, la pantalla se desplaza sola. Toca el nombre para ver la foto y reportar un problema." : "Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar."}</p>
           {anuncio ? <p role="status" className="ayuda">{anuncio}</p> : null}
           {/* El horario es una estimación: lo que según él ya cerró no sale de la ruta, queda al final y se avisa. */}
           <ol ref={lista} className={`paradas${arrastre.arrastrando ? ' paradas--arrastrando' : ''}`} aria-label="Paradas en orden">
@@ -656,11 +640,10 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
               <FilaParada
                 key={p.facturaId}
                 p={p}
-                ordenando={ordenando && vista.modo === 'carga'}
                 total={vista.paradas.length}
                 ocupado={ocupado}
                 operar={operar}
-                mover={(posicion, provisional, cancelar) => { mover(p.facturaId, posicion, provisional, cancelar); }}
+                mover={(posicion) => { mover(p.facturaId, posicion); }}
                 asa={arrastre.asa(p.facturaId)}
                 fila={arrastre.fila(i)}
                 enCamion={enCamion}
