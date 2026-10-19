@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { enlaceGoogleMaps, enlaceNavegar, enlaceRutaGoogleMaps, enlaceStreetView, enlaceWaze, enlaceWhatsApp, mensajeDireccionNoEncontrada, mensajeLocalCerrado } from './enlaces';
+import { enlaceGoogleMaps, enlaceNavegar, enlaceRutaGoogleMaps, prepararTramoGoogleMaps, enlaceStreetView, enlaceWaze, enlaceWhatsApp, mensajeDireccionNoEncontrada, mensajeLocalCerrado } from './enlaces';
 
 describe('enlaces de navegación', () => {
   it('Waze', () => {
@@ -49,6 +49,52 @@ describe('varias paradas en Google Maps', () => {
     expect(url.split('%7C')).toHaveLength(8);
     expect(url).toContain('destination=-33.58%2C-70.7');
     expect(enlaceRutaGoogleMaps([sinPin, conPin])).toContain('waypoints=Av.%20Col');
+  });
+});
+
+describe('recorrido de Google Maps compatible y sin omisiones silenciosas', () => {
+  it('9 entregas son 8 intermedias y un destino; se conserva el orden enviado', () => {
+    const paradas = [8, 3, 10, 1, 4, 2, 7, 6, 5, 9].map((n) => ({ direccion: `Calle ${n} 100`, comuna: 'Maipú' }));
+    const tramo = prepararTramoGoogleMaps(paradas);
+    expect(tramo?.cantidad).toBe(9);
+    const url = new URL(tramo?.url ?? 'https://invalid.test');
+    expect(url.searchParams.get('waypoints')?.split('|')).toEqual(paradas.slice(0, 8).map((p) => `${p.direccion}, Maipú, Chile`));
+    expect(url.searchParams.get('destination')).toBe('Calle 5 100, Maipú, Chile');
+    expect(url.searchParams.get('dir_action')).toBe('navigate');
+    expect(url.searchParams.has('origin')).toBe(false);
+  });
+  it('el tramo corto admite solo 3 intermedias más el destino', () => {
+    const paradas = Array.from({ length: 9 }, (_, i) => ({ direccion: `Calle ${i + 1} 100`, comuna: 'Pirque' }));
+    const tramo = prepararTramoGoogleMaps(paradas, 4);
+    expect(tramo?.cantidad).toBe(4);
+    const url = new URL(tramo?.url ?? 'https://invalid.test');
+    expect(url.searchParams.get('waypoints')?.split('|')).toHaveLength(3);
+    expect(url.searchParams.get('destination')).toBe('Calle 4 100, Pirque, Chile');
+  });
+  it('un punto aproximado o inválido usa la dirección, y uno preciso conserva sus coordenadas', () => {
+    const url = new URL(enlaceRutaGoogleMaps([{ ...conPin, ubicacionAproximada: true }, { ...conPin, lat: Number.NaN }, conPin]) ?? 'https://invalid.test');
+    expect(url.searchParams.get('waypoints')).toBe('Av. Colón Sur 765, San Bernardo, Chile|Av. Colón Sur 765, San Bernardo, Chile');
+    expect(url.searchParams.get('destination')).toBe('-33.59,-70.7');
+  });
+  it('las direcciones largas reducen el tramo a un prefijo que cabe y se informa su cantidad real', () => {
+    const paradas = Array.from({ length: 9 }, (_, i) => ({ direccion: `${i} ${'Á'.repeat(70)}`, comuna: 'Maipú' }));
+    expect(enlaceRutaGoogleMaps(paradas)).toBeUndefined();
+    const tramo = prepararTramoGoogleMaps(paradas);
+    expect(tramo?.cantidad).toBeGreaterThan(0);
+    expect(tramo?.cantidad).toBeLessThan(9);
+    expect(tramo?.url.length).toBeLessThanOrEqual(2048);
+    const url = new URL(tramo?.url ?? 'https://invalid.test');
+    const puntos = [...(url.searchParams.get('waypoints')?.split('|') ?? []), url.searchParams.get('destination')];
+    expect(puntos).toEqual(paradas.slice(0, tramo?.cantidad).map((p) => `${p.direccion}, Maipú, Chile`));
+    expect(prepararTramoGoogleMaps([{ direccion: 'Á'.repeat(500), comuna: 'Maipú' }])).toBeUndefined();
+  });
+  it('no fabrica enlaces vacíos ni acepta límites que excedan las 9 entregas', () => {
+    const paradas = Array.from({ length: 15 }, () => conPin);
+    expect(prepararTramoGoogleMaps([])).toBeUndefined();
+    expect(enlaceRutaGoogleMaps(paradas, 0)).toBeUndefined();
+    expect(enlaceRutaGoogleMaps(paradas, -1)).toBeUndefined();
+    expect(prepararTramoGoogleMaps(paradas, 99)?.cantidad).toBe(9);
+    expect(prepararTramoGoogleMaps(paradas, Number.NaN)?.cantidad).toBe(9);
   });
 });
 

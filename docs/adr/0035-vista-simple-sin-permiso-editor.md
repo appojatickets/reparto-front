@@ -25,3 +25,11 @@ El último camión se recuerda por usuario en el dispositivo. Cada jornada nueva
 ## Restauración del botón Mover en todas las vistas
 
 El dueño prefiere el arrastre original: se retiran Subir/Bajar y su pulsación repetida. Mover queda siempre visible para usuarios comunes, ayudantes, editores y administración, incluso con Ordenar ruta cerrado. Mantener y arrastrar cerca del borde conserva el desplazamiento automático original. Al soltar se guarda una sola operación; Escape o cancelar restaura la posición.
+
+## Recorrido externo de Google Maps
+
+Se corrige el límite incoherente del botón (8) frente al generador (9 entregas). El editor tiene un acceso compacto independiente de Ordenar ruta, con lista de las próximas entregas que se enviarán. El enlace se recalcula desde las paradas pendientes visibles tras reordenar o entregar. Google recibe una copia: hay que abrir otra vez el enlace para que una sesión externa use el orden nuevo.
+
+Google documenta hasta 3 paradas intermedias en navegador móvil y hasta 9 en otras plataformas, además del destino, con enlaces de hasta 2048 caracteres. Se conserva el tramo principal de hasta 9 entregas y se ofrece uno corto de hasta 4 (3 intermedias más destino), sin intentar detectar de forma poco fiable si el teléfono abrirá la app o el navegador. Si la longitud obliga a reducir el tramo, se informa la cantidad exacta; nunca se saltan paradas dentro del prefijo. Un punto marcado como aproximado se envía por dirección y comuna, no como coordenada precisa.
+
+Referencia: https://developers.google.com/maps/documentation/urls/get-started

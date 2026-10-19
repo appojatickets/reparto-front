@@ -32,6 +32,14 @@ test(`Mover permite arrastrar con desplazamiento automático en la vista ${edito
   const fila = page.getByRole('listitem', { name: 'Parada 1', exact: true });
   await expect(fila).toBeVisible();
   if (editor) {
+    const google = page.getByRole('button', { name: 'ABRIR RUTA EN GOOGLE MAPS' });
+    await google.click();
+    const enlace = page.getByRole('link', { name: 'LAS PRÓXIMAS 8 EN GOOGLE MAPS' });
+    await expect(enlace).toBeVisible();
+    const url = new URL(await enlace.getAttribute('href') ?? 'https://invalid.test');
+    expect(url.searchParams.get('waypoints')?.split('|')).toHaveLength(7);
+    expect(url.searchParams.get('destination')).toBe('Calle 8 100, Maipú, Chile');
+    await google.click();
     await fila.getByRole('button', { name: /TOCA PARA VER FOTO/ }).click();
     const corregir = page.getByRole('link', { name: 'CORREGIR ESTA DIRECCIÓN Local 1', includeHidden: true });
     await expect(corregir).not.toBeVisible();

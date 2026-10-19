@@ -2257,6 +2257,7 @@ describe('acciones completas en la parada (chofer editor)', () => {
     expect(screen.getByRole('link', { name: 'NAVEGAR CON GOOGLE MAPS a Local A' })).toHaveAttribute('href', expect.stringContaining('destination=-33.59,-70.7'));
     await userEvent.click(within(screen.getByRole('listitem', { name: 'Parada 2' })).getByRole('button', { expanded: false, name: /^Local B/ }));
     expect(screen.getByRole('link', { name: 'NAVEGAR CON WAZE a Local B' })).toHaveAttribute('href', expect.stringContaining('waze.com/ul?q=Calle%20B%20100%2C%20San%20Bernardo'));
+    await userEvent.click(screen.getByRole('button', { name: 'ABRIR RUTA EN GOOGLE MAPS' }));
     expect(screen.getByRole('link', { name: 'LAS PRÓXIMAS 2 EN GOOGLE MAPS' })).toHaveAttribute('href', expect.stringContaining('waypoints='));
   });
 

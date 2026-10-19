@@ -1,8 +1,9 @@
+import { RutaGoogleMaps } from '../componentes/RutaGoogleMaps';
 import { MapaRuta } from '../componentes/MapaRuta';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { reordenarParadas } from '../../../../domain/arrastre';
-import { enlaceNavegar, enlaceRutaGoogleMaps } from '../../../../domain/enlaces';
+import { enlaceNavegar } from '../../../../domain/enlaces';
 import { horaAproximada, horaDeMinutos } from '../../../../domain/hora';
 import { textoMotivos } from '../../../../domain/motivos';
 import { formatearPatente } from '../../../../domain/patente';
@@ -104,7 +105,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
           {p.ubicacionAproximada ? <span className="parada-marca parada-marca--aproximada">SIN UBICACIÓN PRECISA</span> : null}
           {horario !== undefined ? <span className="parada-marca">POSIBLEMENTE CERRADO</span> : null}
-          {!simple ? <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} /> : null}
+          {!compacta ? <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} /> : null}
         </span>
         {hora !== undefined ? <span className="parada-hora" aria-label={`Llegada aproximada ${hora}`}>~{hora}</span> : null}
       </button>
@@ -133,16 +134,17 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
         <div className="parada-detalle" id={idDetalle}>
           {!mismoTexto(p.cliente, p.direccion) ? <Direccion direccion={p.direccion} comuna={p.comuna} /> : null}
           <FotoFachada simple={compacta} editor={!simple && compacta} localId={p.localId} cliente={p.cliente} tieneFoto={p.tieneFoto === true} conPin={p.lat !== undefined && p.lng !== undefined}>{compacta ? <NoEncuentroLocal p={p} alCambiar={alCambiar} /> : null}</FotoFachada>
-          {!simple && p.tieneFoto === true && p.lat !== undefined ? <Contribuyentes localId={p.localId} /> : null}
           {p.folio ? <span>Factura {p.folio}</span> : null}
           <Etiquetas i={p} />
           {p.fijada ? <Insignia>FIJADA AL INICIO</Insignia> : null}
           {horario !== undefined ? <span className="ayuda">{horario} Sigue en tu ruta, al final: si está abierto, entrégalo igual.</span> : null}
-          {p.ubicacionAproximada && !simple ? <AvisoUbicacion p={p} puedeAbrirFicha={puedeHacer(usuario.rol, 'buscar-clientes', usuario.editor)} /> : null}
           {p.nota ? <span>Nota: {p.nota}</span> : null}
-          {!simple && motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
           <details hidden={simple} className="opciones-simples" open={!compacta ? true : undefined}>
           {!simple ? <summary>{compacta ? "EDITAR LOCAL Y MÁS OPCIONES" : "OPCIONES DE LA PARADA"}</summary> : null}
+          {compacta && !simple ? <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} /> : null}
+          {!simple && p.tieneFoto === true && p.lat !== undefined ? <Contribuyentes localId={p.localId} /> : null}
+          {p.ubicacionAproximada && !simple ? <AvisoUbicacion p={p} puedeAbrirFicha={puedeHacer(usuario.rol, 'buscar-clientes', usuario.editor)} /> : null}
+          {!simple && motivos !== '' ? <span className="ayuda">{motivos}</span> : null}
           {puedeEditar(usuario.rol, usuario.editor) ? <Link className="big-button big-button--secundario" to={`/clientes/${p.localId}`} aria-label={`CORREGIR ESTA DIRECCIÓN ${p.cliente}`}>CORREGIR ESTA DIRECCIÓN</Link> : null}
           {enCamion && !simple ? <AccionesParada p={p} alCambiar={alCambiar} alFijarPin={() => { alFijarPin(p.cliente); }} alPosponer={() => { operar({ tipo: 'despues', facturaId: p.facturaId }); }} /> : null}
           {!simple ? <div className="fila-botones">
@@ -573,12 +575,13 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
         <>
           <MapaRuta vista={vista} />
           <Resumen v={vista} simple={compacta} />
+          {enCamion && !simple ? <RutaGoogleMaps paradas={vista.paradas} /> : null}
           {compacta ? <Boton variante="secundario" aria-expanded={ordenando} onClick={() => { setOrdenando(!ordenando); }}>{ordenando ? "LISTO, VOLVER AL REPARTO" : "ORDENAR RUTA"}</Boton> : null}
           {!compacta || ordenando ? <>
           {vista.paradas.length > 0 ? (
             <Boton variante="secundario" aria-pressed={verHoras} onClick={cambiarHoras}>{verHoras ? 'OCULTAR HORAS ESTIMADAS' : 'VER HORAS ESTIMADAS'}</Boton>
           ) : null}
-          {enCamion && !simple && vista.paradas.length > 0 ? <a className="big-button big-button--secundario" href={enlaceRutaGoogleMaps(vista.paradas.map((x) => ({ direccion: x.direccion, comuna: x.comuna, lat: x.lat, lng: x.lng })), 8) ?? '#'} target="_blank" rel="noreferrer">LAS PRÓXIMAS {Math.min(vista.paradas.length, 8)} EN GOOGLE MAPS</a> : null}
+
           {vista.paradas.length >= 2 && (simple || vista.modo !== 'carga') ? (
             <Selector etiqueta={simple ? (vista.modo === 'carga' ? "Comenzar por… (mantiene el resto de tu orden)" : "Comenzar por… (ordena las demás automáticamente)") : "Primera entrega (el resto se ordena desde ahí)"} value="" disabled={ocupado} onChange={(e) => { elegirPrimera(e.target.value); }}>
               <option value="">Elige por cuál empiezas…</option>
@@ -631,7 +634,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
 
           </> : null}
           {vista.paradas.length === 0 ? <Aviso>Ninguna parada se pudo ubicar en la ruta.</Aviso> : null}
-          {!simple ? <AvisoAproximadas paradas={vista.paradas} /> : null}
+          {!compacta ? <AvisoAproximadas paradas={vista.paradas} /> : null}
           <p role="status" className="ayuda">{compacta ? "Para cambiar el orden, mantén presionado MOVER y arrastra la parada. Cerca del borde, la pantalla se desplaza sola. Toca el nombre para ver la foto y reportar un problema." : "Toca una parada para ver sus datos y acciones. Para cambiar el orden, mantén presionado MOVER y arrastra la parada: al soltarla queda en ese lugar."}</p>
           {anuncio ? <p role="status" className="ayuda">{anuncio}</p> : null}
           {/* El horario es una estimación: lo que según él ya cerró no sale de la ruta, queda al final y se avisa. */}

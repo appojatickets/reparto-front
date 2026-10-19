@@ -11,11 +11,11 @@ export const enlaceVerEnMapa = (lat: number, lng: number): string => `https://ww
 export const enlaceStreetView = (lat: number, lng: number, rumbo = 0): string =>
   `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}&heading=${rumbo}`;
 
-export type Destino = { readonly direccion: string; readonly comuna: string; readonly lat?: number | undefined; readonly lng?: number | undefined };
+export type Destino = { readonly direccion: string; readonly comuna: string; readonly lat?: number | undefined; readonly lng?: number | undefined; readonly ubicacionAproximada?: boolean | undefined };
 export type AppMapa = 'waze' | 'google';
 
 const textoDeDireccion = (d: Destino): string => `${d.direccion}, ${d.comuna}, Chile`;
-const punto = (d: Destino): string => (d.lat !== undefined && d.lng !== undefined ? `${d.lat},${d.lng}` : textoDeDireccion(d));
+const punto = (d: Destino): string => (d.ubicacionAproximada !== true && d.lat !== undefined && d.lng !== undefined && Number.isFinite(d.lat) && Number.isFinite(d.lng) && Math.abs(d.lat) <= 90 && Math.abs(d.lng) <= 180 ? `${d.lat},${d.lng}` : textoDeDireccion(d));
 
 /** Abre Waze o Google Maps en esa parada: con el pin si lo tiene y, si no, con la dirección y la comuna. */
 export const enlaceNavegar = (d: Destino, app: AppMapa): string => {
@@ -26,11 +26,23 @@ export const enlaceNavegar = (d: Destino, app: AppMapa): string => {
 
 /** Google Maps acepta varias paradas de una vez: las próximas en el orden de la ruta (hasta 9, la última es el destino). */
 export const enlaceRutaGoogleMaps = (paradas: readonly Destino[], maximo = 9): string | undefined => {
-  const tramo = paradas.slice(0, maximo);
+  const cantidad = Number.isFinite(maximo) ? Math.max(0, Math.min(9, Math.floor(maximo))) : 9;
+  const tramo = paradas.slice(0, cantidad);
   const ultimo = tramo[tramo.length - 1];
   if (!ultimo) return undefined;
   const intermedias = tramo.slice(0, -1).map((d) => encodeURIComponent(punto(d))).join('%7C');
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(punto(ultimo))}${intermedias ? `&waypoints=${intermedias}` : ''}&travelmode=driving`;
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(punto(ultimo))}${intermedias ? `&waypoints=${intermedias}` : ''}&travelmode=driving&dir_action=navigate`;
+  return url.length <= 2048 ? url : undefined;
+};
+
+/** Un prefijo continuo que cabe en el enlace, sin saltar locales ni alterar su orden. */
+export const prepararTramoGoogleMaps = (paradas: readonly Destino[], maximo = 9): { readonly url: string; readonly cantidad: number } | undefined => {
+  const limite = Number.isFinite(maximo) ? Math.max(0, Math.min(9, Math.floor(maximo))) : 9;
+  for (let cantidad = Math.min(limite, paradas.length); cantidad > 0; cantidad -= 1) {
+    const url = enlaceRutaGoogleMaps(paradas, cantidad);
+    if (url) return { url, cantidad };
+  }
+  return undefined;
 };
 
 /** WhatsApp con el mensaje ya escrito. Con teléfono abre ese chat; sin él, deja elegir el contacto. */
