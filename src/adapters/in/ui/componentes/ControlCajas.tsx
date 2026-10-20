@@ -31,7 +31,7 @@ export const ControlCajas = ({ cierre = false, alCerrar }: { readonly cierre?: b
     return () => { vivo = false; window.removeEventListener(EVENTO_CAJAS, cargar); };
   }, [api]);
   const carga = numero(cargadas);
-  const rebaje = numero(rebajes);
+  const rebaje = rebajes.trim() === '' ? 0 : numero(rebajes);
   const valido = cantidadValida(carga) && cantidadValida(rebaje) && rebaje <= carga;
   const entregadas = valido ? Math.round((carga - rebaje) * 100) / 100 : undefined;
   const guardar = async (): Promise<void> => {
@@ -45,16 +45,27 @@ export const ControlCajas = ({ cierre = false, alCerrar }: { readonly cierre?: b
     finally { setOcupado(false); }
   };
   const cerrar = async (): Promise<void> => {
-    if (!actual?.registrada) { setError('Primero guarda las cajas cargadas, aunque sean cero.'); return; }
+    if (!actual?.registrada && cargadas.trim() === '' && rebaje === 0) { await omitir(); return; }
     if (!valido) { setError('Los rebajes deben estar entre cero y las cajas cargadas, con hasta dos decimales.'); return; }
     setOcupado(true); setError('');
     try {
+      if (!actual?.registrada) {
+        const guardada = await api.guardarCajas({ cargadasCamion: carga, cargadasUsuario: carga, revision: actual?.revision ?? 0 });
+        if (!guardada.ok) { setError(mensajeDeError(guardada.error)); return; }
+        setActual(guardada.value);
+      }
       // Conserva los cierres antiguos sin reclasificar sus descuentos.
-      const porCerrado = actual.cerrada ? actual.porCerrado : 0;
+      const porCerrado = actual?.cerrada ? actual.porCerrado : 0;
       const r = await api.cerrarCajas({ porCerrado, rebajes: Math.round((rebaje - porCerrado) * 100) / 100, rebajesCamion: rebaje });
       if (!r.ok) setError(mensajeDeError(r.error));
       else { window.dispatchEvent(new Event(EVENTO_CAJAS)); await alCerrar?.(); }
     } catch { setError('No se confirmó el cierre. Comprueba la conexión y reintenta.'); }
+    finally { setOcupado(false); }
+  };
+  const omitir = async (): Promise<void> => {
+    setOcupado(true); setError('');
+    try { await alCerrar?.(); }
+    catch { setError('No se terminó la ruta. Comprueba la conexión y reintenta.'); }
     finally { setOcupado(false); }
   };
   const lista = actual !== undefined;
@@ -62,15 +73,16 @@ export const ControlCajas = ({ cierre = false, alCerrar }: { readonly cierre?: b
     <div><span className="ceja">MI JORNADA</span><h3>{cierre ? 'Cierra tu día' : 'Cajas cargadas'}</h3></div>
     {!lista && !error ? <p role="status">Consultando cajas…</p> : null}
     {cierre && actual?.registrada ? <p>Cajas cargadas: <strong>{actual.cargadasUsuario}</strong></p> :
-      <Campo etiqueta="Cajas cargadas" ayuda="El total que cargas para repartir. Admite 0,5 o 3,5." inputMode="decimal" value={cargadas} onChange={e => { setCargadas(e.target.value); }} disabled={!lista || ocupado || actual?.cerrada} />}
-    {cierre ? <Campo etiqueta="Rebajes" ayuda="Total de cajas no entregadas, incluidos los locales cerrados. Si entregaste todo, deja 0." inputMode="decimal" value={rebajes} onChange={e => { setRebajes(e.target.value); }} disabled={!lista || ocupado || actual?.cerrada} /> : null}
+      <Campo etiqueta="Cajas cargadas" ayuda="Opcional. El total que cargas para repartir. Admite 0,5 o 3,5." inputMode="decimal" value={cargadas} onChange={e => { setCargadas(e.target.value); }} disabled={!lista || ocupado || actual?.cerrada} />}
+    {cierre ? <Campo etiqueta="Rebajes" ayuda="Total de cajas no entregadas, incluidos los locales cerrados. Si entregaste todo, deja 0 o vacío." inputMode="decimal" value={rebajes} onChange={e => { setRebajes(e.target.value); }} disabled={!lista || ocupado || actual?.cerrada} /> : null}
     {entregadas !== undefined ? <div className="resumen-cajas" aria-live="polite" aria-atomic="true">
       <div><span>Entrega efectiva{!cierre && !actual?.cerrada ? ' estimada' : ''}</span><strong>{entregadas} <small>cajas</small></strong></div>
       <div><span>Ganancia del día{!cierre && !actual?.cerrada ? ' estimada' : ''}</span><strong>{pesos(entregadas * 15)}</strong><small>$15 por caja entregada</small></div>
     </div> : null}
     {actual?.cerrada ? <p role="status">Cierre confirmado</p> : null}
-    {cierre ? <Boton disabled={!lista || ocupado || !actual?.registrada} onClick={() => void cerrar()}>{ocupado ? 'GUARDANDO…' : actual?.cerrada ? 'CONTINUAR CON EL CIERRE' : 'CONFIRMAR REBAJES Y TERMINAR'}</Boton> :
+    {cierre ? <Boton disabled={!lista || ocupado} onClick={() => void cerrar()}>{ocupado ? 'GUARDANDO…' : actual?.cerrada ? 'CONTINUAR CON EL CIERRE' : 'CONFIRMAR REBAJES Y TERMINAR'}</Boton> :
       <Boton disabled={!lista || ocupado || actual?.cerrada === true} onClick={() => void guardar()}>{ocupado ? 'GUARDANDO…' : 'GUARDAR CAJAS CARGADAS'}</Boton>}
+    {cierre && !actual?.cerrada ? <><p className="ayuda">Puedes terminar sin registrar cajas. La ganancia quedará sin confirmar.</p><Boton disabled={ocupado} onClick={() => void omitir()}>TERMINAR SIN REGISTRAR CAJAS</Boton></> : null}
     {error ? <Aviso tipo="error">{error}</Aviso> : null}
   </section>;
 };

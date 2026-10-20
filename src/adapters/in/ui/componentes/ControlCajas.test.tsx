@@ -8,6 +8,43 @@ vi.mock('../contexto',()=>({useCasos:()=>deps}));
 const actual = {registrada:true,cargadasCamion:100.5,cargadasUsuario:100.5,porCerrado:0,rebajes:0,rebajesCamion:null,revision:2,cerrada:false};
 beforeEach(()=>{vi.resetAllMocks();deps.api.obtenerCajas.mockResolvedValue(ok(actual));deps.api.guardarCajas.mockResolvedValue(ok(actual));deps.api.cerrarCajas.mockResolvedValue(ok(true));});
 describe('cajas simples',()=>{
+ it('guarda al confirmar una carga escrita al terminar, aunque no estuviera registrada',async()=>{
+  deps.api.obtenerCajas.mockResolvedValue(ok(null));
+  const alCerrar=vi.fn();render(<ControlCajas cierre alCerrar={alCerrar}/>);
+  const carga=await screen.findByLabelText('Cajas cargadas');await waitFor(()=>expect(carga).toBeEnabled());
+  await userEvent.type(carga,'200');
+  await userEvent.click(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'}));
+  expect(deps.api.guardarCajas).toHaveBeenCalledWith({cargadasCamion:200,cargadasUsuario:200,revision:0});
+  expect(deps.api.cerrarCajas).toHaveBeenCalledWith({porCerrado:0,rebajes:0,rebajesCamion:0});
+  expect(alCerrar).toHaveBeenCalledTimes(1);
+ });
+ it('permite confirmar el formulario vacío sin inventar cajas ni ganancias',async()=>{
+  deps.api.obtenerCajas.mockResolvedValue(ok(null));
+  const alCerrar=vi.fn();render(<ControlCajas cierre alCerrar={alCerrar}/>);
+  const campo=await screen.findByLabelText('Rebajes');await waitFor(()=>expect(campo).toBeEnabled());await userEvent.clear(campo);
+  await userEvent.click(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'}));
+  expect(alCerrar).toHaveBeenCalledTimes(1);expect(deps.api.guardarCajas).not.toHaveBeenCalled();expect(deps.api.cerrarCajas).not.toHaveBeenCalled();
+ });
+ it('trata un rebaje vacío como cero con carga registrada',async()=>{
+  const alCerrar=vi.fn();render(<ControlCajas cierre alCerrar={alCerrar}/>);
+  const campo=await screen.findByLabelText('Rebajes');await waitFor(()=>expect(campo).toBeEnabled());await userEvent.clear(campo);
+  await userEvent.click(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'}));
+  expect(deps.api.cerrarCajas).toHaveBeenCalledWith({porCerrado:0,rebajes:0,rebajesCamion:0});expect(alCerrar).toHaveBeenCalledTimes(1);
+ });
+ it('permite omitir el control incluso si falla la consulta de cajas',async()=>{
+  deps.api.obtenerCajas.mockResolvedValue({ok:false,error:{kind:'HTTP',status:500}});
+  const alCerrar=vi.fn();render(<ControlCajas cierre alCerrar={alCerrar}/>);
+  await userEvent.click(screen.getByRole('button',{name:'TERMINAR SIN REGISTRAR CAJAS'}));
+  expect(alCerrar).toHaveBeenCalledTimes(1);expect(deps.api.guardarCajas).not.toHaveBeenCalled();expect(deps.api.cerrarCajas).not.toHaveBeenCalled();
+ });
+ it('si falla guardar la carga al terminar, conserva los datos y permite reintentar',async()=>{
+  deps.api.obtenerCajas.mockResolvedValue(ok(null));deps.api.guardarCajas.mockResolvedValue({ok:false,error:{kind:'HTTP',status:409,mensaje:'La carga cambió'}});
+  const alCerrar=vi.fn();render(<ControlCajas cierre alCerrar={alCerrar}/>);
+  const campo=await screen.findByLabelText('Cajas cargadas');await waitFor(()=>expect(campo).toBeEnabled());await userEvent.type(campo,'200');
+  await userEvent.click(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'}));
+  expect(await screen.findByRole('alert')).toBeInTheDocument();expect(campo).toHaveValue('200');expect(alCerrar).not.toHaveBeenCalled();expect(deps.api.cerrarCajas).not.toHaveBeenCalled();
+ });
+
  it('pide solo la carga y envía el mismo total para camión y jornada',async()=>{
   render(<ControlCajas/>);const carga=await screen.findByLabelText('Cajas cargadas');
   await waitFor(()=>expect(carga).toHaveValue('100.5'));expect(screen.getAllByRole('textbox')).toHaveLength(1);

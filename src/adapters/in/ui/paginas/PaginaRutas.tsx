@@ -700,7 +700,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
           ) : (
             <div className="tarjeta">
               <p>Entregadas: {vista.hechas.filter((h) => h.estado === 'entregada').length} · No entregadas: {vista.hechas.filter((h) => h.estado === 'no_entregada').length}</p>
-              <p>{pendientes > 0 ? `Quedan ${pendientes} entregas sin hacer. Si terminas, la lista se limpia y esas entregas vuelven a «Facturas del día» sin camión.` : 'No quedan entregas pendientes. Confirma los rebajes antes de cerrar.'}</p>
+              <p>{pendientes > 0 ? `Quedan ${pendientes} entregas sin hacer. Si terminas, la lista se limpia y esas entregas vuelven a «Facturas del día» sin camión.` : 'No quedan entregas pendientes. Puedes registrar las cajas o terminar sin completarlas.'}</p>
               <div className="fila-botones">
                 <ControlCajas cierre alCerrar={terminarRuta} />
                 <Boton variante="secundario" onClick={() => { setConfirmandoFin(false); }}>NO, SEGUIR</Boton>
