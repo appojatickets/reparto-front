@@ -3,6 +3,7 @@ import { registerPlugin } from '@capacitor/core';
 import type { Tokens } from '../../../application/modelos';
 import type { EstadoSeguimientoNativo } from '../../../application/ports/seguimiento-nativo';
 export interface NativeBridge {
+  dictar(): Promise<{ texto?: string; cancelado?: boolean }>;
   requestNotifications(): Promise<void>;
   appInfo(): Promise<VersionInstaladaAndroid>;
   configure(options: { apiUrl: string }): Promise<void>;

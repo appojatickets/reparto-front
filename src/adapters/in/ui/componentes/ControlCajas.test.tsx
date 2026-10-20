@@ -5,20 +5,41 @@ import {ok} from '../../../../domain/result';
 import {ControlCajas} from './ControlCajas';
 const deps=vi.hoisted(()=>({api:{obtenerCajas:vi.fn(),guardarCajas:vi.fn(),cerrarCajas:vi.fn()}}));
 vi.mock('../contexto',()=>({useCasos:()=>deps}));
-beforeEach(()=>{vi.resetAllMocks();deps.api.obtenerCajas.mockResolvedValue(ok({registrada:true,cargadasCamion:100.5,cargadasUsuario:100.5,porCerrado:0,rebajes:0,rebajesCamion:null,revision:2,cerrada:false}));deps.api.cerrarCajas.mockResolvedValue(ok(true));});
-describe('rebajes al terminar el reparto',()=>{
- it('admite coma y punto, guarda ambos descuentos y solo termina tras confirmarlos',async()=>{
+const actual = {registrada:true,cargadasCamion:100.5,cargadasUsuario:100.5,porCerrado:0,rebajes:0,rebajesCamion:null,revision:2,cerrada:false};
+beforeEach(()=>{vi.resetAllMocks();deps.api.obtenerCajas.mockResolvedValue(ok(actual));deps.api.guardarCajas.mockResolvedValue(ok(actual));deps.api.cerrarCajas.mockResolvedValue(ok(true));});
+describe('cajas simples',()=>{
+ it('pide solo la carga y envía el mismo total para camión y jornada',async()=>{
+  render(<ControlCajas/>);const carga=await screen.findByLabelText('Cajas cargadas');
+  await waitFor(()=>expect(carga).toHaveValue('100.5'));expect(screen.getAllByRole('textbox')).toHaveLength(1);
+  expect(screen.queryByText('Cajas a mi cargo')).not.toBeInTheDocument();
+  await userEvent.clear(carga);await userEvent.type(carga,'80,5');
+  await userEvent.click(screen.getByRole('button',{name:'GUARDAR CAJAS CARGADAS'}));
+  expect(deps.api.guardarCajas).toHaveBeenCalledWith({cargadasCamion:80.5,cargadasUsuario:80.5,revision:2});
+ });
+ it('un único rebaje calcula entrega efectiva y ganancia; solo cierra al confirmar',async()=>{
   const alCerrar=vi.fn();render(<ControlCajas cierre alCerrar={alCerrar}/>);
-  await waitFor(()=>expect(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'})).toBeEnabled());expect(alCerrar).not.toHaveBeenCalled();
-  const cerrado=screen.getByLabelText('Mis cajas no entregadas por cerrado');await userEvent.clear(cerrado);await userEvent.type(cerrado,'0,5');
-  const rebajes=screen.getByLabelText('Mis otros rebajes (no incluir los cerrados de arriba)');await userEvent.clear(rebajes);await userEvent.type(rebajes,'3.5');
-  const camion=screen.getByLabelText('Total físico que vuelve en el camión (cerrados + otros rebajes)');await userEvent.clear(camion);await userEvent.type(camion,'4');
+  const rebajes=await screen.findByLabelText('Rebajes');await waitFor(()=>expect(rebajes).toBeEnabled());
+  expect(screen.getAllByRole('textbox')).toHaveLength(1);
+  await userEvent.clear(rebajes);await userEvent.type(rebajes,'4,5');
+  expect(screen.getByText('96')).toBeInTheDocument();expect(screen.getByText(/1\.440/)).toBeInTheDocument();expect(alCerrar).not.toHaveBeenCalled();
   await userEvent.click(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'}));
-  expect(deps.api.cerrarCajas).toHaveBeenCalledWith({porCerrado:0.5,rebajes:3.5,rebajesCamion:4});expect(alCerrar).toHaveBeenCalledTimes(1);
+  expect(deps.api.cerrarCajas).toHaveBeenCalledWith({porCerrado:0,rebajes:4.5,rebajesCamion:4.5});expect(alCerrar).toHaveBeenCalledTimes(1);
+ });
+ it.each(['-1','101','abc','0,001'])('rechaza rebajes inválidos %s sin cerrar',async(valor)=>{
+  const alCerrar=vi.fn();render(<ControlCajas cierre alCerrar={alCerrar}/>);
+  const campo=await screen.findByLabelText('Rebajes');await waitFor(()=>expect(campo).toBeEnabled());await userEvent.clear(campo);await userEvent.type(campo,valor);
+  await userEvent.click(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'}));
+  expect(deps.api.cerrarCajas).not.toHaveBeenCalled();expect(alCerrar).not.toHaveBeenCalled();expect(screen.getByRole('alert')).toHaveTextContent('Los rebajes');
  });
  it('si falla guardar no cierra la ruta y conserva la entrada',async()=>{
-  deps.api.cerrarCajas.mockResolvedValue({ok:false,error:{kind:'HTTP',status:422,mensaje:'Rebajes mayores a la carga.'}});
+  deps.api.cerrarCajas.mockResolvedValue({ok:false,error:{kind:'HTTP',status:422,mensaje:'No se pudo cerrar.'}});
   const alCerrar=vi.fn();render(<ControlCajas cierre alCerrar={alCerrar}/>);
-  await waitFor(()=>expect(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'})).toBeEnabled());await userEvent.click(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'}));expect(await screen.findByRole('alert')).toHaveTextContent('Rebajes mayores a la carga');expect(alCerrar).not.toHaveBeenCalled();
+  const campo=await screen.findByLabelText('Rebajes');await waitFor(()=>expect(campo).toBeEnabled());await userEvent.clear(campo);await userEvent.type(campo,'3.5');
+  await userEvent.click(screen.getByRole('button',{name:'CONFIRMAR REBAJES Y TERMINAR'}));expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo cerrar');expect(campo).toHaveValue('3.5');expect(alCerrar).not.toHaveBeenCalled();
+ });
+ it('continúa un cierre antiguo sin reclasificar descuentos',async()=>{
+  deps.api.obtenerCajas.mockResolvedValue(ok({...actual,porCerrado:0.5,rebajes:3.5,cerrada:true}));
+  render(<ControlCajas cierre/>);await userEvent.click(await screen.findByRole('button',{name:'CONTINUAR CON EL CIERRE'}));
+  expect(deps.api.cerrarCajas).toHaveBeenCalledWith({porCerrado:0.5,rebajes:3.5,rebajesCamion:4});
  });
 });

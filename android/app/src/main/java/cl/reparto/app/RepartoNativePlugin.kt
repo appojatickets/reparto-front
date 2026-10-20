@@ -1,5 +1,10 @@
 package cl.reparto.app
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.speech.RecognizerIntent
+import androidx.activity.result.ActivityResult
+import com.getcapacitor.annotation.ActivityCallback
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -25,6 +30,35 @@ import org.json.JSONObject
     Permission(alias = "notifications", strings = [Manifest.permission.POST_NOTIFICATIONS])
 ])
 class RepartoNativePlugin : Plugin() {
+    @PluginMethod
+    fun dictar(call: PluginCall) {
+        activity.runOnUiThread {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-CL")
+                putExtra(RecognizerIntent.EXTRA_PROMPT, "Di la dirección o el nombre del cliente")
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            }
+            try {
+                startActivityForResult(call, intent, "dictadoRecibido")
+            } catch (_: ActivityNotFoundException) {
+                call.reject("No hay un servicio de dictado instalado. Usa el micrófono del teclado.", "NO_DISPONIBLE")
+            } catch (_: SecurityException) {
+                call.reject("Permite el micrófono para dictar.", "PERMISO")
+            }
+        }
+    }
+
+    @ActivityCallback
+    private fun dictadoRecibido(call: PluginCall?, result: ActivityResult) {
+        if (call == null) return
+        val texto = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        call.resolve(JSObject().apply {
+            put("cancelado", result.resultCode != Activity.RESULT_OK)
+            if (result.resultCode == Activity.RESULT_OK) put("texto", texto ?: "")
+        })
+    }
+
     @PluginMethod
     fun appInfo(call: PluginCall) = respond(call, "No se pudo consultar la versión instalada") {
         val info = context.packageManager.getPackageInfo(context.packageName, 0)

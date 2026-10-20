@@ -25,20 +25,26 @@ const useDictado = (alTexto: (t: string) => void, alError: (m: string) => void) 
   const { voz } = useCasos();
   const [escuchando, setEscuchando] = useState(false);
   const sesion = useRef<{ detener: () => void } | undefined>(undefined);
+  useEffect(() => () => {
+    sesion.current?.detener();
+    sesion.current = undefined;
+  }, []);
   const alternar = (): void => {
-    if (escuchando) {
-      sesion.current?.detener();
+    if (sesion.current) {
+      sesion.current.detener();
       return;
     }
     setEscuchando(true);
-    sesion.current = voz.escuchar({
+    const actual = { detener: (): void => undefined };
+    sesion.current = actual;
+    actual.detener = voz.escuchar({
       alTexto: (e) => { alTexto(e.texto); },
       alTerminar: (error) => {
         setEscuchando(false);
         sesion.current = undefined;
         if (error) alError(MENSAJE_VOZ[error]);
       },
-    });
+    }).detener;
   };
   return { disponible: voz.disponible, escuchando, alternar };
 };

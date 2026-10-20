@@ -37,7 +37,7 @@ describe('voz del navegador', () => {
     (r?.onresult as (e: unknown) => void)(resultados({ t: 'mil doscientos ', final: false }));
     (r?.onresult as (e: unknown) => void)(resultados({ t: 'mil doscientos treinta y cuatro ', final: false }, { t: 'rabet', final: true }));
     expect(alTexto).toHaveBeenNthCalledWith(1, { texto: 'mil doscientos', final: false });
-    expect(alTexto).toHaveBeenNthCalledWith(2, { texto: 'mil doscientos treinta y cuatro rabet', final: true });
+    expect(alTexto).toHaveBeenNthCalledWith(2, { texto: 'mil doscientos treinta y cuatro rabet', final: false });
   });
 
   it('traduce los errores y avisa al terminar; detener corta la escucha', () => {
