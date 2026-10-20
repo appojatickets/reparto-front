@@ -21,11 +21,11 @@
   --aprox-borde: #ffb000;
   color-scheme: dark;
 }
-/* Modo suave: tonos cálidos tipo papel y verde apagado, con menos brillo para descansar la vista (texto 10:1, botones 5.9:1). */
+/* Modo suave: tonos cálidos tipo papel y verde apagado, con menos brillo para descansar la vista (texto 10:1, botones > 7:1). */
 :root[data-tema='suave'] {
   --fg: #3a3328;
   --bg: #f1e9d6;
-  --accent-bg: #3f5f4d;
+  --accent-bg: #294333;
   --accent-fg: #f1e9d6;
   --aprox-bg: #f4d9a0;
   --aprox-borde: #8f4a00;
@@ -846,3 +846,72 @@ html[data-vista='normal'] .parada-num {
 .opciones-simples[open] > summary, .cuenta-simple[open] > summary { margin-bottom: 12px; }
 .opciones-simples :focus-visible, .cuenta-simple :focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
 .parada-atajos > .opciones-simples { flex-basis: 100%; }
+
+/* Acabado compartido: profundidad estática, sin filtros ni librerías gráficas. */
+:root {
+  --superficie: #fff;
+  --borde-suave: #a8b4c5;
+  --sombra-panel: 0 4px 0 #cdd5df, 0 10px 22px #192d4512;
+  --sombra-boton: 0 4px 0 #64748b;
+}
+:root[data-tema='oscuro'] {
+  --superficie: #151b26;
+  --borde-suave: #74839b;
+  --sombra-panel: 0 4px 0 #000, 0 10px 22px #0003;
+  --sombra-boton: 0 4px 0 #6e6412;
+}
+:root[data-tema='suave'] {
+  --superficie: #fff9ec;
+  --borde-suave: #9c9d87;
+  --sombra-panel: 0 4px 0 #d0c6af, 0 10px 22px #3a332812;
+  --sombra-boton: 0 4px 0 #293f32;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema]) {
+    --superficie: #151b26;
+    --borde-suave: #74839b;
+    --sombra-panel: 0 4px 0 #000, 0 10px 22px #0003;
+    --sombra-boton: 0 4px 0 #6e6412;
+  }
+}
+.screen { max-width: 76rem; width: 100%; margin-inline: auto; gap: 1.25rem; padding-bottom: max(2rem, env(safe-area-inset-bottom)); }
+.cabecera { background: var(--superficie); border-bottom: 1px solid var(--borde-suave); box-shadow: 0 3px 12px #0000000d; }
+h1, h2, h3 { letter-spacing: -0.025em; line-height: 1.2; }
+.pagina > h1 { padding-block: 0.5rem; }
+.tarjeta, .opciones-simples, .cuenta-simple {
+  background: var(--superficie);
+  border: 1px solid var(--borde-suave);
+  border-radius: 1.1rem;
+  box-shadow: var(--sombra-panel);
+}
+.tarjeta { gap: 0.75rem; padding: 1.15rem; }
+.tarjeta .tarjeta { box-shadow: none; }
+.big-button, .menu a {
+  border-width: 2px;
+  border-radius: 0.9rem;
+  box-shadow: inset 0 1px 0 #ffffff55, var(--sombra-boton);
+  background-image: linear-gradient(180deg, #ffffff10, #00000008);
+  transition: transform 100ms ease;
+  overflow-wrap: anywhere;
+}
+.big-button:not(:disabled):active, .menu a:active { transform: translateY(3px); }
+.big-button:disabled { background-image: none; box-shadow: none; color: var(--fg); background-color: var(--bg); border-color: var(--borde-suave); }
+input:not([type='checkbox']):not([type='radio']), select, textarea {
+  border-width: 2px;
+  border-color: var(--borde-suave);
+  border-radius: 0.8rem;
+  background: var(--superficie);
+  box-shadow: inset 0 2px 4px #0000000d;
+}
+.insignia { border-width: 1px; border-radius: 0.5rem; padding: 0.15rem 0.55rem; }
+.aviso { border-width: 2px; border-radius: 0.8rem; }
+.control-cajas h3, .control-cajas p { margin: 0; }
+.control-cajas { gap: 1.15rem; }
+.ceja { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; }
+.resumen-cajas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 0.75rem; }
+.resumen-cajas > div { display: flex; flex-direction: column; gap: 0.4rem; padding: 1rem; border: 1px solid var(--borde-suave); border-radius: 0.9rem; }
+.resumen-cajas span, .resumen-cajas small { font-size: 1rem; }
+.resumen-cajas strong { font-size: 2rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.resumen-cajas > div:last-child { background: var(--accent-bg); color: var(--accent-fg); box-shadow: inset 0 1px 0 #ffffff44; }
+@media (prefers-reduced-motion: reduce) { .big-button, .menu a { transition: none; } .big-button:not(:disabled):active, .menu a:active { transform: none; } }
+@media (forced-colors: active) { .tarjeta, .big-button, .menu a, .opciones-simples, .cuenta-simple { box-shadow: none; border: 2px solid CanvasText; } }

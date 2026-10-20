@@ -74,7 +74,7 @@ const casos: Casos = {
   descarga: crearDescargaNavegador(),
   exportacion: crearExportacionStore(),
   ahora: () => new Date(),
-  voz: crearVozWeb(),
+  voz: android ? (await import('./adapters/out/android/voz-android')).crearVozAndroid(android.nativeBridge) : crearVozWeb(),
   ubicacion: esAndroid ? (await import('./adapters/out/android/ubicacion-android')).crearUbicacionAndroid() : crearUbicacionWeb(),
   pantalla: crearPantallaEncendida(),
   permisos: android ? (await import('./adapters/out/android/permisos-android')).crearPermisosAndroid(crearPermisosWeb(undefined, false), undefined, () => android.nativeBridge.requestNotifications()) : crearPermisosWeb(),

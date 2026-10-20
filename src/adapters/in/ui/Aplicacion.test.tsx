@@ -2076,6 +2076,14 @@ describe('el chofer: camión del día y carga de entregas', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('No hay permiso para usar el micrófono');
   });
 
+  it('un error inmediato permite volver a dictar sin dejar una sesión bloqueada', async () => {
+    const voz = { disponible: true, escuchar: vi.fn((m: Parameters<Casos['voz']['escuchar']>[0]) => { m.alTerminar('OTRO'); return { detener: vi.fn() }; }) };
+    montar({ ruta: '/cargar', sesion: CHOFER, casos: { voz }, api: baseApi() });
+    await userEvent.click(await screen.findByRole('button', { name: 'HABLAR' }));
+    await userEvent.click(screen.getByRole('button', { name: 'HABLAR' }));
+    expect(voz.escuchar).toHaveBeenCalledTimes(2);
+  });
+
   it('sin dictado propio no muestra HABLAR y sugiere el micrófono del teclado', async () => {
     montar({ ruta: '/cargar', sesion: CHOFER, api: baseApi() });
     expect(await screen.findByText(/usa el micrófono del teclado/)).toBeInTheDocument();

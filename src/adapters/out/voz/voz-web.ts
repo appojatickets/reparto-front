@@ -46,28 +46,41 @@ export const crearVozWeb = (ventana: VentanaConVoz = window as unknown as Ventan
       r.interimResults = true;
       r.maxAlternatives = 1;
       let error: ErrorVoz | undefined;
+      let terminada = false;
+      const terminar = (fallo?: ErrorVoz): void => {
+        if (terminada) return;
+        terminada = true;
+        r.onresult = null;
+        r.onerror = null;
+        r.onend = null;
+        alTerminar(fallo);
+      };
       r.onresult = (e) => {
         let texto = '';
-        let final = false;
+        let final = true;
         for (let i = 0; i < e.results.length; i++) {
           const resultado = e.results[i];
           texto += resultado?.[0]?.transcript ?? '';
-          final = final || resultado?.isFinal === true;
+          final = final && resultado?.isFinal === true;
         }
         alTexto({ texto: texto.trim(), final });
       };
       r.onerror = (e) => {
         error = aErrorVoz(e.error);
+        terminar(error);
       };
       r.onend = () => {
-        alTerminar(error);
+        terminar(error);
       };
       try {
         r.start();
       } catch {
-        alTerminar('OTRO');
+        terminar('OTRO');
       }
-      return { detener: () => { r.stop(); } };
+      return { detener: () => {
+        if (terminada) return;
+        try { r.stop(); } catch { terminar(); }
+      } };
     },
   };
 };
