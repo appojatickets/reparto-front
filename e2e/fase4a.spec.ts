@@ -94,7 +94,7 @@ test.describe('fase 4a: el chofer', () => {
     await expect(page.getByRole('listitem', { name: 'Parada 1' })).toBeVisible();
     await expect(page.getByRole('listitem', { name: 'Parada 1' }).getByRole('button', { name: 'IR', exact: true })).toBeVisible();
     await sinViolaciones(page);
-    await expect(page.getByText('SIN UBICACIÓN PRECISA', { exact: true })).toBeVisible();
+    await expect(page.getByText('Ubicación estimada', { exact: true })).toBeVisible();
     await expect(page.getByText('VOLVER A IBIZA')).toBeVisible();
     await expect(page.getByText(/1 parada sin ubicación precisa/)).toHaveCount(0);
     await sinViolaciones(page);
