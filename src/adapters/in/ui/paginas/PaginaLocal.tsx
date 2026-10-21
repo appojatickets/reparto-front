@@ -1,3 +1,4 @@
+import { describirOrigenPin } from '../../../../domain/origen-pin';
 import { useCallback, useState, type ChangeEvent, type SyntheticEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { leerCoordenadas } from '../../../../domain/coordenadas';
@@ -95,6 +96,9 @@ const VerificarPin = ({ local, alCambiar }: { readonly local: LocalDetalle; read
   };
   return (
     <>
+      <p className="ayuda">{describirOrigenPin(local)}</p>
+      {local.pinFuente === 'gemini' && !local.pinVerificado ? <p className="ayuda">Se confirma con dos visitas distintas, GPS preciso y detención junto al local. Una entrega sola no mueve este pin.</p> : null}
+      {local.pinCorreccion ? <Aviso>Dos visitas coinciden lejos de este pin. <a href={`https://www.google.com/maps/search/?api=1&query=${local.pinCorreccion.lat},${local.pinCorreccion.lng}`} target="_blank" rel="noreferrer">Ver ubicación propuesta por las entregas</a>. Revisa la ubicación antes de corregirla.</Aviso> : null}
       <p className="ayuda">{local.pinVerificado && local.pinVerificacion ? `${textoDeQuienVerifico(local.pinVerificacion)} No se mueve solo.` : local.pinRespaldo ? describirRespaldo(local.pinRespaldo).ayuda : local.pinVerificado ? 'Este pin está verificado: no se mueve solo.' : 'Este pin se va ajustando con el lugar donde se entrega. Verifícalo cuando esté bien para dejarlo fijo.'}</p>
       {puede ? (
         local.pinVerificado

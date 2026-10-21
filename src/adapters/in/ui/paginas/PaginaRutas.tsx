@@ -1,3 +1,4 @@
+import { describirOrigenPin } from '../../../../domain/origen-pin';
 import { VisitasGps } from '../componentes/VisitasGps';
 import { ControlCajas, EVENTO_CAJAS } from '../componentes/ControlCajas';
 import { RutaGoogleMaps } from '../componentes/RutaGoogleMaps';
@@ -105,7 +106,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           {compacta ? <span className="parada-marca">PENDIENTE · TOCA PARA VER FOTO</span> : null}
           {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
-          {p.ubicacionAproximada ? <span className="parada-marca parada-marca--aproximada">SIN UBICACIÓN PRECISA</span> : null}
+          {describirOrigenPin(p) ? <span className="parada-marca parada-marca--aproximada">{describirOrigenPin(p)}</span> : null}
           {horario !== undefined ? <span className="parada-marca">POSIBLEMENTE CERRADO</span> : null}
           {!compacta ? <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} /> : null}
         </span>
