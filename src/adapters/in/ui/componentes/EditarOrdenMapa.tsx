@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { enlaceNavegar } from '../../../../domain/enlaces';
 import type { ParadaDeRuta } from '../../../../application/modelos';
 import { Aviso, Boton, Campo } from './ui';
 
@@ -28,6 +29,7 @@ export const EditarOrdenMapa = ({ parada, total, manual, guardar, cancelar }: {
       {error ? <Aviso tipo="error">{error}</Aviso> : null}
       <Boton type="submit" disabled={ocupado}>{ocupado ? 'GUARDANDO…' : 'MOVER'}</Boton>
       <Boton variante="secundario" disabled={ocupado} onClick={cancelar}>CANCELAR</Boton>
+      <a className="big-button big-button--secundario" href={enlaceNavegar(parada, 'google')} target="_blank" rel="noreferrer">ABRIR NAVEGACIÓN</a>
     </form>
   </dialog>;
 };
