@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import type { VistaRuta } from '../../../../application/modelos';
 import { useCasos } from '../contexto';
 import { useUsuario } from '../sesion';
@@ -18,6 +18,7 @@ export const MapaRuta = ({ vista, mover, ocupado = false }: { readonly vista: Vi
   const { ahora } = useCasos();
   const usuario = useUsuario();
   const [elegida, setElegida] = useState<{ id: string; version: number | undefined }>();
+  const seleccionar = useCallback((id: string) => { setElegida({ id, version: vista.version }); }, [vista.version]);
   const parada = vista.paradas.find(p => p.facturaId === elegida?.id);
   const [abierto, setAbierto] = useState(false);
   const [aviso, setAviso] = useState('');
@@ -25,7 +26,7 @@ export const MapaRuta = ({ vista, mover, ocupado = false }: { readonly vista: Vi
     <Boton variante="secundario" aria-expanded={abierto} onClick={() => { setAbierto(!abierto); }}>{abierto ? 'OCULTAR MAPA' : 'VER MAPA DE MI RUTA'}</Boton>
     {abierto ? <>
       <p className="ayuda">Puntos numerados en tu orden de entrega, sin líneas de recorrido. Toca un número para cambiar su puesto o ver el cliente y navegar.</p>
-      <Suspense fallback={<Cargando />}><Mapa vista={vista} ocupado={ocupado} seleccionar={mover ? id => { setElegida({ id, version: vista.version }); } : undefined} /></Suspense>
+      <Suspense fallback={<Cargando />}><Mapa vista={vista} ocupado={ocupado} seleccionar={mover ? seleccionar : undefined} /></Suspense>
       {parada && elegida && mover ? <EditarOrdenMapa key={parada.facturaId} parada={parada} total={vista.paradas.length} manual={vista.modo === 'carga'} cancelar={() => { setElegida(undefined); }} guardar={async puesto => {
         if (elegida.version !== vista.version || ocupado) { setAviso('La ruta cambió. Cierra el editor y selecciona de nuevo la entrega.'); return false; }
         return mover(parada.facturaId, puesto);
