@@ -26,6 +26,8 @@ export type ResultadoBusqueda = {
   readonly pinEstado: EstadoPin;
   /** Alguien verificó el pin / el admin dio por buena la foto: se muestran como insignias ✓. */
   readonly pinVerificado?: boolean;
+  readonly pinFuente?: string;
+  readonly pinVerificacion?: QuienVerifico;
   readonly fotoPath?: string;
   readonly fotoVerificada?: boolean;
   readonly streetviewRumbo?: number;
@@ -34,7 +36,7 @@ export type ResultadoBusqueda = {
 
 /** `pinVerificado`: una persona confirmó el pin y ya no se mueve solo; si no, está «por verificar» y cada entrega con buen GPS lo ajusta. */
 /** `pinRespaldo`: qué tan firme es el pin según las entregas (solo si el local tiene pin y el servidor pudo calcularlo). */
-export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean; readonly pinVerificacion?: QuienVerifico; readonly fotoVerificada?: boolean; readonly pinRespaldo?: PinRespaldo };
+export type LocalDetalle = Omit<ResultadoBusqueda, 'localId'> & { readonly id: string; readonly rut?: string; readonly pinVerificado: boolean; readonly pinVerificacion?: QuienVerifico; readonly fotoVerificada?: boolean; readonly pinRespaldo?: PinRespaldo; readonly pinCorreccion?: { readonly lat: number; readonly lng: number } };
 
 /** Una fila de la sección «Locales»: los datos del cliente y del local, el pin y lo entregado. */
 export type LocalDeLista = {
@@ -85,6 +87,7 @@ export type PinParaRevisar = {
   readonly lng: number;
   readonly pinVerificacion?: QuienVerifico;
   readonly verificadoEn?: string;
+  readonly pinFuente?: string;
   readonly respaldo: PinRespaldo;
 };
 export type PinesParaRevisar = { readonly total: number; readonly pines: readonly PinParaRevisar[] };
@@ -241,6 +244,8 @@ export type ItemRuta = {
   readonly tieneFoto?: boolean;
   /** Insignias ✓: el pin del local está verificado y la foto de su fachada está verificada. */
   readonly pinVerificado?: boolean;
+  readonly pinFuente?: string;
+  readonly pinVerificacion?: QuienVerifico;
   readonly fotoVerificada?: boolean;
   readonly urgente: boolean;
   readonly antesDeMin?: number;

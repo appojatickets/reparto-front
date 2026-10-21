@@ -2511,10 +2511,14 @@ export interface paths {
                             /** @enum {string} */
                             pinEstado: "pendiente" | "sugerido" | "validado";
                             /** @enum {string} */
-                            pinFuente?: "geocodificador" | "manual" | "importado" | "aprendido" | "chofer" | "enlace";
+                            pinFuente?: "geocodificador" | "manual" | "importado" | "aprendido" | "chofer" | "enlace" | "gemini";
                             pinVerificado: boolean;
                             /** @enum {string} */
                             pinVerificacion?: "persona" | "entregas";
+                            pinCorreccion?: {
+                                lat: number;
+                                lng: number;
+                            };
                             pinRespaldo?: {
                                 /** @enum {string} */
                                 nivel: "verificado" | "respaldado" | "en_conflicto" | "sin_respaldo";
@@ -6921,7 +6925,7 @@ export interface paths {
                                 /** @enum {string} */
                                 pinEstado: "pendiente" | "sugerido" | "validado";
                                 /** @enum {string} */
-                                pinFuente?: "geocodificador" | "manual" | "importado" | "aprendido" | "chofer" | "enlace";
+                                pinFuente?: "geocodificador" | "manual" | "importado" | "aprendido" | "chofer" | "enlace" | "gemini";
                                 pinConfianza?: number;
                                 nota?: string;
                                 tieneFoto: boolean;
@@ -8639,6 +8643,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -8665,6 +8672,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -8683,6 +8693,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -8703,6 +8716,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -8721,6 +8737,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -8740,6 +8759,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9083,6 +9105,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9109,6 +9134,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9127,6 +9155,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9147,6 +9178,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9165,6 +9199,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9184,6 +9221,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9403,6 +9443,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9429,6 +9472,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9447,6 +9493,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9467,6 +9516,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9485,6 +9537,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;
@@ -9504,6 +9559,9 @@ export interface paths {
                                 noEncontradaEnMapa?: boolean;
                                 tieneFoto?: boolean;
                                 pinVerificado?: boolean;
+                                pinFuente?: string;
+                                /** @enum {string} */
+                                pinVerificacion?: "persona" | "entregas";
                                 fotoVerificada?: boolean;
                                 urgente: boolean;
                                 antesDeMin?: number;

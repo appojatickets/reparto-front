@@ -11,7 +11,7 @@ export type FilaExportacion = {
   readonly lat?: number;
   readonly lng?: number;
   readonly pinEstado: 'pendiente' | 'sugerido' | 'validado';
-  readonly pinFuente?: 'geocodificador' | 'manual' | 'importado' | 'aprendido' | 'chofer' | 'enlace';
+  readonly pinFuente?: 'geocodificador' | 'manual' | 'importado' | 'aprendido' | 'chofer' | 'enlace' | 'gemini';
   readonly pinConfianza?: number;
   readonly nota?: string;
   readonly tieneFoto: boolean;
@@ -28,6 +28,7 @@ export type Columna = { readonly id: IdColumna; readonly titulo: string; readonl
 
 const ESTADO_PIN: Readonly<Record<FilaExportacion['pinEstado'], string>> = { pendiente: 'Sin pin', sugerido: 'Sugerido', validado: 'Validado' };
 const FUENTE_PIN: Readonly<Record<NonNullable<FilaExportacion['pinFuente']>, string>> = {
+  gemini: 'Gemini',
   geocodificador: 'Buscador por dirección', manual: 'Manual', importado: 'Importado', aprendido: 'Aprendido', chofer: 'GPS del chofer', enlace: 'Enlace del vendedor',
 };
 

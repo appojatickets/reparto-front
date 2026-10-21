@@ -1,3 +1,4 @@
+import { describirOrigenPin } from '../../../../domain/origen-pin';
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 import { enlaceGoogleMaps } from '../../../../domain/enlaces';
@@ -26,9 +27,10 @@ const FilaPin = ({ p, vista, alCambiar }: { readonly p: PinParaRevisar; readonly
   return (
     <li className="tarjeta" aria-label={`Pin de ${p.razonSocial}`}>
       <strong>{p.razonSocial}</strong>
+      {describirOrigenPin({ ...p, pinVerificado: vista === 'verificados' }) ? <span className="ayuda">{describirOrigenPin({ ...p, pinVerificado: vista === 'verificados' })}</span> : null}
       <span>{p.direccion}, <strong className="comuna">{p.comuna}</strong></span>
       <Insignia>{vista === 'verificados' ? '✓ VERIFICADO' : respaldo.etiqueta}</Insignia>
-      <span className="ayuda">{vista === 'verificados' ? textoDeQuienVerifico(p.pinVerificacion) : respaldo.ayuda}</span>
+      <span className="ayuda">{vista === 'verificados' ? textoDeQuienVerifico(p.pinVerificacion) : p.pinFuente === 'gemini' && p.respaldo.nivel === 'sin_respaldo' ? 'Se confirma con dos visitas distintas, GPS preciso y detención. Una entrega sola no mueve este pin.' : respaldo.ayuda}</span>
       <div className="fila-botones">
         {vista === 'por_verificar'
           ? <Boton disabled={ocupado} aria-label={`VERIFICAR EL PIN DE ${p.razonSocial}`} onClick={() => void cambiar(true)}>VERIFICAR PIN</Boton>

@@ -1,3 +1,4 @@
+import { describirOrigenPin } from '../../../../domain/origen-pin';
 import { useEffect, useRef, useState } from 'react';
 import { Map, Marker, NavigationControl, Popup, LngLatBounds, setWorkerUrl } from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
@@ -49,7 +50,7 @@ export default function MapaInteractivo({ vista, seleccionar, ocupado = false }:
     if (vista.deposito) agregar(vista.deposito.lng, vista.deposito.lat, 'D', vista.deposito.nombre ?? 'Depósito', 'Salida y regreso', '#111827');
     vista.paradas.forEach((p, i) => {
       if (p.lng === undefined || p.lat === undefined) return;
-      agregar(p.lng, p.lat, String(i + 1), p.cliente, `${p.direccion}, ${p.comuna}${p.ubicacionAproximada ? ' · Ubicación aproximada' : ''}`, p.ubicacionAproximada ? '#9a3412' : color(i), p, p.facturaId);
+      agregar(p.lng, p.lat, String(i + 1), p.cliente, `${p.direccion}, ${p.comuna}${describirOrigenPin(p) ? ` · ${describirOrigenPin(p)}` : ''}`, p.ubicacionAproximada ? '#9a3412' : color(i), p, p.facturaId);
     });
     const clave = `${vista.camionId}:${vista.fecha}`;
     if (!limites.isEmpty() && encuadrada.current !== clave) {

@@ -1,3 +1,4 @@
+import { describirOrigenPin } from '../../../../domain/origen-pin';
 import { VisitasGps } from '../componentes/VisitasGps';
 import { ControlCajas, EVENTO_CAJAS } from '../componentes/ControlCajas';
 import { RutaGoogleMaps } from '../componentes/RutaGoogleMaps';
@@ -49,6 +50,7 @@ const AvisoUbicacion = ({ p, puedeAbrirFicha }: { readonly p: ParadaDeRuta; read
   const como = puedeAbrirFicha
     ? <>Recomendado: ajústala con <Link to={`/clientes/${p.localId}`}>Fijar el pin</Link> o pega la ubicación del vendedor.</>
     : <>Recomendado: pega la ubicación del vendedor con el botón UBICACIÓN DEL VENDEDOR.</>;
+  if (p.pinFuente === 'gemini' && !p.pinVerificado) return <span className="ayuda">Ubicación encontrada mediante Gemini: se confirma con dos visitas distintas y detenciones con GPS preciso. Una entrega sola no la mueve. {como}</span>;
   if (!sinPin) {
     return <span className="ayuda">Ubicación aproximada: te guía por la dirección. Al llegar, tu GPS la mejora. {como}</span>;
   }
@@ -62,11 +64,13 @@ const AvisoUbicacion = ({ p, puedeAbrirFicha }: { readonly p: ParadaDeRuta; read
 
 /** Cuántas paradas de la ruta están ubicadas por estimación (sin pin o con pin aproximado), para que se note y se ajusten. */
 const AvisoAproximadas = ({ paradas }: { readonly paradas: readonly ParadaDeRuta[] }) => {
-  const n = paradas.filter((p) => p.ubicacionAproximada).length;
-  if (n === 0) return null;
+  const n = paradas.filter((p) => p.ubicacionAproximada && p.pinFuente !== 'gemini').length;
+  const ia = paradas.filter(p => p.pinFuente === 'gemini' && !p.pinVerificado).length;
+  if (n === 0) return ia > 0 ? <Aviso>Hay pines encontrados mediante Gemini pendientes de verificar. Se confirman con dos visitas distintas y detenciones con GPS preciso.</Aviso> : null;
   return (
     <Aviso>
       {n === 1 ? '1 parada sin ubicación precisa' : `${n} paradas sin ubicación precisa`}: la ruta {n === 1 ? 'la ubica' : 'las ubica'} por estimación (van marcadas en naranja). Se ajustan al marcar ENTREGADO en la puerta, o antes pegando la ubicación del vendedor.
+      {ia > 0 ? ' Los pines de Gemini requieren dos visitas distintas con detenciones y GPS preciso.' : ''}
     </Aviso>
   );
 };
@@ -105,7 +109,7 @@ const FilaParada = ({ p, total, ocupado, operar, mover, asa, fila, enCamion, alC
           {compacta ? <span className="parada-marca">PENDIENTE · TOCA PARA VER FOTO</span> : null}
           {esSiguiente ? <span className="parada-marca">SIGUIENTE</span> : null}
           {p.urgente ? <span className="parada-marca">URGENTE</span> : null}
-          {p.ubicacionAproximada ? <span className="parada-marca parada-marca--aproximada">SIN UBICACIÓN PRECISA</span> : null}
+          {describirOrigenPin(p) ? <span className="parada-marca parada-marca--aproximada">{describirOrigenPin(p)}</span> : null}
           {horario !== undefined ? <span className="parada-marca">POSIBLEMENTE CERRADO</span> : null}
           {!compacta ? <InsigniasDeVerificacion pin={p.pinVerificado} foto={p.fotoVerificada} /> : null}
         </span>

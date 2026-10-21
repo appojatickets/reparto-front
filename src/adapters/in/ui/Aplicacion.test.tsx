@@ -1651,6 +1651,13 @@ describe('rutas del día', () => {
   });
 
 
+  it('muestra en la ruta qué pin fijó Gemini y cuál ya confirmaron las entregas', async () => {
+    montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, { pinFuente: 'gemini', ubicacionAproximada: true }), parada('B', 1, { pinFuente: 'gemini', pinVerificado: true, pinVerificacion: 'entregas' })] }))) }) });
+    await elegirCamion();
+    expect(await screen.findByText('Fijado por Gemini · pendiente de verificar')).toBeInTheDocument();
+    expect(screen.getByText('Confirmado por entregas')).toBeInTheDocument();
+  });
+
   it('una parada sin pin exacto avisa que es aproximada y lleva a fijar el pin', async () => {
     montar({ ruta: '/rutas', sesion: DESPACHADOR, api: base({ verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, { ubicacionAproximada: true, localId: 'lA', lat: -33.5, lng: -70.6 })] }))) }) });
     await elegirCamion();
@@ -1665,12 +1672,12 @@ describe('rutas del día', () => {
     await elegirCamion();
     expect(await screen.findByText(/2 paradas sin ubicación precisa/)).toBeInTheDocument();
     const b = screen.getByRole('listitem', { name: 'Parada 2' });
-    expect(within(b).getByText('SIN UBICACIÓN PRECISA')).toBeInTheDocument();
+    expect(within(b).getByText('Ubicación estimada')).toBeInTheDocument();
     expect(b).toHaveClass('parada--aproximada');
     expect(screen.getByRole('listitem', { name: 'Parada 3' })).toHaveClass('parada--aproximada');
     const a = screen.getByRole('listitem', { name: 'Parada 1' });
     expect(a).not.toHaveClass('parada--aproximada');
-    expect(within(a).queryByText('SIN UBICACIÓN PRECISA')).toBeNull();
+    expect(within(a).queryByText('Ubicación estimada')).toBeNull();
   });
 
   it('sin ninguna parada aproximada no hay aviso en la ruta', async () => {
@@ -1698,7 +1705,7 @@ describe('rutas del día', () => {
     const JORNADA = { id: 'j1', fecha: '2026-10-05', desde: '2026-10-05T11:00:00.000Z', camion: { id: 'c1', patente: 'AB1234', alias: 'Camión 3' } };
     montar({ ruta: '/mi-ruta', sesion: CHOFER, api: { miJornada: () => Promise.resolve(ok(JORNADA)), verRuta: () => Promise.resolve(ok(vista({ paradas: [parada('A', 0, sinPin)] }))) } });
     const a = await screen.findByRole('listitem', { name: 'Parada 1' });
-    expect(within(a).getByText("SIN UBICACIÓN PRECISA")).toBeInTheDocument();
+    expect(within(a).getByText('Ubicación estimada')).toBeInTheDocument();
     expect(within(a).queryByText(/botón UBICACIÓN DEL VENDEDOR/)).toBeNull();
     expect(within(a).queryByRole('link', { name: 'Fijar el pin' })).toBeNull();
   });
@@ -3171,6 +3178,15 @@ describe('verificar pines (lista como la de fotos)', () => {
   it('en el inicio el despachador ve VERIFICAR PINES', async () => {
     montar({ sesion: DESPACHADOR });
     expect(await screen.findByRole('link', { name: 'VERIFICAR PINES' })).toBeInTheDocument();
+  });
+
+  it('la ficha muestra la discrepancia del pin Gemini y permite ver la propuesta sin moverlo', async () => {
+    const local = { id: 'l1', clienteId: 'c1', razonSocial: 'Rabelo', direccion: 'Colón 10', comuna: 'San Bernardo', pinEstado: 'sugerido' as const, lat: -33.6, lng: -70.7, pinFuente: 'gemini', pinVerificado: false, pinCorreccion: { lat: -33.61, lng: -70.71 } };
+    const verificarPin = vi.fn(() => Promise.resolve(ok(undefined)));
+    montar({ ruta: '/clientes/l1', sesion: DESPACHADOR, api: { obtenerLocal: () => Promise.resolve(ok(local)), verificarPin } });
+    expect(await screen.findByText('Fijado por Gemini · pendiente de verificar')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver ubicación propuesta por las entregas' })).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=-33.61,-70.71');
+    expect(verificarPin).not.toHaveBeenCalled();
   });
 
   it('la ficha dice quién verificó el pin', async () => {
