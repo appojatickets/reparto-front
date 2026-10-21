@@ -323,15 +323,18 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
   const vista = actualizada ?? (estado.tipo === 'ok' ? estado.datos : undefined);
   const cierranPorHorario = new Map((vista?.enRiesgo ?? []).flatMap((r) => (r.conflictos[0]?.startsWith('Según su horario') ? [[r.facturaId, r.conflictos[0]] as const] : [])));
 
-  const aplicar = async (llamada: () => ReturnType<typeof api.planificarRuta>, alFallar?: () => void): Promise<void> => {
+  const aplicar = async (llamada: () => ReturnType<typeof api.planificarRuta>, alFallar?: () => void, alGuardar?: (v: VistaRuta) => void): Promise<void> => {
     setOcupado(true);
     setAviso(undefined);
     setConfirmar(false);
     setConfirmarCarga(false);
-    const r = await llamada();
-    setOcupado(false);
+    let r: Awaited<ReturnType<typeof api.planificarRuta>>;
+    try { r = await llamada(); }
+    catch { alFallar?.(); setAviso('No se guardó. Comprueba la conexión y reintenta.'); return; }
+    finally { setOcupado(false); }
     if (r.ok) {
       setActualizada(r.value);
+      alGuardar?.(r.value);
       return;
     }
     alFallar?.();
@@ -368,22 +371,27 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
    * Arrastrar y soltar (o las flechas del asa): la parada queda en su lugar de inmediato y el servidor lo confirma y recalcula las horas.
    * Si no se pudo, vuelve a donde estaba y se avisa.
    */
-  const mover = (facturaId: string, posicion: number): void => {
+  const [deshacerMovimiento, setDeshacerMovimiento] = useState<{ anterior: VistaRuta; version: number }>();
+  const mover = async (facturaId: string, posicion: number): Promise<boolean> => {
     const v = vista;
     const version = v?.version;
     const parada = v?.paradas.find((p) => p.facturaId === facturaId);
-    if (!v || version === undefined || !parada || ocupado) return;
+    if (!v || version === undefined || !parada || ocupado) return false;
+    if (parada.posicion === posicion) return true;
     const anterior = actualizada;
     const paradas = reordenarParadas(v.paradas, facturaId, posicion);
     setActualizada({ ...v, paradas });
     setAnuncio(`${parada.cliente} quedó en el lugar ${(paradas.find((p) => p.facturaId === facturaId)?.posicion ?? posicion) + 1}.`);
-    void aplicar(
+    let guardado = false;
+    await aplicar(
       () => api.operarRuta(camionId, fecha, version, { tipo: 'mover', facturaId, posicion }),
       () => { setActualizada(anterior); setAnuncio(undefined); },
+      nueva => { guardado = true; if (nueva.version !== undefined) setDeshacerMovimiento({ anterior: v, version: nueva.version }); },
     );
+    return guardado;
   };
   const lista = useRef<HTMLOListElement>(null);
-  const arrastre = useArrastre(lista, vista?.paradas.map((p) => p.facturaId) ?? [], mover);
+  const arrastre = useArrastre(lista, vista?.paradas.map((p) => p.facturaId) ?? [], (id, puesto) => { void mover(id, puesto); });
   // Terminar la ruta: con el botón de abajo o al llegar al depósito. El servidor limpia la lista al instante (borra la ruta y suelta lo pendiente del camión).
   const [terminada, setTerminada] = useState<{ readonly resumen: ResumenJornada | null } | undefined>();
   const [confirmandoFin, setConfirmandoFin] = useState(false);
@@ -576,7 +584,11 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
         </>
       ) : (
         <>
-          <MapaRuta vista={vista} />
+          <MapaRuta vista={vista} ocupado={ocupado} mover={mover} />
+          {deshacerMovimiento && deshacerMovimiento.version === vista.version && deshacerMovimiento.anterior.camionId === vista.camionId && deshacerMovimiento.anterior.fecha === vista.fecha ? <Boton variante="secundario" disabled={ocupado} onClick={() => {
+            const anterior = deshacerMovimiento.anterior;
+            void aplicar(() => api.operarRuta(camionId, fecha, deshacerMovimiento.version, { tipo: 'restaurar', orden: anterior.paradas.map(p => p.facturaId), fijas: anterior.paradas.filter(p => p.fijada).map(p => p.facturaId), modo: anterior.modo ?? 'sugerida' }), undefined, () => { setDeshacerMovimiento(undefined); setAnuncio('Se recuperó el orden anterior.'); });
+          }}>DESHACER ÚLTIMO MOVIMIENTO</Boton> : null}
           <Resumen v={vista} simple={compacta} />
           {enCamion && !simple ? <RutaGoogleMaps paradas={vista.paradas} /> : null}
           {compacta ? <Boton variante="secundario" aria-expanded={ordenando} onClick={() => { setOrdenando(!ordenando); }}>{ordenando ? "LISTO, VOLVER AL REPARTO" : "ORDENAR RUTA"}</Boton> : null}
@@ -649,7 +661,7 @@ export const RutaDelCamion = ({ camionId, fecha }: { readonly camionId: string; 
                 total={vista.paradas.length}
                 ocupado={ocupado}
                 operar={operar}
-                mover={(posicion) => { mover(p.facturaId, posicion); }}
+                mover={(posicion) => { void mover(p.facturaId, posicion); }}
                 asa={arrastre.asa(p.facturaId)}
                 fila={arrastre.fila(i)}
                 enCamion={enCamion}

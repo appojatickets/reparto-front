@@ -20,7 +20,7 @@ const montar = (opciones: { ruta?: string; sesion?: UsuarioSesion; api?: Partial
   window.history.pushState({}, '', opciones.ruta ?? '/');
   const estado: EstadoSesion = opciones.sesion ? { tipo: 'sesion', usuario: opciones.sesion } : { tipo: 'sin_sesion' };
   const casos: Casos = {
-    api: fakeApi({ verRuta: () => Promise.resolve(http(503, { mensaje: "Resumen no disponible" })), ...opciones.api }),
+    api: fakeApi({ verRuta: () => Promise.resolve(opciones.ruta === '/cargar' ? ok({ camionId: 'c1', fecha: '2026-10-05', planificada: true, modo: 'carga' as const, version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, paradas: [], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] }) : http(503, { mensaje: "Resumen no disponible" })), ...opciones.api }),
     iniciarSesion: vi.fn(() => Promise.resolve(err('Usuario o clave incorrectos. Te quedan 4 intentos.'))),
     restaurarSesion: vi.fn(() => Promise.resolve(estado)),
     cerrarSesion: vi.fn(),

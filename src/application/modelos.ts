@@ -258,6 +258,7 @@ export type ParadaDeRuta = ItemRuta & {
 };
 export type SugerenciaRuta = { readonly tipo: 'MOVER_AL_INICIO' | 'SALIR_ANTES' | 'OTRO_CAMION'; readonly minutos?: number; readonly texto: string };
 export type VistaRuta = {
+  readonly ordenComunas?: readonly string[];
   readonly camionId: string;
   readonly fecha: string;
   readonly planificada: boolean;
@@ -282,6 +283,7 @@ export type OperacionRuta =
   | { readonly tipo: 'subir' | 'bajar' | 'primero' | 'despues' | 'quitar'; readonly facturaId: string }
   /** Arrastrar y soltar: la parada queda en `posicion` (0 = la primera) de la lista de paradas en orden. */
   | { readonly tipo: 'mover'; readonly facturaId: string; readonly posicion: number }
+  | { readonly tipo: 'restaurar'; readonly orden: readonly string[]; readonly fijas: readonly string[]; readonly modo: 'sugerida' | 'manual' | 'carga' }
   | { readonly tipo: 'ordenar' | 'insertar' }
   /** PASAR A MANUAL: se congela el orden que se ve y desde ahí nada se reordena solo. */
   | { readonly tipo: 'fijar' }
