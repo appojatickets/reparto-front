@@ -12,6 +12,7 @@ const rutas = (extra: Rutas = {}): Rutas => ({
   'POST /v1/auth/login': () => ({ status: 200, json: { ...SESION, usuario: CHOFER } }),
   'GET /v1/camiones': () => ({ status: 200, json: { camiones: [CAMION] } }),
   'GET /v1/jornada': () => ({ status: 200, json: { jornada: JORNADA } }),
+  'GET /v1/rutas': () => ({ status: 200, json: { camionId: CAMION.id, fecha: JORNADA.fecha, planificada: true, modo: 'carga', version: 1, salidaMin: 480, horaLimiteRegresoMin: 1260, paradas: [], nuevas: [], hechas: [], sinPin: [], noAtendidas: [], enRiesgo: [] } }),
   'GET /v1/facturas': () => ({ status: 200, json: { facturas: [FACTURA] } }),
   'GET /v1/clientes/buscar': () => ({ status: 200, json: { resultados: [{ localId: UUID, clienteId: 'c1', razonSocial: 'Minimarket Rabet', direccion: 'Calle 1 123', comuna: 'Maipú', pinEstado: 'validado', score: 0.9 }] } }),
   ...extra,

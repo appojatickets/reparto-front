@@ -8612,6 +8612,7 @@ export interface paths {
                             camionId: string;
                             fecha: string;
                             planificada: boolean;
+                            readonly ordenComunas?: string[];
                             /** @enum {string} */
                             modo?: "sugerida" | "manual" | "carga";
                             version?: number;
@@ -9040,6 +9041,7 @@ export interface paths {
                         salidaMin?: number;
                         /** @enum {string} */
                         orden?: "calcular" | "carga";
+                        ordenComunas?: string[];
                     };
                 };
             };
@@ -9054,6 +9056,7 @@ export interface paths {
                             camionId: string;
                             fecha: string;
                             planificada: boolean;
+                            readonly ordenComunas?: string[];
                             /** @enum {string} */
                             modo?: "sugerida" | "manual" | "carga";
                             version?: number;
@@ -9346,6 +9349,13 @@ export interface paths {
                             posicion: number;
                         } | {
                             /** @enum {string} */
+                            tipo: "restaurar";
+                            orden: string[];
+                            fijas: string[];
+                            /** @enum {string} */
+                            modo: "sugerida" | "manual" | "carga";
+                        } | {
+                            /** @enum {string} */
                             tipo: "ordenar" | "insertar" | "fijar";
                         } | {
                             /** @enum {string} */
@@ -9366,6 +9376,7 @@ export interface paths {
                             camionId: string;
                             fecha: string;
                             planificada: boolean;
+                            readonly ordenComunas?: string[];
                             /** @enum {string} */
                             modo?: "sugerida" | "manual" | "carga";
                             version?: number;

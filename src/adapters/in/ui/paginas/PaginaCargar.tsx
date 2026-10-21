@@ -1,3 +1,4 @@
+import { OrganizacionRuta } from '../componentes/OrganizacionRuta';
 import { mismoTexto } from '../../../../domain/texto';
 import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import { Link } from 'react-router';
@@ -271,6 +272,7 @@ const ClienteNuevo = ({ direccionInicial, comunaInicial, alCrear, alCancelar }: 
 
 const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
   const { api } = useCasos();
+  const [organizada, setOrganizada] = useState(false);
   const [texto, setTexto] = useState('');
   const consulta = useDebounced(texto, 250);
   const [resultados, setResultados] = useState<{ consulta: string; lista: readonly ResultadoBusqueda[]; error?: string } | undefined>();
@@ -333,6 +335,9 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
 
   return (
     <>
+      <OrganizacionRuta jornada={jornada} alPreparada={setOrganizada} />
+      {!organizada ? <Aviso>Elige y guarda la organización antes de cargar las facturas.</Aviso> : null}
+      <fieldset className="carga-direcciones" disabled={!organizada}>
       <Campo
         ref={campo}
         etiqueta="Dirección o cliente"
@@ -378,6 +383,7 @@ const Carga = ({ jornada }: { readonly jornada: Jornada }) => {
       {creando ? <ClienteNuevo direccionInicial={escrito.consulta} comunaInicial={escrito.comuna ?? ''} alCrear={(c, avisos) => void cargar(c, avisos)} alCancelar={() => { setCreando(false); }} /> : null}
       {aviso ? <Aviso tipo={aviso.tipo}>{aviso.texto}</Aviso> : null}
 
+      </fieldset>
       <h2>Cargadas hoy ({facturas.length})</h2>
       {facturas.length > 0 ? <Link className="big-button big-button--primario" to="/mi-ruta">CALCULAR MI RUTA</Link> : null}
       {lista.estado.tipo === 'cargando' ? <Cargando /> : null}
@@ -397,7 +403,7 @@ export const PaginaCargar = () => {
       {estado.tipo === 'cargando' ? <Cargando /> : null}
       {estado.tipo === 'error' ? <ErrorCarga error={estado.error} alReintentar={recargar} /> : null}
       {estado.tipo === 'ok' && !estado.datos ? <Aviso tipo="error">Primero elige el camión que manejas hoy. <Link to="/">Ir al inicio</Link></Aviso> : null}
-      {estado.tipo === 'ok' && estado.datos ? <Carga jornada={estado.datos} /> : null}
+      {estado.tipo === 'ok' && estado.datos ? <Carga key={`${estado.datos.camion.id}:${estado.datos.fecha}`} jornada={estado.datos} /> : null}
     </Pagina>
   );
 };

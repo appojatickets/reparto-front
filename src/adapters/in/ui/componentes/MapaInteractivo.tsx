@@ -9,7 +9,7 @@ setWorkerUrl(workerUrl);
 export const COLORES = ['#1d4ed8', '#b45309', '#7e22ce', '#047857', '#be123c', '#0e7490'];
 const color = (i: number): string => COLORES[i % COLORES.length] ?? '#1d4ed8';
 
-export default function MapaInteractivo({ vista }: { readonly vista: VistaRuta }) {
+export default function MapaInteractivo({ vista, seleccionar, ocupado = false }: { readonly vista: VistaRuta; readonly seleccionar?: ((id: string) => void) | undefined; readonly ocupado?: boolean }) {
   const contenedor = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
   const mapaActual = useRef<Map | undefined>(undefined);
@@ -30,7 +30,7 @@ export default function MapaInteractivo({ vista }: { readonly vista: VistaRuta }
     if (!mapa) return;
     const marcadores: Marker[] = [];
     const limites = new LngLatBounds();
-    const agregar = (lng: number, lat: number, numero: string, titulo: string, detalle: string, tono: string, destino?: Parameters<typeof enlaceNavegar>[0]) => {
+    const agregar = (lng: number, lat: number, numero: string, titulo: string, detalle: string, tono: string, destino?: Parameters<typeof enlaceNavegar>[0], id?: string) => {
       const boton = document.createElement('button');
       boton.type = 'button'; boton.className = 'mapa-pin'; boton.style.backgroundColor = tono;
       boton.textContent = numero; boton.setAttribute('aria-label', `${numero}. ${titulo}`);
@@ -43,12 +43,13 @@ export default function MapaInteractivo({ vista }: { readonly vista: VistaRuta }
         enlace.href = enlaceNavegar(destino, 'google'); enlace.target = '_blank'; enlace.rel = 'noreferrer'; contenido.append(enlace);
       }
       marcadores.push(new Marker({ element: boton }).setLngLat([lng, lat]).setPopup(new Popup({ offset: 20 }).setDOMContent(contenido)).addTo(mapa));
+      if (id && seleccionar) { boton.disabled = ocupado; boton.setAttribute('aria-label', `${numero}. ${titulo}. Cambiar orden`); boton.addEventListener('click', () => { seleccionar(id); }); }
       limites.extend([lng, lat]);
     };
     if (vista.deposito) agregar(vista.deposito.lng, vista.deposito.lat, 'D', vista.deposito.nombre ?? 'Depósito', 'Salida y regreso', '#111827');
     vista.paradas.forEach((p, i) => {
       if (p.lng === undefined || p.lat === undefined) return;
-      agregar(p.lng, p.lat, String(i + 1), p.cliente, `${p.direccion}, ${p.comuna}${p.ubicacionAproximada ? ' · Ubicación aproximada' : ''}`, p.ubicacionAproximada ? '#9a3412' : color(i), p);
+      agregar(p.lng, p.lat, String(i + 1), p.cliente, `${p.direccion}, ${p.comuna}${p.ubicacionAproximada ? ' · Ubicación aproximada' : ''}`, p.ubicacionAproximada ? '#9a3412' : color(i), p, p.facturaId);
     });
     const clave = `${vista.camionId}:${vista.fecha}`;
     if (!limites.isEmpty() && encuadrada.current !== clave) {
@@ -56,6 +57,6 @@ export default function MapaInteractivo({ vista }: { readonly vista: VistaRuta }
       encuadrada.current = clave;
     }
     return () => { marcadores.forEach((marcador) => { marcador.remove(); }); };
-  }, [vista]);
+  }, [vista, seleccionar, ocupado]);
   return <><p className="ayuda" role="status">Mapa actualizado · {vista.paradas.length} paradas en el mismo orden que la lista.</p><div ref={contenedor} className="mapa-ruta" role="region" aria-label="Mapa interactivo de las entregas en orden" />{error ? <p role="status" className="ayuda">{error}</p> : null}</>;
 }

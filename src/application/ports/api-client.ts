@@ -154,6 +154,6 @@ export interface ApiClient extends SaludApi {
   /** Marca liviana del estado de la ruta del camión: cambia si cualquiera de quienes lo comparten la mueve, carga una factura o avisa una entrega. */
   marcaDeRuta(camionId: string, fecha: string): R<string>;
   /** `orden: 'carga'` arma la ruta en el orden en que se cargaron las facturas (sin calcularla). */
-  planificarRuta(camionId: string, fecha: string, salidaMin?: number, orden?: 'calcular' | 'carga'): R<VistaRuta>;
+  planificarRuta(camionId: string, fecha: string, salidaMin?: number, orden?: 'calcular' | 'carga', ordenComunas?: readonly string[]): R<VistaRuta>;
   operarRuta(camionId: string, fecha: string, version: number, operacion: OperacionRuta): R<VistaRuta>;
 }
