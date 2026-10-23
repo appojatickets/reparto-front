@@ -9,13 +9,14 @@ import { Aviso, Boton, Cargando } from './ui';
 const Mapa = lazy(() => import('./MapaInteractivo'));
 
 export const MapaGuardadoOffline = () => {
+  const { ubicacion } = useCasos();
   const [datos] = useState<MapaGuardado | undefined>(() => leerMapa());
   if (!datos) return <Aviso>No hay un mapa guardado en este dispositivo.</Aviso>;
-  return <section className="tarjeta"><h2>Ruta guardada · {datos.vista.fecha}</h2><Aviso>Consulta sin conexión. Guardada el {new Date(datos.guardadoEn).toLocaleString('es-CL')}. El estado de las entregas puede haber cambiado.</Aviso><Suspense fallback={<Cargando />}><Mapa vista={datos.vista} /></Suspense><ol>{datos.vista.paradas.map((p) => <li key={p.facturaId}>{p.cliente} · {p.direccion}, {p.comuna}</li>)}</ol></section>;
+  return <section className="tarjeta"><h2>Ruta guardada · {datos.vista.fecha}</h2><Aviso>Consulta sin conexión. Guardada el {new Date(datos.guardadoEn).toLocaleString('es-CL')}. El estado de las entregas puede haber cambiado.</Aviso><Suspense fallback={<Cargando />}><Mapa vista={datos.vista} ubicacion={ubicacion} /></Suspense><ol>{datos.vista.paradas.map((p) => <li key={p.facturaId}>{p.cliente} · {p.direccion}, {p.comuna}</li>)}</ol></section>;
 };
 
 export const MapaRuta = ({ vista, mover, ocupado = false }: { readonly vista: VistaRuta; readonly mover?: ((id: string, puesto: number) => Promise<boolean>) | undefined; readonly ocupado?: boolean }) => {
-  const { ahora } = useCasos();
+  const { ahora, ubicacion } = useCasos();
   const usuario = useUsuario();
   const [elegida, setElegida] = useState<{ id: string; version: number | undefined }>();
   const seleccionar = useCallback((id: string) => { setElegida({ id, version: vista.version }); }, [vista.version]);
@@ -26,7 +27,7 @@ export const MapaRuta = ({ vista, mover, ocupado = false }: { readonly vista: Vi
     <Boton variante="secundario" aria-expanded={abierto} onClick={() => { setAbierto(!abierto); }}>{abierto ? 'OCULTAR MAPA' : 'VER MAPA DE MI RUTA'}</Boton>
     {abierto ? <>
       <p className="ayuda">Puntos numerados en tu orden de entrega, sin líneas de recorrido. Toca un número para cambiar su puesto o ver el cliente y navegar.</p>
-      <Suspense fallback={<Cargando />}><Mapa vista={vista} ocupado={ocupado} seleccionar={mover ? seleccionar : undefined} /></Suspense>
+      <Suspense fallback={<Cargando />}><Mapa vista={vista} ubicacion={ubicacion} ocupado={ocupado} seleccionar={mover ? seleccionar : undefined} /></Suspense>
       {parada && elegida && mover ? <EditarOrdenMapa key={parada.facturaId} parada={parada} total={vista.paradas.length} manual={vista.modo === 'carga'} cancelar={() => { setElegida(undefined); }} guardar={async puesto => {
         if (elegida.version !== vista.version || ocupado) { setAviso('La ruta cambió. Cierra el editor y selecciona de nuevo la entrega.'); return false; }
         return mover(parada.facturaId, puesto);
