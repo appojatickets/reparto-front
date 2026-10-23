@@ -1,15 +1,17 @@
-import { render } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Posicion, ErrorUbicacion, Ubicacion } from '../../../../application/ports/ubicacion';
+import { ok } from '../../../../domain/result';
 import type { VistaRuta, ParadaDeRuta } from '../../../../application/modelos';
 import MapaInteractivo from './MapaInteractivo';
-const dibujo = vi.hoisted(() => ({ crear: vi.fn(), encuadrar: vi.fn(), quitar: vi.fn(), puntos: [] as HTMLElement[] }));
+const dibujo = vi.hoisted(() => ({ crear: vi.fn(), encuadrar: vi.fn(), quitar: vi.fn(), centrar: vi.fn(), coordenadas: vi.fn(), puntos: [] as HTMLElement[] }));
 vi.mock('maplibre-gl', () => ({
   setWorkerUrl: vi.fn(), NavigationControl: class { onAdd() { return document.createElement('div'); } },
-  Map: class { constructor() { dibujo.crear(); } addControl() {} on() {} fitBounds() { dibujo.encuadrar(); } remove() { dibujo.quitar(); } },
+  Map: class { constructor() { dibujo.crear(); } addControl() {} easeTo(p: unknown) { dibujo.centrar(p); } on() {} fitBounds() { dibujo.encuadrar(); } remove() { dibujo.quitar(); } },
   Marker: class {
     element: HTMLElement;
     constructor({ element }: { element: HTMLElement }) { this.element = element; dibujo.puntos.push(element); }
-    setLngLat() { return this; } setPopup() { return this; } addTo() { return this; }
+    setLngLat(p: unknown) { dibujo.coordenadas(this.element.textContent, p); return this; } setPopup() { return this; } addTo() { return this; }
     remove() { const i = dibujo.puntos.indexOf(this.element); if (i >= 0) dibujo.puntos.splice(i, 1); }
   },
   Popup: class { setDOMContent() { return this; } },
@@ -31,4 +33,62 @@ describe('actualización del mapa conservando el zoom', () => {
     expect(dibujo.quitar).toHaveBeenCalledTimes(1);
     expect(dibujo.puntos).toHaveLength(0);
   });
+});
+
+beforeEach(() => { vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); });
+const punto = { lat: -33.51, lng: -70.61, precisionM: 12 };
+const seguimiento = () => {
+  let recibir!: (p: Posicion) => void;
+  let fallar!: (e: ErrorUbicacion) => void;
+  const detener = vi.fn();
+  const ubicacion: Ubicacion = { disponible: true, actual: vi.fn(), seguir: (p, e) => { recibir = p; fallar = e; return detener; } };
+  return { ubicacion, detener, recibir: (p: Posicion) => { act(() => { recibir(p); }); }, fallar: (e: ErrorUbicacion) => { act(() => { fallar(e); }); } };
+};
+it('mueve un solo marcador GPS, centra a pedido y lo conserva al reordenar', () => {
+  const gps = seguimiento();
+  const { rerender, unmount } = render(<MapaInteractivo vista={vista} ubicacion={gps.ubicacion} />);
+  expect(screen.getByRole('button', { name: 'MI UBICACIÓN' })).toBeDisabled();
+  gps.recibir(punto);
+  gps.recibir({ ...punto, lat: -33.52 });
+  expect(dibujo.puntos.filter(p => p.textContent === 'Tú')).toHaveLength(1);
+  expect(dibujo.coordenadas).toHaveBeenLastCalledWith('Tú', [-70.61, -33.52]);
+  expect(dibujo.centrar).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'MI UBICACIÓN' }));
+  expect(dibujo.centrar).toHaveBeenCalledWith({ center: [-70.61, -33.52], zoom: 16 });
+  rerender(<MapaInteractivo vista={{ ...vista, paradas: [parada('B', 0)] }} ubicacion={gps.ubicacion} />);
+  expect(dibujo.puntos.map(p => p.textContent)).toEqual(['Tú', '1']);
+  expect(dibujo.encuadrar).toHaveBeenCalledTimes(1);
+  unmount();
+  expect(gps.detener).toHaveBeenCalledOnce();
+  gps.recibir(punto);
+  expect(dibujo.puntos).toHaveLength(0);
+});
+it('retira posiciones con error o GPS antiguo y recupera con una nueva lectura', () => {
+  vi.useFakeTimers();
+  const gps = seguimiento();
+  render(<MapaInteractivo vista={vista} ubicacion={gps.ubicacion} />);
+  gps.recibir(punto);
+  gps.fallar('PERMISO');
+  expect(screen.getByText(/Permite el acceso a tu ubicación/)).toBeInTheDocument();
+  expect(dibujo.puntos.some(p => p.textContent === 'Tú')).toBe(false);
+  gps.recibir(punto);
+  act(() => { vi.advanceTimersByTime(60_000); });
+  expect(screen.getByText(/Sin señal GPS reciente/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'MI UBICACIÓN' })).toBeDisabled();
+  gps.recibir(punto);
+  expect(screen.getByText(/precisión aproximada de 12 m/)).toBeInTheDocument();
+});
+it('consulta cada cinco segundos sin seguimiento nativo y deja de consultar al cerrar', async () => {
+  vi.useFakeTimers();
+  const actual = vi.fn().mockResolvedValue(ok(punto));
+  const { unmount } = render(<MapaInteractivo vista={vista} ubicacion={{ disponible: true, actual }} />);
+  await act(async () => { await Promise.resolve(); });
+  expect(actual).toHaveBeenCalledTimes(1);
+  await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+  expect(actual).toHaveBeenCalledTimes(2);
+  expect(dibujo.puntos.some(p => p.textContent === 'Tú')).toBe(true);
+  unmount();
+  await act(async () => { await vi.advanceTimersByTimeAsync(10_000); });
+  expect(actual).toHaveBeenCalledTimes(2);
 });
